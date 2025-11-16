@@ -69,18 +69,21 @@ if (session_status() === PHP_SESSION_NONE) {
 
                         <ul class="dropdown-menu dropdown-menu-end">
 
-                            <?php if ($_SESSION['rol_id'] == 1): ?>
-                                <li><a class="dropdown-item" href="/twintalk/admin/dashboard.php">Panel administrador</a></li>
+<?php if ($_SESSION['rol_id'] == 1): ?>
+    <li><a class="dropdown-item" href="/twintalk/admin/dashboard.php">Panel administrador</a></li>
+    <li><a class="dropdown-item" href="/twintalk/admin/perfil.php">Mi perfil</a></li>
 
-                            <?php elseif ($_SESSION['rol_id'] == 2): ?>
-                                <li><a class="dropdown-item" href="/twintalk/docente/dashboard.php">Panel docente</a></li>
+<?php elseif ($_SESSION['rol_id'] == 2): ?>
+    <li><a class="dropdown-item" href="/twintalk/docente/dashboard.php">Panel docente</a></li>
+    <li><a class="dropdown-item" href="/twintalk/docente/perfil.php">Mi perfil</a></li>
 
-                            <?php else: ?>
-                                <li><a class="dropdown-item" href="/twintalk/student/dashboard.php">Panel estudiante</a></li>
-                            <?php endif; ?>
+<?php else: ?>
+    <li><a class="dropdown-item" href="/twintalk/student/dashboard.php">Panel estudiante</a></li>
+    <li><a class="dropdown-item" href="/twintalk/student/perfil.php">Mi perfil</a></li>
+<?php endif; ?>
 
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="/twintalk/logout.php">Cerrar sesión</a></li>
+<li><hr class="dropdown-divider"></li>
+<li><a class="dropdown-item text-danger" href="/twintalk/logout.php">Cerrar sesión</a></li>
                         </ul>
                     </li>
 

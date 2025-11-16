@@ -1,9 +1,15 @@
 <?php
-require_once __DIR__ . "/../config/db.php";
-require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+
 require_role([2]);
 
-$docente_id = $_SESSION['usuario_id'];
+$docenteId = $_SESSION['usuario_id'] ?? null;
+
+if (!$docenteId) {
+    header("Location: /twintalk/login.php");
+    exit;
+}
 $horario_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 $mensaje = "";

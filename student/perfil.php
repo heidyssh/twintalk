@@ -19,6 +19,23 @@ $lista_avatars = [
     "/twintalk/assets/img/avatars/avatar8.jpg",
     "/twintalk/assets/img/avatars/avatar9.jpg",
     "/twintalk/assets/img/avatars/avatar10.jpg",
+    "/twintalk/assets/img/avatars/avatar11.jpg",
+    "/twintalk/assets/img/avatars/avatar12.jpg",
+    "/twintalk/assets/img/avatars/avatar13.jpg",
+    "/twintalk/assets/img/avatars/avatar14.jpg",
+    "/twintalk/assets/img/avatars/avatar15.jpg",
+    "/twintalk/assets/img/avatars/avatar16.jpg",
+    "/twintalk/assets/img/avatars/avatar17.jpg",
+    "/twintalk/assets/img/avatars/avatar19.jpg",
+    "/twintalk/assets/img/avatars/avatar20.jpg",
+    "/twintalk/assets/img/avatars/avatar21.jpg",
+    "/twintalk/assets/img/avatars/avatar22.jpg",
+    "/twintalk/assets/img/avatars/avatar23.jpg",
+    "/twintalk/assets/img/avatars/avatar24.jpg",
+    "/twintalk/assets/img/avatars/avatar25.jpg",
+    "/twintalk/assets/img/avatars/avatar26.jpg",
+    "/twintalk/assets/img/avatars/avatar27.jpg",
+    "/twintalk/assets/img/avatars/avatar28.jpg",
 ];
 
 // Carpeta para avatares subidos por usuario

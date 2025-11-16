@@ -1,13 +1,18 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([1]); // estudiante
+require_role([1]); // solo admin
 
-$usuario_id = $_SESSION['usuario_id'];
+$usuario_id = $_SESSION['usuario_id'] ?? null;
+if (!$usuario_id) {
+    header("Location: /twintalk/login.php");
+    exit;
+}
+
 $mensaje = "";
-$error = "";
+$error   = "";
 
-// Avatares de ejemplo (predeterminados)
+// Avatares predeterminados (los que están en assets/img/avatars)
 $lista_avatars = [
     "/twintalk/assets/img/avatars/avatar1.jpg",
     "/twintalk/assets/img/avatars/avatar2.jpg",
@@ -19,40 +24,76 @@ $lista_avatars = [
     "/twintalk/assets/img/avatars/avatar8.jpg",
     "/twintalk/assets/img/avatars/avatar9.jpg",
     "/twintalk/assets/img/avatars/avatar10.jpg",
+    "/twintalk/assets/img/avatars/avatar11.jpg",
+    "/twintalk/assets/img/avatars/avatar12.jpg",
+    "/twintalk/assets/img/avatars/avatar13.jpg",
+    "/twintalk/assets/img/avatars/avatar14.jpg",
+    "/twintalk/assets/img/avatars/avatar15.jpg",
+    "/twintalk/assets/img/avatars/avatar16.jpg",
+    "/twintalk/assets/img/avatars/avatar17.jpg",
+    "/twintalk/assets/img/avatars/avatar19.jpg",
+    "/twintalk/assets/img/avatars/avatar20.jpg",
+    "/twintalk/assets/img/avatars/avatar21.jpg",
+    "/twintalk/assets/img/avatars/avatar22.jpg",
+    "/twintalk/assets/img/avatars/avatar23.jpg",
+    "/twintalk/assets/img/avatars/avatar24.jpg",
+    "/twintalk/assets/img/avatars/avatar25.jpg",
+    "/twintalk/assets/img/avatars/avatar26.jpg",
+    "/twintalk/assets/img/avatars/avatar27.jpg",
+    "/twintalk/assets/img/avatars/avatar28.jpg",
 ];
 
-// Carpeta para avatares subidos por usuario
-$uploadDir = __DIR__ . "/../uploads/avatars/";
+// Carpeta para avatares subidos
+$uploadDir     = __DIR__ . "/../uploads/avatars/";
 $uploadUrlBase = "/twintalk/uploads/avatars/";
 
-// Asegurar que la carpeta exista (por si acaso)
+// Asegurar carpeta
 if (!is_dir($uploadDir)) {
     @mkdir($uploadDir, 0777, true);
 }
 
+// Cargar datos del usuario
+$stmt = $mysqli->prepare("SELECT nombre, apellido, email, telefono, foto_perfil FROM usuarios WHERE id = ?");
+$stmt->bind_param("i", $usuario_id);
+$stmt->execute();
+$stmt->bind_result($nombre, $apellido, $email, $telefono, $foto_perfil);
+$stmt->fetch();
+$stmt->close();
+
+$avatar_actual = $foto_perfil ?: "/twintalk/assets/img/avatars/avatar1.jpg";
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // 1) Actualizar datos personales
+    // 1) Actualizar datos básicos
     if (isset($_POST['actualizar_perfil'])) {
-        $nombre = trim($_POST['nombre'] ?? '');
-        $apellido = trim($_POST['apellido'] ?? '');
-        $telefono = trim($_POST['telefono'] ?? '');
+        $nuevo_nombre   = trim($_POST['nombre'] ?? '');
+        $nuevo_apellido = trim($_POST['apellido'] ?? '');
+        $nuevo_telefono = trim($_POST['telefono'] ?? '');
 
-        $stmt = $mysqli->prepare("UPDATE usuarios SET nombre = ?, apellido = ?, telefono = ? WHERE id = ?");
-        $stmt->bind_param("sssi", $nombre, $apellido, $telefono, $usuario_id);
-        if ($stmt->execute()) {
-            $_SESSION['nombre'] = $nombre;
-            $_SESSION['apellido'] = $apellido;
-            $mensaje = "Perfil actualizado.";
+        if ($nuevo_nombre === '' || $nuevo_apellido === '') {
+            $error = "Nombre y apellido son obligatorios.";
         } else {
-            $error = "Error al actualizar perfil.";
+            $stmt = $mysqli->prepare("UPDATE usuarios SET nombre = ?, apellido = ?, telefono = ? WHERE id = ?");
+            $stmt->bind_param("sssi", $nuevo_nombre, $nuevo_apellido, $nuevo_telefono, $usuario_id);
+            if ($stmt->execute()) {
+                $_SESSION['nombre']   = $nuevo_nombre;
+                $_SESSION['apellido'] = $nuevo_apellido;
+                $mensaje = "Perfil actualizado correctamente.";
+                $nombre   = $nuevo_nombre;
+                $apellido = $nuevo_apellido;
+                $telefono = $nuevo_telefono;
+            } else {
+                $error = "Error al actualizar el perfil.";
+            }
+            $stmt->close();
         }
     }
 
     // 2) Cambiar contraseña
     elseif (isset($_POST['cambiar_password'])) {
-        $pass1 = $_POST['password'] ?? '';
+        $pass1 = $_POST['password']  ?? '';
         $pass2 = $_POST['password2'] ?? '';
+
         if ($pass1 === '' || $pass2 === '') {
             $error = "Debes escribir la nueva contraseña dos veces.";
         } elseif ($pass1 !== $pass2) {
@@ -62,180 +103,197 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $mysqli->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ?");
             $stmt->bind_param("si", $hash, $usuario_id);
             if ($stmt->execute()) {
-                $mensaje = "Contraseña actualizada.";
+                $mensaje = "Contraseña actualizada correctamente.";
             } else {
-                $error = "Error al actualizar contraseña.";
+                $error = "Error al actualizar la contraseña.";
             }
+            $stmt->close();
         }
     }
 
-    // 3) Seleccionar avatar predeterminado
-    elseif (isset($_POST['seleccionar_avatar'])) {
-        $avatar = $_POST['avatar'] ?? '';
-        if (in_array($avatar, $lista_avatars, true)) {
+    // 3) Elegir avatar predeterminado
+    elseif (isset($_POST['actualizar_avatar'])) {
+        $avatar_sel = $_POST['avatar_seleccionado'] ?? '';
+        if (in_array($avatar_sel, $lista_avatars)) {
             $stmt = $mysqli->prepare("UPDATE usuarios SET foto_perfil = ? WHERE id = ?");
-            $stmt->bind_param("si", $avatar, $usuario_id);
+            $stmt->bind_param("si", $avatar_sel, $usuario_id);
             if ($stmt->execute()) {
-                $_SESSION['foto_perfil'] = $avatar;
+                $_SESSION['foto_perfil'] = $avatar_sel;
                 $mensaje = "Avatar actualizado.";
+                $avatar_actual = $avatar_sel;
             } else {
-                $error = "Error al actualizar avatar.";
+                $error = "Error al actualizar el avatar.";
             }
+            $stmt->close();
         } else {
             $error = "Avatar seleccionado no válido.";
         }
     }
 
-    // 4) Subir avatar desde la computadora
+    // 4) Subir avatar propio
     elseif (isset($_POST['subir_avatar']) && isset($_FILES['avatar_file'])) {
         $file = $_FILES['avatar_file'];
 
-        if ($file['error'] === UPLOAD_ERR_OK) {
-            $allowed = [
-                'image/png' => 'png',
-                'image/jpeg' => 'jpg',
-                'image/jpg' => 'jpg',
-            ];
-
-            if (!array_key_exists($file['type'], $allowed)) {
-                $error = "Formato de imagen no permitido. Usa PNG o JPG.";
-            } elseif ($file['size'] > 2 * 1024 * 1024) { // 2 MB
-                $error = "La imagen es muy pesada. Máximo 2MB.";
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $error = "Error al subir el archivo.";
+        } elseif ($file['size'] > 2 * 1024 * 1024) {
+            $error = "El archivo supera el límite de 2MB.";
+        } else {
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['png', 'jpg', 'jpeg'])) {
+                $error = "Formato no permitido. Solo PNG o JPG.";
             } else {
-                $ext = $allowed[$file['type']];
-                $filename = "user_" . $usuario_id . "_" . time() . "." . $ext;
-
-                $destinoFs = $uploadDir . $filename;         // ruta física
-                $destinoUrl = $uploadUrlBase . $filename;    // ruta para guardar en BD
-
-                if (move_uploaded_file($file['tmp_name'], $destinoFs)) {
-                    // Guardar ruta en BD
+                $nuevo_nombre = "avatar_" . $usuario_id . "_" . time() . "." . $ext;
+                $destino      = $uploadDir . $nuevo_nombre;
+                if (move_uploaded_file($file['tmp_name'], $destino)) {
+                    $avatar_url = $uploadUrlBase . $nuevo_nombre;
                     $stmt = $mysqli->prepare("UPDATE usuarios SET foto_perfil = ? WHERE id = ?");
-                    $stmt->bind_param("si", $destinoUrl, $usuario_id);
+                    $stmt->bind_param("si", $avatar_url, $usuario_id);
                     if ($stmt->execute()) {
-                        $_SESSION['foto_perfil'] = $destinoUrl;  // 🔴 ACTUALIZA SESIÓN
-                        $mensaje = "Avatar subido y actualizado correctamente.";
+                        $_SESSION['foto_perfil'] = $avatar_url;
+                        $mensaje = "Avatar subido y actualizado.";
+                        $avatar_actual = $avatar_url;
                     } else {
-                        $error = "Se subió la imagen pero falló al guardar en la base de datos.";
+                        $error = "Error al guardar el avatar en la base de datos.";
                     }
+                    $stmt->close();
                 } else {
-                    $error = "No se pudo guardar el archivo en el servidor.";
+                    $error = "No se pudo mover el archivo subido.";
                 }
             }
-        } else {
-            $error = "Ocurrió un error al subir la imagen (código: {$file['error']}).";
         }
     }
 }
 
-// Obtener datos del usuario
-$stmt = $mysqli->prepare("SELECT nombre, apellido, email, telefono, foto_perfil FROM usuarios WHERE id = ?");
-$stmt->bind_param("i", $usuario_id);
-$stmt->execute();
-$usuario = $stmt->get_result()->fetch_assoc();
-
-// Avatar actual
-$avatar_actual = $usuario['foto_perfil'] ?: "/twintalk/assets/img/avatars/avatar1.png";
-
 include __DIR__ . "/../includes/header.php";
 ?>
 
-<h1 class="h4 fw-bold mt-3">Mi perfil</h1>
-<div class="mb-3">
-    <a href="/twintalk/admin/dashboard.php" 
-   class="btn btn-outline-secondary btn-sm">
-   ← Regresar
-</a>
+<div class="container my-4">
+    <h1 class="h4 fw-bold mb-3">Mi Perfil (Administrador)</h1>
 
-</div>
-<?php if ($mensaje): ?>
-    <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div><?php endif; ?>
-<?php if ($error): ?>
-    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
+    <?php if ($mensaje): ?>
+        <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>
+    <?php endif; ?>
+    <?php if ($error): ?>
+        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
 
-<div class="row g-3 mt-2">
-    <!-- Datos personales -->
-    <div class="col-md-6">
-        <div class="card card-soft p-3 h-100">
-            <h2 class="h6 fw-bold mb-3">Datos personales</h2>
-            <form method="post">
-                <div class="mb-3">
-                    <label class="form-label">Nombre</label>
-                    <input class="form-control" name="nombre" value="<?= htmlspecialchars($usuario['nombre']) ?>">
+    <div class="row g-4">
+        <!-- Tarjeta de info + avatar -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <img src="<?= htmlspecialchars($avatar_actual) ?>"
+                         class="rounded-circle mb-3"
+                         style="width: 120px; height: 120px; object-fit: cover;"
+                         alt="Avatar">
+                    <h5 class="mb-0"><?= htmlspecialchars($nombre . " " . $apellido) ?></h5>
+                    <p class="text-muted mb-1">Administrador</p>
+                    <p class="small text-muted mb-0">
+                        <?= htmlspecialchars($email) ?><br>
+                        Tel: <?= htmlspecialchars($telefono ?? 'N/D') ?>
+                    </p>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Apellido</label>
-                    <input class="form-control" name="apellido" value="<?= htmlspecialchars($usuario['apellido']) ?>">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Correo (solo lectura)</label>
-                    <input class="form-control" value="<?= htmlspecialchars($usuario['email']) ?>" disabled>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Teléfono</label>
-                    <input class="form-control" name="telefono" value="<?= htmlspecialchars($usuario['telefono']) ?>">
-                </div>
-                <button class="btn btn-tt-primary" name="actualizar_perfil">Guardar cambios</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Contraseña + Avatares -->
-    <div class="col-md-6">
-        <!-- Cambio de contraseña -->
-        <div class="card card-soft p-3 mb-3">
-            <h2 class="h6 fw-bold mb-3">Cambio de contraseña</h2>
-            <form method="post">
-                <div class="mb-3">
-                    <label class="form-label">Nueva contraseña</label>
-                    <input type="password" name="password" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Repetir nueva contraseña</label>
-                    <input type="password" name="password2" class="form-control">
-                </div>
-                <button class="btn btn-outline-secondary" name="cambiar_password">Actualizar contraseña</button>
-            </form>
+            </div>
         </div>
 
-        <!-- Avatares -->
-        <div class="card card-soft p-3">
-            <h2 class="h6 fw-bold mb-3">Avatar</h2>
-
-            <div class="mb-3 text-center">
-                <span class="small text-muted d-block mb-1">Avatar actual:</span>
-                <img src="<?= htmlspecialchars($avatar_actual) ?>" class="avatar-preview" alt="Avatar actual">
+        <!-- Formulario de datos + password + avatar -->
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Datos personales</h5>
+                    <form method="post">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre</label>
+                                <input type="text" name="nombre" class="form-control"
+                                       value="<?= htmlspecialchars($nombre) ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Apellido</label>
+                                <input type="text" name="apellido" class="form-control"
+                                       value="<?= htmlspecialchars($apellido) ?>" required>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" name="telefono" class="form-control"
+                                   value="<?= htmlspecialchars($telefono) ?>">
+                        </div>
+                        <div class="mt-3 text-end">
+                            <button type="submit" name="actualizar_perfil" class="btn btn-primary">
+                                Guardar cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
-            <!-- Elegir avatar predeterminado -->
-            <form method="post" class="mb-3">
-                <span class="small text-muted d-block mb-1">Elegir un avatar predeterminado:</span>
-                <div class="d-flex flex-wrap gap-2 mb-2">
-                    <?php foreach ($lista_avatars as $av): ?>
-                        <label class="border rounded-3 p-1" style="cursor:pointer;">
-                            <input type="radio" name="avatar" value="<?= htmlspecialchars($av) ?>"
-                                class="form-check-input me-1" <?= $av === $avatar_actual ? 'checked' : '' ?>>
-                            <img src="<?= htmlspecialchars($av) ?>" class="avatar-option" alt="Avatar">
-                        </label>
-                    <?php endforeach; ?>
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Cambiar contraseña</h5>
+                    <form method="post">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Nueva contraseña</label>
+                                <input type="password" name="password" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Repetir contraseña</label>
+                                <input type="password" name="password2" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-end">
+                            <button type="submit" name="cambiar_password" class="btn btn-warning">
+                                Actualizar contraseña
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <button class="btn btn-sm btn-tt-primary" name="seleccionar_avatar">
-                    Guardar avatar predeterminado
-                </button>
-            </form>
+            </div>
 
-            <!-- Subir avatar propio -->
-            <form method="post" enctype="multipart/form-data">
-                <span class="small text-muted d-block mb-1">O subir tu propia foto:</span>
-                <div class="mb-2">
-                    <input type="file" name="avatar_file" class="form-control form-control-sm"
-                        accept="image/png, image/jpeg">
-                    <small class="text-muted">Formatos permitidos: PNG, JPG. Máx: 2MB.</small>
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Avatar</h5>
+                    <form method="post">
+                        <div class="row g-2">
+                            <?php foreach ($lista_avatars as $avatar): ?>
+                                <div class="col-3 col-md-2 text-center">
+                                    <label class="d-block">
+                                        <input type="radio" name="avatar_seleccionado"
+                                               value="<?= htmlspecialchars($avatar) ?>"
+                                               class="form-check-input mb-1"
+                                               <?= $avatar === $avatar_actual ? 'checked' : '' ?>>
+                                        <img src="<?= htmlspecialchars($avatar) ?>"
+                                             class="rounded-circle"
+                                             style="width: 50px; height: 50px; object-fit: cover;">
+                                    </label>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="mt-3 text-end">
+                            <button type="submit" name="actualizar_avatar" class="btn btn-outline-primary btn-sm">
+                                Usar avatar seleccionado
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr>
+
+                    <form method="post" enctype="multipart/form-data">
+                        <label class="form-label">Subir tu propia imagen</label>
+                        <input type="file" name="avatar_file" class="form-control form-control-sm"
+                               accept="image/png, image/jpeg">
+                        <small class="text-muted">Máx. 2MB. Formatos: PNG, JPG.</small>
+                        <div class="mt-2 text-end">
+                            <button type="submit" name="subir_avatar" class="btn btn-outline-secondary btn-sm">
+                                Subir y usar esta imagen
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <button class="btn btn-sm btn-outline-secondary" name="subir_avatar">
-                    Subir y usar esta imagen
-                </button>
-            </form>
+            </div>
+
         </div>
     </div>
 </div>

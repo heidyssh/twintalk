@@ -3,7 +3,12 @@ require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
 require_role([2]); // rol docente
 
-$docente_id = $_SESSION['usuario_id'];
+$docenteId = $_SESSION['usuario_id'] ?? null;
+
+if (!$docenteId) {
+    header("Location: /twintalk/login.php");
+    exit;
+}
 
 $cursos = $mysqli->prepare("
     SELECT h.id AS horario_id, c.nombre_curso, n.codigo_nivel,
@@ -23,6 +28,56 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <h1 class="h4 fw-bold mt-3">Panel del docente</h1>
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Mis cursos</h6>
+                <p class="mb-2 small">Ver todos los horarios que tengo asignados.</p>
+                <a href="cursos.php" class="btn btn-sm btn-primary">Ver cursos</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Estudiantes</h6>
+                <p class="mb-2 small">Ver alumnos por curso.</p>
+                <a href="cursos.php" class="btn btn-sm btn-outline-primary">
+                    Ver lista
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Calificaciones</h6>
+<p class="mb-2 small">Registrar y consultar notas por curso.</p>
+<a href="calificaciones.php" class="btn btn-sm btn-outline-primary">
+    Ver Calificaciones
+</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Anuncios y materiales</h6>
+                <p class="mb-2 small">Publicar anuncios y subir recursos.</p>
+                <a href="anuncios.php" class="btn btn-sm btn-outline-primary mb-1">
+                    Anuncios
+                </a>
+                <a href="materiales.php" class="btn btn-sm btn-outline-secondary">
+                    Materiales
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 <p class="text-muted mb-3">
     Administra tus cursos, registra calificaciones y publica anuncios.
 </p>
