@@ -33,6 +33,100 @@ if (!$matricula) {
     include __DIR__ . "/../includes/footer.php";
     exit;
 }
+$matricula_id = (int)$matricula['matricula_id'];
+
+$mensaje_tarea = "";
+$error_tarea   = "";
+
+// Carpeta para archivos de tareas de estudiantes
+$uploadDirTareas = __DIR__ . '/../uploads/tareas/';
+if (!is_dir($uploadDirTareas)) {
+    mkdir($uploadDirTareas, 0775, true);
+}
+
+// Manejar subida de tarea del estudiante
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir_tarea') {
+    $tarea_id = (int)($_POST['tarea_id'] ?? 0);
+
+    if ($tarea_id <= 0 || !isset($_FILES['archivo_tarea'])) {
+        $error_tarea = "Datos de tarea inválidos.";
+    } else {
+        // Validar que la tarea sea de este horario
+        $sqlValT = "SELECT id FROM tareas WHERE id = ? AND horario_id = ? AND activo = 1 LIMIT 1";
+        $stmtValT = $mysqli->prepare($sqlValT);
+        $stmtValT->bind_param("ii", $tarea_id, $horario_id);
+        $stmtValT->execute();
+        $resValT = $stmtValT->get_result();
+        $stmtValT->close();
+
+        if ($resValT->num_rows === 0) {
+            $error_tarea = "La tarea no pertenece a este curso.";
+        } else {
+            $file = $_FILES['archivo_tarea'];
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                $error_tarea = "Error al subir el archivo.";
+            } else {
+                $nombreOriginal = $file['name'];
+                $tmpName        = $file['tmp_name'];
+                $ext            = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
+                $nuevoNombre    = uniqid('entrega_') . ($ext ? '.' . $ext : '');
+                $rutaDestino    = $uploadDirTareas . $nuevoNombre;
+
+                if (move_uploaded_file($tmpName, $rutaDestino)) {
+                    $archivo_url    = '/twintalk/uploads/tareas/' . $nuevoNombre;
+                    $tamano_archivo = $file['size'];
+
+                    // Ver si ya existe entrega para esta tarea y esta matrícula
+                    $sqlCheckEnt = "
+                        SELECT id FROM tareas_entregas
+                        WHERE tarea_id = ? AND matricula_id = ?
+                        LIMIT 1
+                    ";
+                    $stmtCE = $mysqli->prepare($sqlCheckEnt);
+                    $stmtCE->bind_param("ii", $tarea_id, $matricula_id);
+                    $stmtCE->execute();
+                    $resCE = $stmtCE->get_result();
+                    $existente = $resCE->fetch_assoc();
+                    $stmtCE->close();
+
+                    if ($existente) {
+                        // Actualizar entrega (reemplazar archivo y resetear nota)
+                        $sqlUpd = "
+                            UPDATE tareas_entregas
+                            SET archivo_url = ?, tamano_archivo = ?, fecha_entrega = NOW(),
+                                calificacion = NULL, comentarios_docente = NULL, fecha_calificacion = NULL
+                            WHERE id = ?
+                        ";
+                        $stmtUpd = $mysqli->prepare($sqlUpd);
+                        $stmtUpd->bind_param("sii", $archivo_url, $tamano_archivo, $existente['id']);
+                        $ok = $stmtUpd->execute();
+                        $stmtUpd->close();
+                    } else {
+                        // Insertar nueva entrega
+                        $sqlIns = "
+                            INSERT INTO tareas_entregas
+                            (tarea_id, matricula_id, archivo_url, tamano_archivo)
+                            VALUES (?, ?, ?, ?)
+                        ";
+                        $stmtIns = $mysqli->prepare($sqlIns);
+                        $stmtIns->bind_param("iisi", $tarea_id, $matricula_id, $archivo_url, $tamano_archivo);
+                        $ok = $stmtIns->execute();
+                        $stmtIns->close();
+                    }
+
+                    if (!empty($ok)) {
+                        $mensaje_tarea = "Archivo enviado correctamente.";
+                    } else {
+                        $error_tarea = "No se pudo guardar la entrega.";
+                    }
+                } else {
+                    $error_tarea = "No se pudo guardar el archivo en el servidor.";
+                }
+            }
+        }
+    }
+}
+
 
 // 2) Datos del curso, horario y docente
 $infoSql = "
@@ -113,6 +207,49 @@ $stmtMat->bind_param("i", $horario_id);
 $stmtMat->execute();
 $materiales = $stmtMat->get_result();
 $stmtMat->close();
+
+// 4.1) Tareas de este curso
+$tareasSql = "
+    SELECT 
+        t.id,
+        t.titulo,
+        t.descripcion,
+        t.fecha_publicacion,
+        t.fecha_entrega,
+        t.archivo_instrucciones,
+        -- Datos de mi entrega (si existe)
+        (SELECT te.archivo_url 
+         FROM tareas_entregas te 
+         WHERE te.tarea_id = t.id AND te.matricula_id = ? 
+         LIMIT 1) AS mi_archivo,
+        (SELECT te.fecha_entrega 
+         FROM tareas_entregas te 
+         WHERE te.tarea_id = t.id AND te.matricula_id = ? 
+         LIMIT 1) AS mi_fecha_entrega,
+        (SELECT te.calificacion 
+         FROM tareas_entregas te 
+         WHERE te.tarea_id = t.id AND te.matricula_id = ? 
+         LIMIT 1) AS mi_calificacion,
+        (SELECT te.comentarios_docente 
+         FROM tareas_entregas te 
+         WHERE te.tarea_id = t.id AND te.matricula_id = ? 
+         LIMIT 1) AS mis_comentarios
+    FROM tareas t
+    WHERE t.horario_id = ? AND t.activo = 1
+    ORDER BY t.fecha_publicacion DESC
+";
+$stmtTar = $mysqli->prepare($tareasSql);
+$stmtTar->bind_param(
+    "iiiii",
+    $matricula_id,
+    $matricula_id,
+    $matricula_id,
+    $matricula_id,
+    $horario_id
+);
+$stmtTar->execute();
+$tareas = $stmtTar->get_result();
+$stmtTar->close();
 
 // 5) Anuncios específicos de este curso
 $anSql = "
@@ -197,6 +334,119 @@ include __DIR__ . "/../includes/header.php";
                 </ul>
             <?php endif; ?>
         </div>
+
+                <!-- Bloque de TAREAS del curso -->
+        <div class="card card-soft mb-3 p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="h6 fw-bold mb-0">Tareas del curso</h2>
+            </div>
+
+            <?php if ($mensaje_tarea): ?>
+                <div class="alert alert-success py-2 small">
+                    <?= htmlspecialchars($mensaje_tarea) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($error_tarea): ?>
+                <div class="alert alert-danger py-2 small">
+                    <?= htmlspecialchars($error_tarea) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!isset($tareas) || $tareas->num_rows === 0): ?>
+                <p class="small text-muted mb-0">Aún no hay tareas asignadas para este curso.</p>
+            <?php else: ?>
+                <ul class="list-group list-group-flush">
+                    <?php while ($t = $tareas->fetch_assoc()): ?>
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <strong class="small">
+                                            <?= htmlspecialchars($t['titulo']) ?>
+                                        </strong>
+                                        <?php if ($t['fecha_entrega']): ?>
+                                            <?php
+                                            $hoy = date('Y-m-d');
+                                            $vencida = ($t['fecha_entrega'] < $hoy);
+                                            ?>
+                                            <span class="badge <?= $vencida ? 'bg-danger' : 'bg-primary-subtle text-primary' ?> small">
+                                                Entrega: <?= htmlspecialchars($t['fecha_entrega']) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if ($t['descripcion']): ?>
+                                        <p class="mb-1 small">
+                                            <?= nl2br(htmlspecialchars($t['descripcion'])) ?>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <?php if ($t['archivo_instrucciones']): ?>
+                                        <p class="mb-1 small">
+                                            Instrucciones:
+                                            <a href="<?= htmlspecialchars($t['archivo_instrucciones']) ?>" target="_blank">
+                                                Ver archivo
+                                            </a>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <?php if ($t['mi_archivo']): ?>
+                                        <p class="mb-1 small">
+                                            <strong>Tu entrega:</strong>
+                                            <a href="<?= htmlspecialchars($t['mi_archivo']) ?>" target="_blank">
+                                                Ver archivo enviado
+                                            </a><br>
+                                            <?php if ($t['mi_fecha_entrega']): ?>
+                                                <span class="text-muted">
+                                                    Enviada el <?= date('d/m/Y H:i', strtotime($t['mi_fecha_entrega'])) ?>
+                                                </span><br>
+                                            <?php endif; ?>
+                                            <?php if ($t['mi_calificacion'] !== null): ?>
+                                                <span class="badge bg-success-subtle text-success mt-1">
+                                                    Nota: <?= htmlspecialchars($t['mi_calificacion']) ?>
+                                                </span>
+                                            <?php endif; ?>
+                                            <?php if ($t['mis_comentarios']): ?>
+                                                <div class="mt-1 small">
+                                                    <strong>Comentario del docente:</strong><br>
+                                                    <?= nl2br(htmlspecialchars($t['mis_comentarios'])) ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </p>
+                                        <p class="mb-1 small text-muted">
+                                            Puedes volver a subir el archivo si el docente lo permite; se reemplazará la entrega anterior.
+                                        </p>
+                                    <?php else: ?>
+                                        <p class="mb-1 small text-muted">
+                                            Aún no has enviado esta tarea.
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <!-- Formulario para subir / reemplazar archivo -->
+                                    <form method="post" enctype="multipart/form-data" class="mt-2">
+                                        <input type="hidden" name="accion" value="subir_tarea">
+                                        <input type="hidden" name="tarea_id" value="<?= $t['id'] ?>">
+
+                                        <div class="row g-2 align-items-center">
+                                            <div class="col-sm-8">
+                                                <input type="file" name="archivo_tarea"
+                                                       class="form-control form-control-sm" required>
+                                            </div>
+                                            <div class="col-sm-4 text-end">
+                                                <button type="submit" class="btn btn-sm btn-primary">
+                                                    <?= $t['mi_archivo'] ? 'Reemplazar archivo' : 'Subir archivo' ?>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </li>
+                    <?php endwhile; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+
 
         <div class="card card-soft p-3">
             <div class="d-flex justify-content-between align-items-center mb-2">

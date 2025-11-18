@@ -120,6 +120,7 @@ include __DIR__ . "/../includes/header.php";
                                         $tipos_eval->data_seek(0);
                                         ?>
                                     </select>
+                                    
                                 </div>
                                 <div class="col-auto">
                                     <button class="btn btn-sm btn-tt-primary" name="guardar_nota">

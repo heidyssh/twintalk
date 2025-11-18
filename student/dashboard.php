@@ -82,6 +82,29 @@ $anuncios_stmt->bind_param("i", $usuario_id);
 $anuncios_stmt->execute();
 $res_anuncios = $anuncios_stmt->get_result();
 
+// Últimas calificaciones de tareas (máx 5)
+$sqlUltimasTareas = "
+    SELECT 
+        te.id,
+        te.calificacion,
+        te.fecha_calificacion,
+        t.titulo AS titulo_tarea,
+        c.nombre_curso
+    FROM tareas_entregas te
+    INNER JOIN matriculas m ON te.matricula_id = m.id
+    INNER JOIN tareas t ON te.tarea_id = t.id
+    INNER JOIN horarios h ON m.horario_id = h.id
+    INNER JOIN cursos c ON h.curso_id = c.id
+    WHERE m.estudiante_id = ? AND te.calificacion IS NOT NULL
+    ORDER BY te.fecha_calificacion DESC
+    LIMIT 5
+";
+$stmtUlt = $mysqli->prepare($sqlUltimasTareas);
+$stmtUlt->bind_param("i", $usuario_id);
+$stmtUlt->execute();
+$res_ultimas_tareas = $stmtUlt->get_result();
+$stmtUlt->close();
+
 include __DIR__ . "/../includes/header.php";
 ?>
 
@@ -213,6 +236,46 @@ include __DIR__ . "/../includes/header.php";
                 <p class="small text-muted mb-0">Aún no hay anuncios para tus cursos.</p>
             <?php endif; ?>
         </div>
+
+                <div class="card card-soft p-3">
+            <h2 class="h6 fw-bold mb-2">Mis últimas calificaciones de tareas</h2>
+            <p class="small text-muted mb-2">
+                Revisa las notas más recientes de las tareas que has entregado.
+            </p>
+            <?php if ($res_ultimas_tareas->num_rows > 0): ?>
+                <ul class="list-unstyled mb-0">
+                    <?php while ($t = $res_ultimas_tareas->fetch_assoc()): ?>
+                        <li class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="small fw-semibold">
+                                        <?= htmlspecialchars($t['titulo_tarea']) ?>
+                                    </div>
+                                    <div class="small text-muted">
+                                        <?= htmlspecialchars($t['nombre_curso']) ?>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="badge bg-primary-subtle text-primary">
+                                        <?= htmlspecialchars($t['calificacion']) ?>
+                                    </div>
+                                    <?php if ($t['fecha_calificacion']): ?>
+                                        <div class="small text-muted">
+                                            <?= date('d/m', strtotime($t['fecha_calificacion'])) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </li>
+                    <?php endwhile; ?>
+                </ul>
+            <?php else: ?>
+                <p class="small text-muted mb-0">
+                    Aún no tienes calificaciones de tareas registradas.
+                </p>
+            <?php endif; ?>
+        </div>
+
 
         <div class="card card-soft p-3">
             <h2 class="h6 fw-bold mb-2">Configuración rápida</h2>

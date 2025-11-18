@@ -2,222 +2,290 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-require_role([2]);
+require_role([2]); // Docente
 
 $docenteId = $_SESSION['usuario_id'] ?? null;
-
 if (!$docenteId) {
     header("Location: /twintalk/login.php");
     exit;
 }
 
-$horario_id_param = isset($_GET['horario_id']) ? (int)$_GET['horario_id'] : 0;
+$mensaje = "";
+$error   = "";
 
-// Carpeta de subida (ajusta la ruta según tu proyecto)
+// Carpeta de subida
 $uploadDir = __DIR__ . '/../uploads/materiales/';
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0775, true);
 }
 
-// Horarios del docente
+// 1) Horarios del docente
 $sqlHor = "
     SELECT h.id, c.nombre_curso, d.nombre_dia, h.hora_inicio
     FROM horarios h
     INNER JOIN cursos c ON h.curso_id = c.id
     INNER JOIN dias_semana d ON h.dia_semana_id = d.id
     WHERE h.docente_id = ?
-    ORDER BY d.numero_dia, h.hora_inicio
+    ORDER BY c.nombre_curso, d.numero_dia, h.hora_inicio
 ";
-$stmt = $mysqli->prepare($sqlHor);
-$stmt->bind_param("i", $docenteId);
-$stmt->execute();
-$horarios = $stmt->get_result();
-$stmt->close();
+$stmtHor = $mysqli->prepare($sqlHor);
+$stmtHor->bind_param("i", $docenteId);
+$stmtHor->execute();
+$horarios = $stmtHor->get_result();
+$stmtHor->close();
 
-// Tipos de archivo
-$tipos = $mysqli->query("SELECT id, tipo_archivo FROM tipos_archivo ORDER BY tipo_archivo ASC");
-
-$mensaje = "";
+// 2) Manejar acciones POST (subir / eliminar)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $horario_id     = (int)($_POST['horario_id'] ?? 0);
-    $tipo_archivo_id= (int)($_POST['tipo_archivo_id'] ?? 0);
-    $titulo         = trim($_POST['titulo'] ?? '');
-    $descripcion    = trim($_POST['descripcion'] ?? '');
+    $accion = $_POST['accion'] ?? '';
 
-    if ($horario_id > 0 && $tipo_archivo_id > 0 && $titulo && isset($_FILES['archivo'])) {
-        $file = $_FILES['archivo'];
+    // SUBIR MATERIAL
+    if ($accion === 'subir_material') {
+        $horario_id  = (int)($_POST['horario_id'] ?? 0);
+        $titulo      = trim($_POST['titulo'] ?? '');
+        $descripcion = trim($_POST['descripcion'] ?? '');
 
-        if ($file['error'] === UPLOAD_ERR_OK) {
-            $nombreOriginal = $file['name'];
-            $tmpName = $file['tmp_name'];
-
-            // Crear nombre único
-            $ext = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
-            $nuevoNombre = uniqid('mat_') . '.' . $ext;
-
-            $rutaDestino = $uploadDir . $nuevoNombre;
-            // URL relativa para guardar en BD, ajústala si usas otra ruta pública
-            $archivo_url = '/twintalk/uploads/materiales/' . $nuevoNombre;
-
-            if (move_uploaded_file($tmpName, $rutaDestino)) {
-                $tamano_archivo = $file['size'];
-
-                $sqlIns = "
-                    INSERT INTO materiales
-                    (docente_id, horario_id, tipo_archivo_id, titulo, descripcion, archivo_url, tamano_archivo)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ";
-                $stmt = $mysqli->prepare($sqlIns);
-                $stmt->bind_param(
-                    "iiisssi",
-                    $docenteId,
-                    $horario_id,
-                    $tipo_archivo_id,
-                    $titulo,
-                    $descripcion,
-                    $archivo_url,
-                    $tamano_archivo
-                );
-
-                if ($stmt->execute()) {
-                    $mensaje = "Material subido correctamente.";
-                } else {
-                    $mensaje = "Error al guardar en la base de datos: " . $stmt->error;
-                }
-                $stmt->close();
-            } else {
-                $mensaje = "No se pudo mover el archivo al servidor.";
-            }
+        if ($horario_id <= 0 || !$titulo) {
+            $error = "Debes elegir un curso y escribir un título.";
+        } elseif (!isset($_FILES['archivo']) || $_FILES['archivo']['error'] !== UPLOAD_ERR_OK) {
+            $error = "Debes seleccionar un archivo válido.";
         } else {
-            $mensaje = "Error al subir el archivo.";
+            // Verificar que el horario sea del docente
+            $checkHor = $mysqli->prepare("SELECT id FROM horarios WHERE id = ? AND docente_id = ? LIMIT 1");
+            $checkHor->bind_param("ii", $horario_id, $docenteId);
+            $checkHor->execute();
+            $resHor = $checkHor->get_result();
+            $checkHor->close();
+
+            if ($resHor->num_rows === 0) {
+                $error = "El horario seleccionado no pertenece a tus cursos.";
+            } else {
+                $file          = $_FILES['archivo'];
+                $nombreOriginal = $file['name'];
+                $tmpName        = $file['tmp_name'];
+                $ext            = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
+                $nuevoNombre    = uniqid('mat_') . ($ext ? '.' . $ext : '');
+                $rutaDestino    = $uploadDir . $nuevoNombre;
+
+                if (!move_uploaded_file($tmpName, $rutaDestino)) {
+                    $error = "No se pudo guardar el archivo en el servidor.";
+                } else {
+                    $archivo_url = '/twintalk/uploads/materiales/' . $nuevoNombre;
+
+                    $sqlIns = "
+                        INSERT INTO materiales
+                        (docente_id, horario_id, titulo, descripcion, archivo_url, fecha_subida)
+                        VALUES (?, ?, ?, ?, ?, NOW())
+                    ";
+                    $stmtIns = $mysqli->prepare($sqlIns);
+                    $stmtIns->bind_param(
+                        "iisss",
+                        $docenteId,
+                        $horario_id,
+                        $titulo,
+                        $descripcion,
+                        $archivo_url
+                    );
+                    if ($stmtIns->execute()) {
+                        $mensaje = "Material subido correctamente.";
+                    } else {
+                        $error = "Error al guardar el material: " . $stmtIns->error;
+                    }
+                    $stmtIns->close();
+                }
+            }
         }
-    } else {
-        $mensaje = "Debes seleccionar horario, tipo de archivo, título y archivo.";
+
+    // ELIMINAR MATERIAL
+    } elseif ($accion === 'eliminar_material') {
+        $material_id = (int)($_POST['material_id'] ?? 0);
+        if ($material_id > 0) {
+            // Primero obtener la ruta para eliminar archivo físico (opcional)
+            $sqlGet = "SELECT archivo_url FROM materiales WHERE id = ? AND docente_id = ? LIMIT 1";
+            $stmtGet = $mysqli->prepare($sqlGet);
+            $stmtGet->bind_param("ii", $material_id, $docenteId);
+            $stmtGet->execute();
+            $resGet = $stmtGet->get_result()->fetch_assoc();
+            $stmtGet->close();
+
+            if ($resGet) {
+                $rutaRel = $resGet['archivo_url']; // ej: /twintalk/uploads/materiales/xxx.pdf
+                $rutaAbs = realpath(__DIR__ . '/..' . str_replace('/twintalk', '', $rutaRel));
+                // Si quieres eliminar el archivo físico, descomenta esto:
+                // if ($rutaAbs && file_exists($rutaAbs)) {
+                //     unlink($rutaAbs);
+                // }
+
+                $sqlDelMat = "DELETE FROM materiales WHERE id = ? AND docente_id = ?";
+                $stmtDelMat = $mysqli->prepare($sqlDelMat);
+                $stmtDelMat->bind_param("ii", $material_id, $docenteId);
+                if ($stmtDelMat->execute()) {
+                    $mensaje = "Material eliminado correctamente.";
+                } else {
+                    $error = "No se pudo eliminar el material.";
+                }
+                $stmtDelMat->close();
+            }
+        }
     }
 }
 
-// Listar materiales del docente (opcionalmente filtrado por horario)
-if ($horario_id_param > 0) {
-    $sqlMat = "
-        SELECT m.*, c.nombre_curso
-        FROM materiales m
-        INNER JOIN horarios h ON m.horario_id = h.id
-        INNER JOIN cursos c ON h.curso_id = c.id
-        WHERE m.docente_id = ? AND m.horario_id = ?
-        ORDER BY m.fecha_subida DESC
-    ";
-    $stmt = $mysqli->prepare($sqlMat);
-    $stmt->bind_param("ii", $docenteId, $horario_id_param);
-} else {
-    $sqlMat = "
-        SELECT m.*, c.nombre_curso
-        FROM materiales m
-        INNER JOIN horarios h ON m.horario_id = h.id
-        INNER JOIN cursos c ON h.curso_id = c.id
-        WHERE m.docente_id = ?
-        ORDER BY m.fecha_subida DESC
-    ";
-    $stmt = $mysqli->prepare($sqlMat);
-    $stmt->bind_param("i", $docenteId);
-}
-
-$stmt->execute();
-$materiales = $stmt->get_result();
-$stmt->close();
+// 3) Listar materiales del docente
+$sqlMat = "
+    SELECT 
+        m.id,
+        m.titulo,
+        m.descripcion,
+        m.archivo_url,
+        m.fecha_subida,
+        c.nombre_curso,
+        d.nombre_dia,
+        h.hora_inicio
+    FROM materiales m
+    INNER JOIN horarios h ON m.horario_id = h.id
+    INNER JOIN cursos c ON h.curso_id = c.id
+    INNER JOIN dias_semana d ON h.dia_semana_id = d.id
+    WHERE m.docente_id = ?
+    ORDER BY m.fecha_subida DESC
+";
+$stmtMat = $mysqli->prepare($sqlMat);
+$stmtMat->bind_param("i", $docenteId);
+$stmtMat->execute();
+$materiales = $stmtMat->get_result();
+$stmtMat->close();
 
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<h1 class="h4 fw-bold mt-3">Materiales del curso</h1>
+<div class="container-fluid mt-3">
+    <h1 class="h4 fw-bold mb-3">Materiales de mis cursos</h1>
 
-<a href="cursos.php" class="btn btn-sm btn-secondary mb-3">&larr; Volver a mis cursos</a>
+    <a href="dashboard.php" class="btn btn-sm btn-secondary mb-3">&larr; Volver al dashboard</a>
 
-<?php if ($mensaje): ?>
-    <div class="alert alert-info"><?php echo htmlspecialchars($mensaje); ?></div>
-<?php endif; ?>
+    <?php if ($mensaje): ?>
+        <div class="alert alert-success py-2 small"><?= htmlspecialchars($mensaje) ?></div>
+    <?php endif; ?>
 
-<div class="card mb-4">
-    <div class="card-header">
-        Subir nuevo material
-    </div>
-    <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Curso / Horario</label>
-                    <select name="horario_id" class="form-select" required>
-                        <option value="">Seleccione...</option>
-                        <?php
-                        // Volvemos a obtener horarios para el select
-                        $stmt = $mysqli->prepare($sqlHor);
-                        $stmt->bind_param("i", $docenteId);
-                        $stmt->execute();
-                        $horarios2 = $stmt->get_result();
-                        while ($h = $horarios2->fetch_assoc()):
-                        ?>
-                            <option value="<?php echo (int)$h['id']; ?>" <?php echo $horario_id_param == $h['id'] ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($h['nombre_curso'] . " - " . $h['nombre_dia'] . " " . $h['hora_inicio']); ?>
-                            </option>
-                        <?php endwhile;
-                        $stmt->close();
-                        ?>
-                    </select>
+    <?php if ($error): ?>
+        <div class="alert alert-danger py-2 small"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
+
+    <!-- Formulario para subir material -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>Subir nuevo material</strong>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="accion" value="subir_material">
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Curso / horario</label>
+                        <select name="horario_id" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            <?php foreach ($horarios as $h): ?>
+                                <option value="<?= $h['id'] ?>">
+                                    <?= htmlspecialchars($h['nombre_curso']) ?> -
+                                    <?= htmlspecialchars($h['nombre_dia']) ?> <?= substr($h['hora_inicio'], 0, 5) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Título del material</label>
+                        <input type="text" name="titulo" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Archivo</label>
+                        <input type="file" name="archivo" class="form-control" required>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">Tipo de archivo</label>
-                    <select name="tipo_archivo_id" class="form-select" required>
-                        <option value="">Seleccione...</option>
-                        <?php while ($t = $tipos->fetch_assoc()): ?>
-                            <option value="<?php echo (int)$t['id']; ?>">
-                                <?php echo htmlspecialchars($t['tipo_archivo']); ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Archivo</label>
-                    <input type="file" name="archivo" class="form-control" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Título</label>
-                    <input type="text" name="titulo" class="form-control" required>
-                </div>
-                <div class="col-md-6">
+
+                <div class="mt-3">
                     <label class="form-label">Descripción (opcional)</label>
-                    <input type="text" name="descripcion" class="form-control">
+                    <textarea name="descripcion" rows="2" class="form-control"></textarea>
                 </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">Subir material</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Listado de materiales -->
+    <div class="card">
+        <div class="card-header">
+            <strong>Mis materiales subidos</strong>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>Curso</th>
+                            <th>Título</th>
+                            <th>Archivo</th>
+                            <th>Fecha subida</th>
+                            <th>Eliminar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($materiales->num_rows === 0): ?>
+                            <tr>
+                                <td colspan="5" class="text-muted small text-center py-3">
+                                    Aún no has subido materiales.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php while ($m = $materiales->fetch_assoc()): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= htmlspecialchars($m['nombre_curso']) ?></strong><br>
+                                        <span class="small text-muted">
+                                            <?= htmlspecialchars($m['nombre_dia']) ?> <?= substr($m['hora_inicio'], 0, 5) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($m['titulo']) ?></strong><br>
+                                        <?php if ($m['descripcion']): ?>
+                                            <span class="small text-muted">
+                                                <?= nl2br(htmlspecialchars(substr($m['descripcion'], 0, 80))) ?>
+                                                <?= (strlen($m['descripcion']) > 80 ? '...' : '') ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($m['archivo_url']): ?>
+                                            <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank">
+                                                Ver archivo
+                                            </a>
+                                        <?php else: ?>
+                                            -
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= htmlspecialchars($m['fecha_subida']) ?></td>
+
+                                    <!-- AQUÍ VA EL BOTÓN DE ELIMINAR MATERIAL -->
+                                    <td>
+                                        <form method="post" onsubmit="return confirm('¿Eliminar este material?');">
+                                            <input type="hidden" name="accion" value="eliminar_material">
+                                            <input type="hidden" name="material_id" value="<?= $m['id'] ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
-            <button type="submit" class="btn btn-primary mt-3">Subir material</button>
-        </form>
+        </div>
     </div>
 </div>
 
-<h5>Materiales subidos</h5>
-<table class="table table-striped table-sm align-middle">
-    <thead>
-        <tr>
-            <th>Curso</th>
-            <th>Título</th>
-            <th>Archivo</th>
-            <th>Tamaño</th>
-            <th>Fecha subida</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php while ($m = $materiales->fetch_assoc()): ?>
-            <tr>
-                <td><?php echo htmlspecialchars($m['nombre_curso']); ?></td>
-                <td><?php echo htmlspecialchars($m['titulo']); ?></td>
-                <td>
-                    <a href="<?php echo htmlspecialchars($m['archivo_url']); ?>" target="_blank">
-                        Ver / descargar
-                    </a>
-                </td>
-                <td><?php echo number_format(($m['tamano_archivo'] ?? 0) / 1024, 2); ?> KB</td>
-                <td><?php echo htmlspecialchars($m['fecha_subida']); ?></td>
-            </tr>
-        <?php endwhile; ?>
-    </tbody>
-</table>
-
-<?php include __DIR__ . "/../includes/footer.php"; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>
