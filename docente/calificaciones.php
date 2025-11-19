@@ -163,6 +163,39 @@ if ($curso_id) {
         $stmt->close();
     }
 }
+// NUEVO: Resumen de calificaciones de tareas por curso (basado en tareas_entregas)
+$resumen_tareas = [];
+if ($curso_id) {
+    $sqlResumenTareas = "
+        SELECT 
+            m.id AS matricula_id,
+            u.nombre,
+            u.apellido,
+            u.email,
+            COUNT(DISTINCT te.id) AS total_entregas,
+            SUM(CASE WHEN te.calificacion IS NOT NULL THEN 1 ELSE 0 END) AS total_calificadas,
+            AVG(te.calificacion) AS promedio_calificacion,
+            MAX(te.fecha_calificacion) AS ultima_calificacion
+        FROM matriculas m
+        INNER JOIN estudiantes est ON est.id = m.estudiante_id
+        INNER JOIN usuarios u ON u.id = est.id
+        INNER JOIN horarios h ON h.id = m.horario_id
+        LEFT JOIN tareas t ON t.horario_id = h.id
+        LEFT JOIN tareas_entregas te 
+            ON te.matricula_id = m.id 
+           AND te.tarea_id = t.id
+        WHERE h.curso_id = ?
+          AND h.docente_id = ?
+        GROUP BY m.id, u.nombre, u.apellido, u.email
+        ORDER BY u.apellido, u.nombre
+    ";
+    $stmtResumenT = $mysqli->prepare($sqlResumenTareas);
+    $stmtResumenT->bind_param("ii", $curso_id, $docente_id);
+    $stmtResumenT->execute();
+    $resumen_tareas = $stmtResumenT->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmtResumenT->close();
+}
+
 
 include __DIR__ . '/../includes/header.php';
 ?>
@@ -289,8 +322,66 @@ include __DIR__ . '/../includes/header.php';
                     <?php else: ?>
                         <p class="text-muted small">Selecciona un tipo de evaluación para ingresar notas.</p>
                     <?php endif; ?>
+                     <hr class="my-4">
 
-                <?php endif; ?>
+    <h3 class="h6 fw-bold mb-2">Resumen de calificaciones de tareas</h3>
+    <p class="text-muted small mb-2">
+        Basado en las entregas de tareas registradas en este curso.
+    </p>
+
+    <?php if (empty($resumen_tareas)): ?>
+        <p class="text-muted small mb-0">
+            Aún no hay entregas de tareas en este curso.
+        </p>
+    <?php else: ?>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Estudiante</th>
+                        <th class="text-center">Entregas</th>
+                        <th class="text-center">Calificadas</th>
+                        <th class="text-center">Promedio</th>
+                        <th class="text-center">Última calificación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($resumen_tareas as $rt): ?>
+                        <tr>
+                            <td>
+                                <?= htmlspecialchars($rt['apellido'] . ', ' . $rt['nombre']) ?><br>
+                                <small class="text-muted">
+                                    <?= htmlspecialchars($rt['email']) ?>
+                                </small>
+                            </td>
+                            <td class="text-center">
+                                <?= (int)($rt['total_entregas'] ?? 0) ?>
+                            </td>
+                            <td class="text-center">
+                                <?= (int)($rt['total_calificadas'] ?? 0) ?>
+                            </td>
+                            <td class="text-center">
+                                <?php if (!empty($rt['promedio_calificacion'])): ?>
+                                    <?= number_format($rt['promedio_calificacion'], 2) ?>
+                                <?php else: ?>
+                                    --
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center">
+                                <?php if (!empty($rt['ultima_calificacion'])): ?>
+                                    <?= htmlspecialchars($rt['ultima_calificacion']) ?>
+                                <?php else: ?>
+                                    --
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+
+            <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>

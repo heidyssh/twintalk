@@ -262,7 +262,7 @@ include __DIR__ . '/../includes/header.php';
                         <?php endif; ?>
                     </td>
                     <td>
-                        <a href="tarea_entregas.php?tarea_id=<?= $t['id'] ?>" class="btn btn-sm btn-outline-primary">
+                        <a href="/twintalk/docente/tarea_entregas.php?tarea_id=<?= (int)$t['id'] ?>" class="btn btn-sm btn-outline-primary">
                             Ver entregas
                         </a>
                     </td>

@@ -104,6 +104,55 @@ $stmtUlt->bind_param("i", $usuario_id);
 $stmtUlt->execute();
 $res_ultimas_tareas = $stmtUlt->get_result();
 $stmtUlt->close();
+// Resumen rápido de tareas: entregadas, pendientes y promedio
+$sqlResumenTareas = "
+    SELECT 
+        COUNT(*) AS total_entregadas,
+        SUM(CASE WHEN te.calificacion IS NOT NULL THEN 1 ELSE 0 END) AS total_calificadas,
+        AVG(te.calificacion) AS promedio_calificacion
+    FROM tareas_entregas te
+    INNER JOIN matriculas m ON te.matricula_id = m.id
+    INNER JOIN estados_matricula em ON m.estado_id = em.id
+    WHERE m.estudiante_id = ? AND em.nombre_estado = 'Activa'
+";
+$stmtResumen = $mysqli->prepare($sqlResumenTareas);
+$stmtResumen->bind_param("i", $usuario_id);
+$stmtResumen->execute();
+$resResumen = $stmtResumen->get_result()->fetch_assoc();
+$stmtResumen->close();
+
+$total_tareas_entregadas  = (int)($resResumen['total_entregadas'] ?? 0);
+$total_tareas_calificadas = (int)($resResumen['total_calificadas'] ?? 0);
+$promedio_tareas          = $resResumen['promedio_calificacion'] !== null
+    ? (float)$resResumen['promedio_calificacion']
+    : null;
+
+// Tareas pendientes (tareas activas sin entrega en cursos donde la matrícula está activa)
+$sqlPendientes = "
+    SELECT COUNT(*) AS total_pendientes
+    FROM tareas t
+    INNER JOIN horarios h           ON t.horario_id = h.id
+    INNER JOIN matriculas m         ON m.horario_id = h.id
+    INNER JOIN estados_matricula em ON m.estado_id = em.id
+    WHERE m.estudiante_id = ?
+      AND em.nombre_estado = 'Activa'
+      AND t.activo = 1
+      AND (t.fecha_entrega IS NULL OR t.fecha_entrega >= CURDATE())
+      AND NOT EXISTS (
+          SELECT 1 
+          FROM tareas_entregas te
+          WHERE te.tarea_id = t.id
+            AND te.matricula_id = m.id
+      )
+";
+$stmtPend = $mysqli->prepare($sqlPendientes);
+$stmtPend->bind_param("i", $usuario_id);
+$stmtPend->execute();
+$rowPend = $stmtPend->get_result()->fetch_assoc();
+$stmtPend->close();
+
+$total_tareas_pendientes = (int)($rowPend['total_pendientes'] ?? 0);
+
 
 include __DIR__ . "/../includes/header.php";
 ?>
@@ -116,6 +165,54 @@ include __DIR__ . "/../includes/header.php";
         <p class="text-muted mb-0">Bienvenido a tu dashboard de estudiante.</p>
     </div>
 </div>
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card card-soft p-3 h-100">
+            <p class="small text-muted mb-1">Tareas entregadas</p>
+            <div class="d-flex justify-content-between align-items-end">
+                <span class="display-6 fw-bold">
+                    <?= (int)$total_tareas_entregadas ?>
+                </span>
+                <span class="small text-muted">
+                    Calificadas: <?= (int)$total_tareas_calificadas ?>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-soft p-3 h-100">
+            <p class="small text-muted mb-1">Tareas pendientes</p>
+            <div class="d-flex justify-content-between align-items-end">
+                <span class="display-6 fw-bold">
+                    <?= (int)$total_tareas_pendientes ?>
+                </span>
+                <span class="small text-muted">
+                    En tus cursos activos
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-soft p-3 h-100">
+            <p class="small text-muted mb-1">Promedio de calificaciones</p>
+            <div class="d-flex justify-content-between align-items-end">
+                <span class="display-6 fw-bold">
+                    <?php if ($promedio_tareas !== null): ?>
+                        <?= number_format($promedio_tareas, 2) ?>
+                    <?php else: ?>
+                        --
+                    <?php endif; ?>
+                </span>
+                <span class="small text-muted">
+                    Sobre tus tareas calificadas
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <div class="row g-3">
     <div class="col-lg-7">
