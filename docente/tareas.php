@@ -33,7 +33,11 @@ $sqlHor = "
 $stmtHor = $mysqli->prepare($sqlHor);
 $stmtHor->bind_param("i", $docenteId);
 $stmtHor->execute();
-$horarios = $stmtHor->get_result();
+$resHor = $stmtHor->get_result();
+$horarios = [];
+while ($row = $resHor->fetch_assoc()) {
+    $horarios[] = $row;
+}
 $stmtHor->close();
 
 // 2) Acciones POST: crear o eliminar tarea
@@ -42,165 +46,226 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // CREAR TAREA
     if ($accion === 'crear_tarea') {
-        $horario_id    = (int)($_POST['horario_id'] ?? 0);
-        $titulo        = trim($_POST['titulo'] ?? '');
-        $descripcion   = trim($_POST['descripcion'] ?? '');
-        $fecha_entrega = !empty($_POST['fecha_entrega']) ? $_POST['fecha_entrega'] : null;
-        $modalidad     = ($_POST['modalidad'] ?? 'individual') === 'grupo' ? 'grupo' : 'individual';
+        $horario_id       = (int)($_POST['horario_id'] ?? 0);
+        $titulo           = trim($_POST['titulo'] ?? '');
+        $descripcion      = trim($_POST['descripcion'] ?? '');
+        $fecha_entrega    = !empty($_POST['fecha_entrega']) ? $_POST['fecha_entrega'] : null;
+        $modalidad        = ($_POST['modalidad'] ?? 'individual') === 'grupo' ? 'grupo' : 'individual';
+        $permitir_atraso  = isset($_POST['permitir_atraso']) ? 1 : 0;
+        $valor_maximo     = isset($_POST['valor_maximo']) ? (int)$_POST['valor_maximo'] : 100;
         $archivo_instrucciones = null;
 
-        if ($horario_id <= 0 || !$titulo) {
-            $error = "Debes seleccionar un horario, un título y una modalidad.";
+        if ($valor_maximo <= 0) {
+            $valor_maximo = 1;
+        }
+
+        if ($horario_id <= 0 || $titulo === '') {
+            $error = "Debes seleccionar un horario y escribir un título.";
         } else {
             // Validar que el horario pertenezca a este docente
             $checkHor = $mysqli->prepare("SELECT id FROM horarios WHERE id = ? AND docente_id = ? LIMIT 1");
             $checkHor->bind_param("ii", $horario_id, $docenteId);
             $checkHor->execute();
-            $resHor = $checkHor->get_result();
+            $resCheckHor = $checkHor->get_result();
             $checkHor->close();
 
-            if ($resHor->num_rows === 0) {
-                $error = "El horario seleccionado no pertenece a tu lista de cursos.";
-            } else {
-                // Archivo de instrucciones (opcional)
-                if (isset($_FILES['archivo_instrucciones']) && $_FILES['archivo_instrucciones']['error'] === UPLOAD_ERR_OK) {
-                    $file = $_FILES['archivo_instrucciones'];
-                    $nombreOriginal = $file['name'];
-                    $tmpName        = $file['tmp_name'];
-                    $ext            = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
-                    $nuevoNombre    = uniqid('tarea_') . ($ext ? '.' . $ext : '');
-                    $rutaDestino    = $uploadDir . $nuevoNombre;
-
-                    if (move_uploaded_file($tmpName, $rutaDestino)) {
-                        $archivo_instrucciones = '/twintalk/uploads/tareas/' . $nuevoNombre;
-                    } else {
-                        $error = "No se pudo guardar el archivo de instrucciones.";
-                    }
-                }
-
-                if (!$error) {
-                    $sqlIns = "
-                        INSERT INTO tareas
-                        (docente_id, horario_id, modalidad, titulo, descripcion, fecha_entrega, archivo_instrucciones)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ";
-                    $stmtIns = $mysqli->prepare($sqlIns);
-                    $stmtIns->bind_param(
-                        "iisssss",
-                        $docenteId,
-                        $horario_id,
-                        $modalidad,
-                        $titulo,
-                        $descripcion,
-                        $fecha_entrega,
-                        $archivo_instrucciones
-                    );
-                    if ($stmtIns->execute()) {
-                        $mensaje = "Tarea creada correctamente.";
-                    } else {
-                        $error = "Error al guardar la tarea: " . $stmtIns->error;
-                    }
-                    $stmtIns->close();
-                }
+            if ($resCheckHor->num_rows === 0) {
+                $error = "El horario seleccionado no pertenece a tu carga.";
             }
+        }
+
+        // Manejo de archivo de instrucciones (opcional)
+        if (!$error && !empty($_FILES['archivo_instrucciones']['name'])) {
+            $file = $_FILES['archivo_instrucciones'];
+            if ($file['error'] === UPLOAD_ERR_OK) {
+                $nombreOriginal = $file['name'];
+                $tmpName        = $file['tmp_name'];
+                $ext            = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
+                $nuevoNombre    = uniqid('tarea_') . ($ext ? '.' . $ext : '');
+                $rutaDestino    = $uploadDir . $nuevoNombre;
+
+                if (move_uploaded_file($tmpName, $rutaDestino)) {
+                    $archivo_instrucciones = '/twintalk/uploads/tareas/' . $nuevoNombre;
+                } else {
+                    $error = "No se pudo guardar el archivo de instrucciones en el servidor.";
+                }
+            } else {
+                $error = "Error al subir el archivo de instrucciones.";
+            }
+        }
+
+        if (!$error) {
+            $sqlIns = "
+                INSERT INTO tareas
+                (docente_id, horario_id, modalidad, titulo, descripcion,
+                 fecha_publicacion, fecha_entrega, permitir_atraso,
+                 archivo_instrucciones, activo, valor_maximo)
+                VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?, 1, ?)
+            ";
+            $stmtIns = $mysqli->prepare($sqlIns);
+            $stmtIns->bind_param(
+                "iissssisi",
+                $docenteId,
+                $horario_id,
+                $modalidad,
+                $titulo,
+                $descripcion,
+                $fecha_entrega,
+                $permitir_atraso,
+                $archivo_instrucciones,
+                $valor_maximo
+            );
+            if ($stmtIns->execute()) {
+                $mensaje = "Tarea creada correctamente.";
+            } else {
+                $error = "Error al guardar la tarea: " . $stmtIns->error;
+            }
+            $stmtIns->close();
         }
 
     // ELIMINAR TAREA
     } elseif ($accion === 'eliminar_tarea') {
         $tarea_id = (int)($_POST['tarea_id'] ?? 0);
+
         if ($tarea_id > 0) {
-            // Solo borra tareas del propio docente
-            $sqlDel = "DELETE FROM tareas WHERE id = ? AND docente_id = ?";
-            $stmtDel = $mysqli->prepare($sqlDel);
-            $stmtDel->bind_param("ii", $tarea_id, $docenteId);
-            if ($stmtDel->execute()) {
-                $mensaje = "Tarea eliminada correctamente.";
+            // Validar que la tarea sea de este docente
+            $stmtVal = $mysqli->prepare("
+                SELECT t.id
+                FROM tareas t
+                INNER JOIN horarios h ON t.horario_id = h.id
+                WHERE t.id = ? AND h.docente_id = ?
+                LIMIT 1
+            ");
+            $stmtVal->bind_param("ii", $tarea_id, $docenteId);
+            $stmtVal->execute();
+            $resVal = $stmtVal->get_result();
+            $stmtVal->close();
+
+            if ($resVal->num_rows === 0) {
+                $error = "No puedes eliminar esta tarea.";
             } else {
-                $error = "No se pudo eliminar la tarea.";
+                // Borrar entregas asociadas
+                $stmtDelEnt = $mysqli->prepare("DELETE FROM tareas_entregas WHERE tarea_id = ?");
+                $stmtDelEnt->bind_param("i", $tarea_id);
+                $stmtDelEnt->execute();
+                $stmtDelEnt->close();
+
+                // Marcar tarea como inactiva
+                $stmtDelTar = $mysqli->prepare("UPDATE tareas SET activo = 0 WHERE id = ?");
+                $stmtDelTar->bind_param("i", $tarea_id);
+                $stmtDelTar->execute();
+                $stmtDelTar->close();
+
+                $mensaje = "Tarea eliminada correctamente.";
             }
-            $stmtDel->close();
         }
     }
 }
 
-// 3) Listar tareas del docente
+// 3) Listado de tareas del docente (opcionalmente filtradas por horario)
+$params = [$docenteId];
+$types  = "i";
+
+$sqlTar = "
+    SELECT 
+        t.id,
+        t.titulo,
+        t.descripcion,
+        t.fecha_publicacion,
+        t.fecha_entrega,
+        t.modalidad,
+        t.permitir_atraso,
+        t.archivo_instrucciones,
+        t.valor_maximo,
+        h.id AS horario_id,
+        c.nombre_curso,
+        d.nombre_dia,
+        h.hora_inicio
+    FROM tareas t
+    INNER JOIN horarios h ON t.horario_id = h.id
+    INNER JOIN cursos c ON h.curso_id = c.id
+    INNER JOIN dias_semana d ON h.dia_semana_id = d.id
+    WHERE h.docente_id = ?
+      AND t.activo = 1
+";
+
 if ($horario_id_param > 0) {
-    $sqlTareas = "
-        SELECT t.*, c.nombre_curso
-        FROM tareas t
-        INNER JOIN horarios h ON t.horario_id = h.id
-        INNER INNER JOIN cursos c ON h.curso_id = c.id
-        WHERE t.docente_id = ? AND t.horario_id = ? AND t.activo = 1
-        ORDER BY t.fecha_publicacion DESC
-    ";
-    $stmtT = $mysqli->prepare($sqlTareas);
-    $stmtT->bind_param("ii", $docenteId, $horario_id_param);
-} else {
-    $sqlTareas = "
-        SELECT t.*, c.nombre_curso
-        FROM tareas t
-        INNER JOIN horarios h ON t.horario_id = h.id
-        INNER JOIN cursos c ON h.curso_id = c.id
-        WHERE t.docente_id = ? AND t.activo = 1
-        ORDER BY t.fecha_publicacion DESC
-    ";
-    $stmtT = $mysqli->prepare($sqlTareas);
-    $stmtT->bind_param("i", $docenteId);
+    $sqlTar .= " AND t.horario_id = ?";
+    $types   .= "i";
+    $params[] = $horario_id_param;
 }
-$stmtT->execute();
-$tareas = $stmtT->get_result();
-$stmtT->close();
+
+$sqlTar .= "
+    ORDER BY c.nombre_curso, d.numero_dia, h.hora_inicio, t.fecha_publicacion DESC
+";
+
+$stmtTar = $mysqli->prepare($sqlTar);
+$stmtTar->bind_param($types, ...$params);
+$stmtTar->execute();
+$tareas = $stmtTar->get_result();
+$stmtTar->close();
 
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<h1 class="h4 fw-bold mt-3">Tareas de mis cursos</h1>
-
-<a href="dashboard.php" class="btn btn-sm btn-secondary mb-3">&larr; Volver al dashboard</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Tareas</h4>
+    <a href="/twintalk/docente/dashboard.php" class="btn btn-sm btn-outline-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Volver al dashboard
+    </a>
+</div>
 
 <?php if ($mensaje): ?>
-    <div class="alert alert-success"><?php echo htmlspecialchars($mensaje); ?></div>
+    <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>
 <?php endif; ?>
 
 <?php if ($error): ?>
-    <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
 <?php endif; ?>
 
 <div class="card mb-4">
     <div class="card-header">
-        <strong>Crear nueva tarea</strong>
+        Crear nueva tarea
     </div>
     <div class="card-body">
         <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="accion" value="crear_tarea">
 
             <div class="mb-3">
-                <label class="form-label">Curso / horario</label>
+                <label class="form-label">Horario</label>
                 <select name="horario_id" class="form-select" required>
-                    <option value="">Seleccione...</option>
+                    <option value="">Seleccione un horario</option>
                     <?php foreach ($horarios as $h): ?>
-                        <option value="<?= $h['id'] ?>" <?= ($horario_id_param == $h['id']) ? 'selected' : '' ?>>
+                        <option value="<?= $h['id'] ?>" <?= ($h['id'] == $horario_id_param ? 'selected' : '') ?>>
                             <?= htmlspecialchars($h['nombre_curso']) ?> -
-                            <?= htmlspecialchars($h['nombre_dia']) ?> <?= substr($h['hora_inicio'], 0, 5) ?>
+                            <?= htmlspecialchars($h['nombre_dia']) ?> 
+                            (<?= substr($h['hora_inicio'], 0, 5) ?>)
                         </option>
                     <?php endforeach; ?>
                 </select>
             </div>
 
             <div class="mb-3">
-                <label class="form-label">Modalidad</label>
-                <select name="modalidad" class="form-select" required>
-                    <option value="individual">Individual</option>
-                    <option value="grupo">Grupal</option>
-                </select>
-                <div class="form-text small">
-                    Solo indica si la tarea la trabajarán en grupo o individual.
+                <label class="form-label">Título de la tarea</label>
+                <input type="text" name="titulo" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label d-block">Modalidad</label>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="modalidad" id="mod_individual" value="individual" checked>
+                    <label class="form-check-label" for="mod_individual">Individual</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="modalidad" id="mod_grupo" value="grupo">
+                    <label class="form-check-label" for="mod_grupo">Grupo</label>
                 </div>
             </div>
 
             <div class="mb-3">
-                <label class="form-label">Título de la tarea</label>
-                <input type="text" name="titulo" class="form-control" required>
+                <label class="form-label">Valor máximo de la tarea (puntos)</label>
+                <input type="number" name="valor_maximo" class="form-control" min="1" value="100" required>
+                <div class="form-text">Ejemplo: 10, 20, 25, 100, etc.</div>
             </div>
 
             <div class="mb-3">
@@ -211,6 +276,13 @@ include __DIR__ . '/../includes/header.php';
             <div class="mb-3">
                 <label class="form-label">Fecha de entrega (opcional)</label>
                 <input type="date" name="fecha_entrega" class="form-control">
+            </div>
+
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" name="permitir_atraso" id="permitir_atraso" value="1">
+                <label class="form-check-label" for="permitir_atraso">
+                    Permitir entregas tardías para esta tarea
+                </label>
             </div>
 
             <div class="mb-3">
@@ -227,47 +299,54 @@ include __DIR__ . '/../includes/header.php';
 <table class="table table-striped table-sm align-middle">
     <thead>
         <tr>
-            <th>Curso</th>
+            <th>Curso / Horario</th>
             <th>Título</th>
+            <th>Valor</th>
             <th>Modalidad</th>
-            <th>Fecha publicación</th>
-            <th>Fecha entrega</th>
-            <th>Archivo</th>
+            <th>Publicada</th>
+            <th>Vence</th>
             <th>Entregas</th>
-            <th>Eliminar</th>
+            <th class="text-end">Acciones</th>
         </tr>
     </thead>
     <tbody>
         <?php if ($tareas->num_rows === 0): ?>
-            <tr><td colspan="8" class="text-muted">Aún no has creado tareas.</td></tr>
+            <tr>
+                <td colspan="8" class="text-muted text-center">Aún no has creado tareas.</td>
+            </tr>
         <?php else: ?>
             <?php while ($t = $tareas->fetch_assoc()): ?>
                 <tr>
-                    <td><?= htmlspecialchars($t['nombre_curso']) ?></td>
-                    <td><?= htmlspecialchars($t['titulo']) ?></td>
                     <td>
-                        <?php if ($t['modalidad'] === 'grupo'): ?>
-                            <span class="badge bg-info-subtle text-info">Grupal</span>
-                        <?php else: ?>
-                            <span class="badge bg-secondary-subtle text-secondary">Individual</span>
-                        <?php endif; ?>
+                        <div class="small fw-semibold">
+                            <?= htmlspecialchars($t['nombre_curso']) ?>
+                        </div>
+                        <div class="small text-muted">
+                            <?= htmlspecialchars($t['nombre_dia']) ?> - <?= substr($t['hora_inicio'], 0, 5) ?>
+                        </div>
                     </td>
-                    <td><?= htmlspecialchars($t['fecha_publicacion']) ?></td>
-                    <td><?= $t['fecha_entrega'] ? htmlspecialchars($t['fecha_entrega']) : '-' ?></td>
-                    <td>
-                        <?php if ($t['archivo_instrucciones']): ?>
-                            <a href="<?= htmlspecialchars($t['archivo_instrucciones']) ?>" target="_blank">Ver</a>
-                        <?php else: ?>
-                            -
-                        <?php endif; ?>
+                    <td class="small">
+                        <?= htmlspecialchars($t['titulo']) ?>
                     </td>
-                    <td>
-                        <a href="/twintalk/docente/tarea_entregas.php?tarea_id=<?= (int)$t['id'] ?>" class="btn btn-sm btn-outline-primary">
+                    <td class="small">
+                        <?= (int)$t['valor_maximo'] ?> pts
+                    </td>
+                    <td class="small">
+                        <?= $t['modalidad'] === 'grupo' ? 'Grupo' : 'Individual' ?>
+                    </td>
+                    <td class="small">
+                        <?= $t['fecha_publicacion'] ? date('d/m/Y H:i', strtotime($t['fecha_publicacion'])) : '-' ?>
+                    </td>
+                    <td class="small">
+                        <?= $t['fecha_entrega'] ? date('d/m/Y', strtotime($t['fecha_entrega'])) : '-' ?>
+                    </td>
+                    <td class="small">
+                        <a href="/twintalk/docente/tarea_entregas.php?tarea_id=<?= $t['id'] ?>" class="btn btn-sm btn-outline-primary">
                             Ver entregas
                         </a>
                     </td>
-                    <td>
-                        <form method="post" onsubmit="return confirm('¿Eliminar esta tarea? Se borrarán también las entregas.');">
+                    <td class="text-end">
+                        <form method="post" class="d-inline" onsubmit="return confirm('¿Eliminar esta tarea? Se borrarán también las entregas.');">
                             <input type="hidden" name="accion" value="eliminar_tarea">
                             <input type="hidden" name="tarea_id" value="<?= $t['id'] ?>">
                             <button type="submit" class="btn btn-sm btn-outline-danger">

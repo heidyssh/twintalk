@@ -17,7 +17,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errores[] = "Correo electrónico inválido.";
     } else {
-        $stmt = $mysqli->prepare("SELECT id, password_hash, rol_id, activo, nombre, apellido, email FROM usuarios WHERE email = ? LIMIT 1");
+        $stmt = $mysqli->prepare("
+    SELECT id,
+           password_hash,
+           rol_id,
+           activo,
+           nombre,
+           apellido,
+           email,
+           foto_perfil
+    FROM usuarios
+    WHERE email = ?
+    LIMIT 1
+");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $res = $stmt->get_result();
@@ -28,15 +40,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif (!password_verify($password, $row['password_hash'])) {
                 $errores[] = "Correo o contraseña incorrectos.";
             } else {
-                // Login correcto
-                $_SESSION['usuario_id'] = (int)$row['id'];
-                $_SESSION['rol_id']     = (int)$row['rol_id'];
-                $_SESSION['nombre']     = $row['nombre'] ?? '';
-                $_SESSION['apellido']   = $row['apellido'] ?? '';
-                $_SESSION['email']      = $row['email'] ?? '';
+               // Login correcto
+$_SESSION['usuario_id'] = (int)$row['id'];
+$_SESSION['rol_id']     = (int)$row['rol_id'];
+$_SESSION['nombre']     = $row['nombre'] ?? '';
+$_SESSION['apellido']   = $row['apellido'] ?? '';
+$_SESSION['email']      = $row['email'] ?? '';
 
-                redirect_by_role();
-                exit;
+// Cargar avatar desde la BD en la sesión
+if (!empty($row['foto_perfil'])) {
+    $_SESSION['foto_perfil'] = $row['foto_perfil'];
+} else {
+    $_SESSION['foto_perfil'] = '/twintalk/assets/img/default_user.png';
+}
+
+redirect_by_role();
+exit;
             }
         } else {
             $errores[] = "Correo o contraseña incorrectos.";

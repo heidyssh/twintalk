@@ -388,6 +388,12 @@ include __DIR__ . "/../includes/header.php";
             <a href="perfil.php" class="btn btn-outline-secondary rounded-pill btn-sm">
                 Ir a mi perfil
             </a>
+            <a href="/twintalk/student/calendario.php" class="btn btn-outline-primary btn-sm">
+    Ver calendario de tareas
+</a>
+<a href="/twintalk/student/calificaciones.php" class="btn btn-outline-success btn-sm">
+    Ver mis calificaciones
+</a>
         </div>
     </div>
 </div>

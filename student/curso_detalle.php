@@ -33,6 +33,7 @@ if (!$matricula) {
     include __DIR__ . "/../includes/footer.php";
     exit;
 }
+
 $matricula_id = (int)$matricula['matricula_id'];
 
 $mensaje_tarea = "";
@@ -52,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir
         $error_tarea = "Datos de tarea inválidos.";
     } else {
         // Validar que la tarea sea de este horario
-        $sqlValT = "SELECT id FROM tareas WHERE id = ? AND horario_id = ? AND activo = 1 LIMIT 1";
+        $sqlValT = "SELECT id, fecha_entrega, permitir_atraso FROM tareas WHERE id = ? AND horario_id = ? AND activo = 1 LIMIT 1";
         $stmtValT = $mysqli->prepare($sqlValT);
         $stmtValT->bind_param("ii", $tarea_id, $horario_id);
         $stmtValT->execute();
@@ -62,71 +63,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir
         if ($resValT->num_rows === 0) {
             $error_tarea = "La tarea no pertenece a este curso.";
         } else {
-            $file = $_FILES['archivo_tarea'];
-            if ($file['error'] !== UPLOAD_ERR_OK) {
-                $error_tarea = "Error al subir el archivo.";
+            $tareaRow = $resValT->fetch_assoc();
+
+            $hoy = date('Y-m-d');
+            if (!empty($tareaRow['fecha_entrega'])
+                && $hoy > $tareaRow['fecha_entrega']
+                && (int)$tareaRow['permitir_atraso'] === 0) {
+
+                $error_tarea = "⛔ Ya pasó la fecha de entrega y el docente no habilitó entregas tardías.";
             } else {
-                $nombreOriginal = $file['name'];
-                $tmpName        = $file['tmp_name'];
-                $ext            = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
-                $nuevoNombre    = uniqid('entrega_') . ($ext ? '.' . $ext : '');
-                $rutaDestino    = $uploadDirTareas . $nuevoNombre;
-
-                if (move_uploaded_file($tmpName, $rutaDestino)) {
-                    $archivo_url    = '/twintalk/uploads/tareas/' . $nuevoNombre;
-                    $tamano_archivo = $file['size'];
-
-                    // Ver si ya existe entrega para esta tarea y esta matrícula
-                    $sqlCheckEnt = "
-                        SELECT id FROM tareas_entregas
-                        WHERE tarea_id = ? AND matricula_id = ?
-                        LIMIT 1
-                    ";
-                    $stmtCE = $mysqli->prepare($sqlCheckEnt);
-                    $stmtCE->bind_param("ii", $tarea_id, $matricula_id);
-                    $stmtCE->execute();
-                    $resCE = $stmtCE->get_result();
-                    $existente = $resCE->fetch_assoc();
-                    $stmtCE->close();
-
-                    if ($existente) {
-                        // Actualizar entrega (reemplazar archivo y resetear nota)
-                        $sqlUpd = "
-                            UPDATE tareas_entregas
-                            SET archivo_url = ?, tamano_archivo = ?, fecha_entrega = NOW(),
-                                calificacion = NULL, comentarios_docente = NULL, fecha_calificacion = NULL
-                            WHERE id = ?
-                        ";
-                        $stmtUpd = $mysqli->prepare($sqlUpd);
-                        $stmtUpd->bind_param("sii", $archivo_url, $tamano_archivo, $existente['id']);
-                        $ok = $stmtUpd->execute();
-                        $stmtUpd->close();
-                    } else {
-                        // Insertar nueva entrega
-                        $sqlIns = "
-                            INSERT INTO tareas_entregas
-                            (tarea_id, matricula_id, archivo_url, tamano_archivo)
-                            VALUES (?, ?, ?, ?)
-                        ";
-                        $stmtIns = $mysqli->prepare($sqlIns);
-                        $stmtIns->bind_param("iisi", $tarea_id, $matricula_id, $archivo_url, $tamano_archivo);
-                        $ok = $stmtIns->execute();
-                        $stmtIns->close();
-                    }
-
-                    if (!empty($ok)) {
-                        $mensaje_tarea = "Archivo enviado correctamente.";
-                    } else {
-                        $error_tarea = "No se pudo guardar la entrega.";
-                    }
+                $file = $_FILES['archivo_tarea'];
+                if ($file['error'] !== UPLOAD_ERR_OK) {
+                    $error_tarea = "Error al subir el archivo.";
                 } else {
-                    $error_tarea = "No se pudo guardar el archivo en el servidor.";
+                    $nombreOriginal = $file['name'];
+                    $tmpName        = $file['tmp_name'];
+                    $ext            = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
+                    $nuevoNombre    = uniqid('entrega_') . ($ext ? '.' . $ext : '');
+                    $rutaDestino    = $uploadDirTareas . $nuevoNombre;
+
+                    if (move_uploaded_file($tmpName, $rutaDestino)) {
+                        $archivo_url    = '/twintalk/uploads/tareas/' . $nuevoNombre;
+                        $tamano_archivo = $file['size'];
+
+                        // Ver si ya existe entrega
+                        $sqlCheckEnt = "
+                            SELECT id FROM tareas_entregas
+                            WHERE tarea_id = ? AND matricula_id = ?
+                            LIMIT 1
+                        ";
+                        $stmtCE = $mysqli->prepare($sqlCheckEnt);
+                        $stmtCE->bind_param("ii", $tarea_id, $matricula_id);
+                        $stmtCE->execute();
+                        $resCE = $stmtCE->get_result();
+                        $existente = $resCE->fetch_assoc();
+                        $stmtCE->close();
+
+                        if ($existente) {
+                            $sqlUpd = "
+                                UPDATE tareas_entregas
+                                SET archivo_url = ?, tamano_archivo = ?, fecha_entrega = NOW(),
+                                    calificacion = NULL, comentarios_docente = NULL, fecha_calificacion = NULL
+                                WHERE id = ?
+                            ";
+                            $stmtUpd = $mysqli->prepare($sqlUpd);
+                            $stmtUpd->bind_param("sii", $archivo_url, $tamano_archivo, $existente['id']);
+                            $ok = $stmtUpd->execute();
+                            $stmtUpd->close();
+                        } else {
+                            $sqlIns = "
+                                INSERT INTO tareas_entregas
+                                (tarea_id, matricula_id, archivo_url, tamano_archivo)
+                                VALUES (?, ?, ?, ?)
+                            ";
+                            $stmtIns = $mysqli->prepare($sqlIns);
+                            $stmtIns->bind_param("iisi", $tarea_id, $matricula_id, $archivo_url, $tamano_archivo);
+                            $ok = $stmtIns->execute();
+                            $stmtIns->close();
+                        }
+
+                        if (!empty($ok)) {
+                            $mensaje_tarea = "Archivo enviado correctamente.";
+                        } else {
+                            $error_tarea = "No se pudo guardar la entrega.";
+                        }
+                    } else {
+                        $error_tarea = "No se pudo guardar el archivo en el servidor.";
+                    }
                 }
             }
         }
     }
 }
-
 
 // 2) Datos del curso, horario y docente
 $infoSql = "
@@ -150,17 +158,18 @@ $infoSql = "
     INNER JOIN cursos c ON h.curso_id = c.id
     INNER JOIN niveles_academicos n ON c.nivel_id = n.id
     INNER JOIN dias_semana d ON h.dia_semana_id = d.id
-    INNER JOIN docentes dc ON h.docente_id = dc.id
-    INNER JOIN usuarios u ON dc.id = u.id
-    LEFT JOIN informacion_personal ip ON ip.usuario_id = u.id
+    INNER JOIN docentes doc ON h.docente_id = doc.id
+    INNER JOIN usuarios u ON doc.id = u.id
+    LEFT JOIN informacion_personal ip ON u.id = ip.usuario_id
     WHERE h.id = ?
     LIMIT 1
 ";
+
 $stmtInfo = $mysqli->prepare($infoSql);
 $stmtInfo->bind_param("i", $horario_id);
 $stmtInfo->execute();
-$resInfo = $stmtInfo->get_result();
-$curso = $resInfo->fetch_assoc();
+$infoRes = $stmtInfo->get_result();
+$curso = $infoRes->fetch_assoc();
 $stmtInfo->close();
 
 if (!$curso) {
@@ -170,32 +179,15 @@ if (!$curso) {
     exit;
 }
 
-// 3) Compañeros de clase (matrículas activas)
-$companerosSql = "
-    SELECT 
-        u.nombre,
-        u.apellido,
-        u.email
-    FROM matriculas m
-    INNER JOIN estudiantes e ON m.estudiante_id = e.id
-    INNER JOIN usuarios u ON e.id = u.id
-    INNER JOIN estados_matricula em ON m.estado_id = em.id
-    WHERE m.horario_id = ? AND em.nombre_estado = 'Activa'
-    ORDER BY u.nombre, u.apellido
-";
-$stmtComp = $mysqli->prepare($companerosSql);
-$stmtComp->bind_param("i", $horario_id);
-$stmtComp->execute();
-$companeros = $stmtComp->get_result();
-$stmtComp->close();
-
-// 4) Materiales del curso
+// 3) Materiales del curso
 $matSql = "
     SELECT 
+        m.id,
         m.titulo,
         m.descripcion,
-        m.archivo_url,
+        m.tipo_archivo_id,
         ta.tipo_archivo,
+        m.archivo_url,
         m.fecha_subida
     FROM materiales m
     INNER JOIN tipos_archivo ta ON m.tipo_archivo_id = ta.id
@@ -208,7 +200,7 @@ $stmtMat->execute();
 $materiales = $stmtMat->get_result();
 $stmtMat->close();
 
-// 4.1) Tareas de este curso
+// 4) Tareas del curso (con valor_maximo y mi entrega)
 $tareasSql = "
     SELECT 
         t.id,
@@ -217,25 +209,27 @@ $tareasSql = "
         t.fecha_publicacion,
         t.fecha_entrega,
         t.archivo_instrucciones,
-        -- Datos de mi entrega (si existe)
+        t.valor_maximo,
+
         (SELECT te.archivo_url 
          FROM tareas_entregas te 
-         WHERE te.tarea_id = t.id AND te.matricula_id = ? 
-         LIMIT 1) AS mi_archivo,
+         WHERE te.tarea_id = t.id AND te.matricula_id = ? LIMIT 1) AS mi_archivo,
+
         (SELECT te.fecha_entrega 
          FROM tareas_entregas te 
-         WHERE te.tarea_id = t.id AND te.matricula_id = ? 
-         LIMIT 1) AS mi_fecha_entrega,
+         WHERE te.tarea_id = t.id AND te.matricula_id = ? LIMIT 1) AS mi_fecha_entrega,
+
         (SELECT te.calificacion 
          FROM tareas_entregas te 
-         WHERE te.tarea_id = t.id AND te.matricula_id = ? 
-         LIMIT 1) AS mi_calificacion,
+         WHERE te.tarea_id = t.id AND te.matricula_id = ? LIMIT 1) AS mi_calificacion,
+
         (SELECT te.comentarios_docente 
          FROM tareas_entregas te 
-         WHERE te.tarea_id = t.id AND te.matricula_id = ? 
-         LIMIT 1) AS mis_comentarios
+         WHERE te.tarea_id = t.id AND te.matricula_id = ? LIMIT 1) AS mis_comentarios
+
     FROM tareas t
-    WHERE t.horario_id = ? AND t.activo = 1
+    WHERE t.horario_id = ? 
+      AND t.activo = 1
     ORDER BY t.fecha_publicacion DESC
 ";
 $stmtTar = $mysqli->prepare($tareasSql);
@@ -251,19 +245,18 @@ $stmtTar->execute();
 $tareas = $stmtTar->get_result();
 $stmtTar->close();
 
-// 5) Anuncios específicos de este curso
+// 5) Anuncios específicos del curso
 $anSql = "
     SELECT 
         a.titulo,
         a.contenido,
         a.fecha_publicacion,
-        a.importante,
-        ta.tipo_anuncio
+        ta.tipo_anuncio AS tipo
     FROM anuncios a
     INNER JOIN tipos_anuncio ta ON a.tipo_anuncio_id = ta.id
     WHERE a.horario_id = ?
       AND (a.fecha_expiracion IS NULL OR a.fecha_expiracion >= CURDATE())
-    ORDER BY a.importante DESC, a.fecha_publicacion DESC
+    ORDER BY a.fecha_publicacion DESC
 ";
 $stmtAn = $mysqli->prepare($anSql);
 $stmtAn->bind_param("i", $horario_id);
@@ -271,23 +264,41 @@ $stmtAn->execute();
 $anuncios = $stmtAn->get_result();
 $stmtAn->close();
 
+// 6) Compañeros de clase
+$comSql = "
+    SELECT u.nombre, u.apellido, u.email
+    FROM matriculas m
+    INNER JOIN usuarios u ON m.estudiante_id = u.id
+    WHERE m.horario_id = ? 
+      AND m.estado_id = 1   -- Activos
+      AND u.id != ?
+    ORDER BY u.nombre ASC
+";
+$stmtCom = $mysqli->prepare($comSql);
+$stmtCom->bind_param("ii", $horario_id, $usuario_id);
+$stmtCom->execute();
+$companeros = $stmtCom->get_result();
+$stmtCom->close();
+
 include __DIR__ . "/../includes/header.php";
 ?>
 
 <h1 class="h4 fw-bold mt-3">
     Detalle del curso: <?= htmlspecialchars($curso['nombre_curso']) ?>
 </h1>
+
 <p class="text-muted mb-3">
-    Nivel <?= htmlspecialchars($curso['codigo_nivel']) ?> · 
-    <?= htmlspecialchars($curso['nombre_nivel']) ?> ·
+    Nivel <?= htmlspecialchars($curso['codigo_nivel']) ?> • 
+    <?= htmlspecialchars($curso['nombre_nivel']) ?> •
     <?= htmlspecialchars($curso['nombre_dia']) ?>,
-    <?= substr($curso['hora_inicio'], 0, 5) ?> - <?= substr($curso['hora_fin'], 0, 5) ?> ·
+    <?= substr($curso['hora_inicio'], 0, 5) ?> - <?= substr($curso['hora_fin'], 0, 5) ?> •
     Aula <?= htmlspecialchars($curso['aula']) ?>
 </p>
 
 <div class="row g-3 mb-4">
-    <!-- Columna izquierda: info curso, anuncios, materiales -->
     <div class="col-lg-8">
+
+        <!-- Descripción curso -->
         <div class="card card-soft mb-3 p-3">
             <h2 class="h6 fw-bold mb-2">Descripción del curso</h2>
             <p class="mb-0">
@@ -295,39 +306,38 @@ include __DIR__ . "/../includes/header.php";
             </p>
         </div>
 
+        <!-- Anuncios -->
         <div class="card card-soft mb-3 p-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h6 fw-bold mb-0">Anuncios de este curso</h2>
+                <h2 class="h6 fw-bold mb-0">Anuncios del curso</h2>
             </div>
 
             <?php if ($anuncios->num_rows === 0): ?>
-                <p class="small text-muted mb-0">Aún no hay anuncios específicos para este curso.</p>
+                <p class="small text-muted">Aún no hay anuncios para este curso.</p>
             <?php else: ?>
                 <ul class="list-group list-group-flush">
                     <?php while ($a = $anuncios->fetch_assoc()): ?>
                         <li class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-start">
+                            <div class="d-flex justify-content-between">
+
                                 <div>
-                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                        <?php if ($a['importante']): ?>
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
-                                                Importante
-                                            </span>
-                                        <?php endif; ?>
-                                        <span class="badge bg-light text-muted border">
-                                            <?= htmlspecialchars($a['tipo_anuncio']) ?>
-                                        </span>
-                                    </div>
+                                    <span class="badge bg-light text-muted border small mb-1">
+                                        <?= htmlspecialchars($a['tipo']) ?>
+                                    </span>
+
                                     <strong class="d-block small mb-1">
                                         <?= htmlspecialchars($a['titulo']) ?>
                                     </strong>
-                                    <p class="mb-0 small">
+
+                                    <p class="small mb-0">
                                         <?= nl2br(htmlspecialchars($a['contenido'])) ?>
                                     </p>
                                 </div>
+
                                 <small class="text-muted ms-3">
                                     <?= date('d/m/Y H:i', strtotime($a['fecha_publicacion'])) ?>
                                 </small>
+
                             </div>
                         </li>
                     <?php endwhile; ?>
@@ -335,210 +345,223 @@ include __DIR__ . "/../includes/header.php";
             <?php endif; ?>
         </div>
 
-                <!-- Bloque de TAREAS del curso -->
+        <!-- TAREAS -->
         <div class="card card-soft mb-3 p-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h6 fw-bold mb-0">Tareas del curso</h2>
-            </div>
+
+            <h2 class="h6 fw-bold mb-2">Tareas del curso</h2>
 
             <?php if ($mensaje_tarea): ?>
-                <div class="alert alert-success py-2 small">
-                    <?= htmlspecialchars($mensaje_tarea) ?>
-                </div>
+                <div class="alert alert-success py-2 small"><?= htmlspecialchars($mensaje_tarea) ?></div>
             <?php endif; ?>
 
             <?php if ($error_tarea): ?>
-                <div class="alert alert-danger py-2 small">
-                    <?= htmlspecialchars($error_tarea) ?>
-                </div>
+                <div class="alert alert-danger py-2 small"><?= htmlspecialchars($error_tarea) ?></div>
             <?php endif; ?>
 
-            <?php if (!isset($tareas) || $tareas->num_rows === 0): ?>
-                <p class="small text-muted mb-0">Aún no hay tareas asignadas para este curso.</p>
+            <?php if ($tareas->num_rows === 0): ?>
+                <p class="small text-muted">Aún no hay tareas asignadas.</p>
             <?php else: ?>
                 <ul class="list-group list-group-flush">
+
                     <?php while ($t = $tareas->fetch_assoc()): ?>
+                        <?php
+                            $hoy       = date('Y-m-d');
+                            $fechaPub  = $t['fecha_publicacion'] ? date('d/m/Y H:i', strtotime($t['fecha_publicacion'])) : null;
+                            $fechaLim  = $t['fecha_entrega'] ? date('d/m/Y', strtotime($t['fecha_entrega'])) : null;
+                            $vencida   = ($t['fecha_entrega'] && $t['fecha_entrega'] < $hoy);
+                            $entregada = !empty($t['mi_archivo']);
+                            $valorMax  = isset($t['valor_maximo']) ? (int)$t['valor_maximo'] : 100;
+                        ?>
+
                         <li class="list-group-item py-3">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
-        <div class="flex-grow-1">
-            <?php
-                $hoy       = date('Y-m-d');
-                $fechaPub  = $t['fecha_publicacion'] ? date('d/m/Y H:i', strtotime($t['fecha_publicacion'])) : null;
-                $fechaLim  = $t['fecha_entrega'] ? date('d/m/Y', strtotime($t['fecha_entrega'])) : null;
-                $vencida   = ($t['fecha_entrega'] && $t['fecha_entrega'] < $hoy);
-                $entregada = !empty($t['mi_archivo']);
-            ?>
 
-            <!-- Título + fechas -->
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                <strong class="small">
-                    <?= htmlspecialchars($t['titulo']) ?>
-                </strong>
+                            <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
 
-                <?php if ($fechaPub): ?>
-                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small">
-                        Publicada: <?= $fechaPub ?>
-                    </span>
-                <?php endif; ?>
+                                <div class="flex-grow-1">
 
-                <?php if ($fechaLim): ?>
-                    <span class="badge small 
-                        <?= $vencida && !$entregada 
-                            ? 'bg-danger-subtle text-danger border border-danger-subtle' 
-                            : 'bg-primary-subtle text-primary border border-primary-subtle' 
-                        ?>">
-                        Vence: <?= $fechaLim ?>
-                    </span>
-                <?php endif; ?>
-            </div>
+                                    <!-- Título y badges -->
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
 
-            <!-- Descripción -->
-            <?php if (!empty($t['descripcion'])): ?>
-                <p class="mb-2 small text-muted">
-                    <?= nl2br(htmlspecialchars($t['descripcion'])) ?>
-                </p>
-            <?php endif; ?>
+                                        <strong class="small"><?= htmlspecialchars($t['titulo']) ?></strong>
 
-            <!-- Archivo de instrucciones -->
-            <?php if (!empty($t['archivo_instrucciones'])): ?>
-                <p class="mb-2 small">
-                    <i class="fa-solid fa-paperclip me-1"></i>
-                    Instrucciones:
-                    <a href="<?= htmlspecialchars($t['archivo_instrucciones']) ?>" target="_blank">
-                        Ver archivo
-                    </a>
-                </p>
-            <?php endif; ?>
+                                        <?php if ($fechaPub): ?>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small">
+                                                Publicada: <?= $fechaPub ?>
+                                            </span>
+                                        <?php endif; ?>
 
-            <!-- Bloque de mi entrega -->
-            <?php if (!empty($t['mi_archivo'])): ?>
-                <div class="border rounded-3 p-2 bg-light mb-2">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="small fw-semibold d-block">Tu entrega</span>
-                            <a href="<?= htmlspecialchars($t['mi_archivo']) ?>" target="_blank" class="small">
-                                Ver archivo enviado
-                            </a>
-                        </div>
-                        <div class="text-end small">
-                            <?php if (!empty($t['mi_fecha_entrega'])): ?>
-                                <div class="text-muted">
-                                    Enviada el <?= date('d/m/Y H:i', strtotime($t['mi_fecha_entrega'])) ?>
+                                        <?php if ($fechaLim): ?>
+                                            <span class="badge small 
+                                                <?= $vencida && !$entregada 
+                                                    ? 'bg-danger-subtle text-danger border border-danger-subtle' 
+                                                    : 'bg-primary-subtle text-primary border border-primary-subtle' ?>">
+                                                Vence: <?= $fechaLim ?>
+                                            </span>
+                                        <?php endif; ?>
+
+                                        <span class="badge bg-light text-secondary border border-secondary-subtle small">
+                                            Valor: <?= $valorMax ?> pts
+                                        </span>
+                                    </div>
+
+                                    <!-- Descripción -->
+                                    <?php if (!empty($t['descripcion'])): ?>
+                                        <p class="small text-muted mb-2">
+                                            <?= nl2br(htmlspecialchars($t['descripcion'])) ?>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <!-- Archivo de instrucciones -->
+                                    <?php if (!empty($t['archivo_instrucciones'])): ?>
+                                        <p class="small mb-2">
+                                            <i class="fa-solid fa-paperclip me-1"></i>
+                                            Instrucciones:
+                                            <a href="<?= htmlspecialchars($t['archivo_instrucciones']) ?>" target="_blank">Ver archivo</a>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <!-- Mi entrega -->
+                                    <?php if (!empty($t['mi_archivo'])): ?>
+                                        <div class="border rounded-3 p-2 bg-light mb-2">
+
+                                            <div class="d-flex justify-content-between">
+
+                                                <div>
+                                                    <span class="small fw-semibold">Tu entrega</span><br>
+                                                    <a href="<?= htmlspecialchars($t['mi_archivo']) ?>" target="_blank" class="small">
+                                                        Ver archivo enviado
+                                                    </a>
+                                                </div>
+
+                                                <div class="small text-end">
+                                                    <?php if (!empty($t['mi_fecha_entrega'])): ?>
+                                                        <div class="text-muted">
+                                                            Enviada el <?= date('d/m/Y H:i', strtotime($t['mi_fecha_entrega'])) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+
+                                                    <?php if ($t['mi_calificacion'] !== null): ?>
+                                                        <div class="mt-1">
+                                                            Nota:
+                                                            <span class="badge bg-success-subtle text-success">
+                                                                <?= htmlspecialchars($t['mi_calificacion']) ?> / <?= $valorMax ?> pts
+                                                            </span>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <div class="mt-1">
+                                                            <span class="badge bg-secondary-subtle text-secondary">
+                                                                Valor: <?= $valorMax ?> pts
+                                                            </span>
+                                                            <div class="text-muted">En revisión</div>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+
+                                            <?php if (!empty($t['mis_comentarios'])): ?>
+                                                <div class="small mt-2">
+                                                    <strong>Comentario del docente:</strong><br>
+                                                    <?= nl2br(htmlspecialchars($t['mis_comentarios'])) ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+
+                                    <?php else: ?>
+                                        <p class="small text-muted mb-2">Aún no has enviado tu archivo para esta tarea.</p>
+                                    <?php endif; ?>
+
                                 </div>
-                            <?php endif; ?>
-                            <?php if ($t['mi_calificacion'] !== null): ?>
-                                <div class="mt-1">
-                                    Nota:
-                                    <span class="badge bg-success-subtle text-success">
-                                        <?= htmlspecialchars($t['mi_calificacion']) ?>
-                                    </span>
+
+                                <!-- Columna derecha: subida -->
+                                <div style="min-width: 230px;">
+
+                                    <?php if ($t['fecha_entrega'] && $t['fecha_entrega'] < $hoy && empty($t['mi_archivo'])): ?>
+                                        <span class="badge bg-danger-subtle text-danger d-block text-center small mb-2">
+                                            Entrega vencida
+                                        </span>
+                                    <?php endif; ?>
+
+                                    <form method="post" enctype="multipart/form-data">
+                                        <input type="hidden" name="accion" value="subir_tarea">
+                                        <input type="hidden" name="tarea_id" value="<?= $t['id'] ?>">
+
+                                        <input type="file" name="archivo_tarea" class="form-control form-control-sm mb-2" required>
+
+                                        <button type="submit" class="btn btn-sm btn-primary w-100">
+                                            <?= $t['mi_archivo'] ? 'Reemplazar archivo' : 'Subir archivo' ?>
+                                        </button>
+                                    </form>
                                 </div>
-                            <?php else: ?>
-                                <div class="mt-1 text-muted">
-                                    En revisión
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+                            </div>
 
-                    <?php if (!empty($t['mis_comentarios'])): ?>
-                        <div class="mt-2 small">
-                            <strong>Comentario del docente:</strong><br>
-                            <?= nl2br(htmlspecialchars($t['mis_comentarios'])) ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            <?php else: ?>
-                <p class="mb-2 small text-muted">
-                    Aún no has enviado tu archivo para esta tarea.
-                </p>
-            <?php endif; ?>
-        </div>
-
-        <!-- Columna derecha: subir / reemplazar archivo -->
-        <div class="mt-2 mt-md-0" style="min-width: 230px;">
-            <?php if ($t['fecha_entrega'] && $t['fecha_entrega'] < $hoy && empty($t['mi_archivo'])): ?>
-                <span class="badge bg-danger-subtle text-danger d-block text-center small mb-2">
-                    Entrega vencida
-                </span>
-            <?php endif; ?>
-
-            <form method="post" enctype="multipart/form-data">
-                <input type="hidden" name="accion" value="subir_tarea">
-                <input type="hidden" name="tarea_id" value="<?= $t['id'] ?>">
-
-                <div class="row g-2 align-items-center">
-                    <div class="col-12 mb-1">
-                        <input type="file" name="archivo_tarea"
-                               class="form-control form-control-sm" required>
-                    </div>
-                    <div class="col-12 text-end">
-                        <button type="submit" class="btn btn-sm btn-primary w-100">
-                            <?= $t['mi_archivo'] ? 'Reemplazar archivo' : 'Subir archivo' ?>
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-</li>
-
+                        </li>
                     <?php endwhile; ?>
+
                 </ul>
             <?php endif; ?>
+
         </div>
 
-
+        <!-- Materiales -->
         <div class="card card-soft p-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h6 fw-bold mb-0">Materiales del curso</h2>
-            </div>
+            <h2 class="h6 fw-bold mb-2">Materiales del curso</h2>
 
             <?php if ($materiales->num_rows === 0): ?>
-                <p class="small text-muted mb-0">Aún no hay materiales subidos para este curso.</p>
+                <p class="small text-muted">Aún no hay materiales subidos.</p>
             <?php else: ?>
                 <ul class="list-group list-group-flush">
                     <?php while ($m = $materiales->fetch_assoc()): ?>
                         <li class="list-group-item">
+
                             <div class="d-flex justify-content-between align-items-start">
+
                                 <div>
                                     <span class="badge bg-light text-muted border small mb-1">
                                         <?= htmlspecialchars($m['tipo_archivo']) ?>
                                     </span>
+
                                     <strong class="d-block">
                                         <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank">
                                             <?= htmlspecialchars($m['titulo']) ?>
                                         </a>
                                     </strong>
+
                                     <?php if (!empty($m['descripcion'])): ?>
                                         <p class="small mb-1">
                                             <?= nl2br(htmlspecialchars($m['descripcion'])) ?>
                                         </p>
                                     <?php endif; ?>
                                 </div>
+
                                 <small class="text-muted ms-3">
                                     <?= date('d/m/Y', strtotime($m['fecha_subida'])) ?>
                                 </small>
+
                             </div>
+
                         </li>
                     <?php endwhile; ?>
                 </ul>
             <?php endif; ?>
+
         </div>
+
     </div>
 
-    <!-- Columna derecha: docente y compañeros -->
+    <!-- Columna derecha -->
     <div class="col-lg-4">
+
         <div class="card card-soft mb-3 p-3">
             <h2 class="h6 fw-bold mb-2">Docente del curso</h2>
+
             <div class="d-flex align-items-center">
+
                 <?php if (!empty($curso['foto_perfil'])): ?>
                     <img src="<?= htmlspecialchars($curso['foto_perfil']) ?>"
-                         alt="Foto docente"
                          class="rounded-circle me-2"
                          style="width:48px;height:48px;object-fit:cover;">
                 <?php else: ?>
-                    <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center me-2"
+                    <div class="rounded-circle bg-light d-flex justify-content-center align-items-center me-2"
                          style="width:48px;height:48px;">
                         <span class="fw-bold">
                             <?= strtoupper(substr($curso['docente_nombre'],0,1) . substr($curso['docente_apellido'],0,1)) ?>
@@ -550,9 +573,7 @@ include __DIR__ . "/../includes/header.php";
                     <div class="fw-semibold">
                         <?= htmlspecialchars($curso['docente_nombre'] . " " . $curso['docente_apellido']) ?>
                     </div>
-                    <div class="small text-muted">
-                        <?= htmlspecialchars($curso['docente_email']) ?>
-                    </div>
+                    <div class="small text-muted"><?= htmlspecialchars($curso['docente_email']) ?></div>
                     <?php if ($curso['pais'] || $curso['ciudad']): ?>
                         <div class="small text-muted">
                             <?= htmlspecialchars(trim($curso['ciudad'] . ", " . $curso['pais']), ", ") ?>
@@ -564,24 +585,26 @@ include __DIR__ . "/../includes/header.php";
 
         <div class="card card-soft p-3">
             <h2 class="h6 fw-bold mb-2">Compañeros de clase</h2>
+
             <?php if ($companeros->num_rows === 0): ?>
-                <p class="small text-muted mb-0">Aún no hay otros estudiantes activos en esta clase.</p>
+                <p class="small text-muted">Aún no hay otros estudiantes.</p>
             <?php else: ?>
-                <ul class="list-unstyled mb-0 small">
+                <ul class="list-unstyled small mb-0">
+
                     <?php while ($c = $companeros->fetch_assoc()): ?>
                         <li class="mb-1">
                             <strong><?= htmlspecialchars($c['nombre'] . " " . $c['apellido']) ?></strong><br>
                             <span class="text-muted"><?= htmlspecialchars($c['email']) ?></span>
                         </li>
                     <?php endwhile; ?>
+
                 </ul>
             <?php endif; ?>
         </div>
+
     </div>
 </div>
 
-<a href="dashboard.php" class="btn btn-link px-0">
-    ‹ Volver a mis cursos
-</a>
+<a href="dashboard.php" class="btn btn-link px-0">‹ Volver a mis cursos</a>
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>
