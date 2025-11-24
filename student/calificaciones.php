@@ -9,51 +9,119 @@ if (!$usuario_id) {
     exit;
 }
 
-// Traer tareas + entregas + cursos del estudiante
-$stmt = $mysqli->prepare("
+// ---------------------------------------------------------------------
+// 1) Cursos del estudiante (a través de sus matrículas)
+// ---------------------------------------------------------------------
+$sqlCursos = "
     SELECT 
-        t.id AS tarea_id,
-        t.titulo,
-        t.descripcion,
-        t.fecha_entrega,
-        c.nombre_curso,
-        h.id AS horario_id,
-        m.id AS matricula_id,
-        te.id AS entrega_id,
-        te.fecha_entrega AS fecha_entrega_real,
-        te.calificacion,
-        te.comentarios_docente
+        h.id  AS horario_id,
+        c.id  AS curso_id,
+        c.nombre_curso
     FROM matriculas m
-    JOIN horarios h ON m.horario_id = h.id
-    JOIN cursos c   ON h.curso_id = c.id
-    JOIN tareas t   ON t.horario_id = h.id AND t.activo = 1
-    LEFT JOIN tareas_entregas te
-           ON te.tarea_id = t.id
-          AND te.matricula_id = m.id
+    INNER JOIN horarios h ON h.id = m.horario_id
+    INNER JOIN cursos   c ON c.id = h.curso_id
     WHERE m.estudiante_id = ?
-      AND m.estado_id IN (1,2)
-    ORDER BY c.nombre_curso, t.fecha_entrega IS NULL, t.fecha_entrega
-");
+      AND m.estado_id IN (1,2,4) -- activa, pendiente, finalizada
+    ORDER BY c.nombre_curso
+";
+$stmt = $mysqli->prepare($sqlCursos);
 $stmt->bind_param("i", $usuario_id);
 $stmt->execute();
-$result = $stmt->get_result();
-
-$tareas = [];
-while ($row = $result->fetch_assoc()) {
-    $tareas[] = $row;
-}
+$cursos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Calcular promedio de tareas calificadas
-$sumaNotas = 0;
-$conteoNotas = 0;
-foreach ($tareas as $t) {
-    if ($t['calificacion'] !== null) {
-        $sumaNotas += (float)$t['calificacion'];
-        $conteoNotas++;
+// ---------------------------------------------------------------------
+// 2) Curso / horario seleccionado
+// ---------------------------------------------------------------------
+$horario_id_seleccionado = isset($_GET['horario_id']) ? (int)$_GET['horario_id'] : 0;
+$matricula_id     = null;
+$tareas           = [];
+$promedio_oficial = null;
+
+if ($horario_id_seleccionado > 0) {
+
+    // Verificar que el estudiante realmente está matriculado en ese horario
+    $sqlMat = "
+        SELECT m.id AS matricula_id
+        FROM matriculas m
+        INNER JOIN horarios h ON h.id = m.horario_id
+        WHERE m.estudiante_id = ?
+          AND h.id = ?
+        LIMIT 1
+    ";
+    $stmt = $mysqli->prepare($sqlMat);
+    $stmt->bind_param("ii", $usuario_id, $horario_id_seleccionado);
+    $stmt->execute();
+    $resMat = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($resMat) {
+        $matricula_id = (int)$resMat['matricula_id'];
+
+        // 2.a) Traer detalle de tareas + entregas de ese curso
+        $sqlTareas = "
+            SELECT 
+                t.id AS tarea_id,
+                t.titulo,
+                t.descripcion,
+                t.fecha_publicacion,
+                t.fecha_entrega,
+                t.valor_maximo,
+                te.id AS entrega_id,
+                te.fecha_entrega AS fecha_entrega_real,
+                te.calificacion,
+                te.comentarios_docente
+            FROM tareas t
+            INNER JOIN horarios h ON h.id = t.horario_id
+            INNER JOIN matriculas m ON m.horario_id = h.id
+            LEFT JOIN tareas_entregas te
+                   ON te.tarea_id = t.id
+                  AND te.matricula_id = m.id
+            WHERE m.id = ?
+              AND h.id = ?
+              AND t.activo = 1
+            ORDER BY t.fecha_entrega IS NULL, t.fecha_entrega, t.titulo
+        ";
+        $stmt = $mysqli->prepare($sqlTareas);
+        $stmt->bind_param("ii", $matricula_id, $horario_id_seleccionado);
+        $stmt->execute();
+        $tareas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        // 2.b) PROMEDIO OFICIAL: tareas + evaluaciones generales
+        //     (tomas TODO lo que tenga nota para este curso/matrícula)
+        $sqlProm = "
+            SELECT AVG(nota) AS promedio
+            FROM (
+                -- Notas de tareas
+                SELECT te.calificacion AS nota
+                FROM tareas_entregas te
+                INNER JOIN tareas t  ON t.id = te.tarea_id
+                INNER JOIN horarios h ON h.id = t.horario_id
+                WHERE te.matricula_id = ?
+                  AND h.id = ?
+                  AND te.calificacion IS NOT NULL
+
+                UNION ALL
+
+                -- Notas de evaluaciones generales (quiz, examen, etc.)
+                SELECT c.puntaje AS nota
+                FROM calificaciones c
+                WHERE c.matricula_id = ?
+                  AND c.puntaje IS NOT NULL
+            ) x
+        ";
+        $stmt = $mysqli->prepare($sqlProm);
+        $stmt->bind_param("iii", $matricula_id, $horario_id_seleccionado, $matricula_id);
+        $stmt->execute();
+        $resProm = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($resProm && $resProm['promedio'] !== null) {
+            $promedio_oficial = (float)$resProm['promedio'];
+        }
     }
 }
-$promedio = $conteoNotas > 0 ? $sumaNotas / $conteoNotas : null;
 
 include __DIR__ . "/../includes/header.php";
 ?>
@@ -61,106 +129,183 @@ include __DIR__ . "/../includes/header.php";
 <div class="container my-4">
     <h1 class="h3 mb-3">
         <i class="fa-solid fa-chart-line me-2"></i>
-        Mis calificaciones de tareas
+        Mis calificaciones
     </h1>
     <p class="text-muted mb-4">
-        Aquí puedes ver cómo vas en cada tarea y tu promedio general de las tareas que ya fueron calificadas.
+        Selecciona un curso para ver tus tareas, notas y tu promedio actual.
     </p>
 
-    <?php if (empty($tareas)): ?>
-        <div class="alert alert-info">
-            Aún no tienes tareas registradas para mostrar calificaciones.
-        </div>
-    <?php else: ?>
-        <div class="card shadow-sm border-0 mb-3">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-1">Promedio general de tareas</h5>
-                    <?php if ($promedio !== null): ?>
-                        <p class="mb-0 fs-4 fw-bold text-primary">
-                            <?= number_format($promedio, 2) ?>
-                        </p>
-                        <small class="text-muted">
-                            Basado en <?= $conteoNotas ?> tarea(s) calificadas.
-                        </small>
-                    <?php else: ?>
-                        <p class="mb-0 text-muted">
-                            Aún no tienes tareas calificadas.
-                        </p>
-                    <?php endif; ?>
-                </div>
-                <div>
-                    <i class="fa-solid fa-star fs-1 text-warning"></i>
-                </div>
+    <div class="row">
+        <!-- Columna izquierda: selección de curso -->
+        <div class="col-md-4 mb-3">
+            <div class="card card-soft p-3">
+                <h2 class="h6 fw-bold mb-3">Mis cursos</h2>
+                <?php if (empty($cursos)): ?>
+                    <p class="text-muted small mb-0">Aún no estás matriculado en ningún curso.</p>
+                <?php else: ?>
+                    <form method="get">
+                        <div class="mb-2">
+                            <label class="form-label small">Selecciona un curso</label>
+                            <select name="horario_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                                <option value="">-- Selecciona --</option>
+                                <?php foreach ($cursos as $c): ?>
+                                    <option value="<?= $c['horario_id'] ?>"
+                                        <?= ($horario_id_seleccionado == $c['horario_id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($c['nombre_curso']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                            Ver calificaciones
+                        </button>
+                    </form>
+                <?php endif; ?>
             </div>
         </div>
 
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <h5 class="card-title mb-3">
-                    Detalle por tarea
-                </h5>
-                <div class="table-responsive small">
-                    <table class="table table-sm align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Curso</th>
-                                <th>Tarea</th>
-                                <th>Fecha límite</th>
-                                <th>Fecha entrega</th>
-                                <th>Estado</th>
-                                <th>Nota</th>
-                                <th>Comentario docente</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($tareas as $t): 
-                                $fechaLimite  = $t['fecha_entrega'] 
-                                    ? date("d/m/Y", strtotime($t['fecha_entrega'])) 
-                                    : "Sin fecha";
-                                $fechaEntReal = $t['fecha_entrega_real'] 
-                                    ? date("d/m/Y H:i", strtotime($t['fecha_entrega_real'])) 
-                                    : "-";
-
-                                $entregada = !empty($t['entrega_id']);
-
-                                if ($entregada && $t['calificacion'] !== null) {
-                                    $estado = "Entregada y calificada";
-                                    $estadoClass = "text-success";
-                                } elseif ($entregada) {
-                                    $estado = "Entregada (sin nota)";
-                                    $estadoClass = "text-primary";
-                                } else {
-                                    $estado = "No entregada";
-                                    $estadoClass = "text-danger";
-                                }
-
-                                $nota = $t['calificacion'] !== null
-                                    ? number_format($t['calificacion'], 2)
-                                    : "-";
-                            ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($t['nombre_curso']) ?></td>
-                                    <td><?= htmlspecialchars($t['titulo']) ?></td>
-                                    <td><?= $fechaLimite ?></td>
-                                    <td><?= $fechaEntReal ?></td>
-                                    <td class="<?= $estadoClass ?>">
-                                        <?= htmlspecialchars($estado) ?>
-                                    </td>
-                                    <td><strong><?= $nota ?></strong></td>
-                                    <td>
-                                        <?= $t['comentarios_docente'] 
-                                            ? nl2br(htmlspecialchars($t['comentarios_docente'])) 
-                                            : '<span class="text-muted">Sin comentarios</span>' ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+        <!-- Columna derecha: detalle y promedio -->
+        <div class="col-md-8 mb-3">
+            <?php if (!$horario_id_seleccionado || !$matricula_id): ?>
+                <div class="alert alert-info mb-0">
+                    Selecciona un curso en el panel de la izquierda para ver tus calificaciones.
                 </div>
-            </div>
+            <?php else: ?>
+
+                <!-- Resumen del promedio -->
+                <div class="card card-soft mb-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="h6 fw-bold mb-1 mb-md-0">Promedio del curso</h2>
+                            <p class="small text-muted mb-0">
+                                Este promedio se calcula con todas las tareas y evaluaciones registradas para este curso.
+                            </p>
+                        </div>
+                        <div class="text-end">
+                            <?php if ($promedio_oficial !== null): ?>
+                                <?php
+                                    $aprobado    = ($promedio_oficial >= 70);
+                                    $badgeClass  = $aprobado ? "bg-success" : "bg-danger";
+                                    $textoEstado = $aprobado ? "Aprobado (≥ 70)" : "En riesgo (&lt; 70)";
+                                ?>
+                                <div class="display-6 fw-bold">
+                                    <?= number_format($promedio_oficial, 2) ?>
+                                </div>
+                                <span class="badge <?= $badgeClass ?> mt-1">
+                                    <?= $textoEstado ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="text-muted small">
+                                    Aún no hay suficientes calificaciones para calcular tu promedio.
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detalle de tareas -->
+                <div class="card card-soft">
+                    <div class="card-header bg-white">
+                        <h2 class="h6 fw-bold mb-0">Detalle de tareas del curso seleccionado</h2>
+                    </div>
+                    <div class="card-body p-0">
+                        <?php if (empty($tareas)): ?>
+                            <p class="text-muted small m-3">
+                                No hay tareas registradas para este curso todavía.
+                            </p>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Tarea</th>
+                                            <th class="text-center">Publicada</th>
+                                            <th class="text-center">Fecha límite</th>
+                                            <th class="text-center">Fecha entrega</th>
+                                            <th class="text-center">Nota</th>
+                                            <th>Comentario docente</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php foreach ($tareas as $t): ?>
+                                        <?php
+                                            $fecha_pub = $t['fecha_publicacion']
+                                                ? date("d/m/Y", strtotime($t['fecha_publicacion']))
+                                                : "—";
+                                            $fecha_lim = $t['fecha_entrega']
+                                                ? date("d/m/Y", strtotime($t['fecha_entrega']))
+                                                : "Sin fecha";
+                                            $fecha_entrega_real = $t['fecha_entrega_real']
+                                                ? date("d/m/Y H:i", strtotime($t['fecha_entrega_real']))
+                                                : null;
+
+                                            $estado = "Pendiente";
+                                            $clase_estado = "badge bg-secondary";
+                                            if ($t['entrega_id']) {
+                                                $estado = "Entregada";
+                                                $clase_estado = "badge bg-info";
+                                            }
+                                            if ($t['calificacion'] !== null) {
+                                                $estado = "Calificada";
+                                                $clase_estado = "badge bg-success";
+                                            }
+                                        ?>
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold small mb-0">
+                                                    <?= htmlspecialchars($t['titulo']) ?>
+                                                </div>
+                                                <?php if (!empty($t['descripcion'])): ?>
+                                                    <div class="small text-muted">
+                                                        <?= nl2br(htmlspecialchars($t['descripcion'])) ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-center small"><?= $fecha_pub ?></td>
+                                            <td class="text-center small"><?= $fecha_lim ?></td>
+                                            <td class="text-center small">
+                                                <?= $fecha_entrega_real ? $fecha_entrega_real : '<span class="text-muted">Sin entregar</span>' ?>
+                                            </td>
+                                            <td class="text-center small">
+                                                <?php if ($t['calificacion'] !== null): ?>
+                                                    <span class="fw-bold">
+                                                        <?= number_format($t['calificacion'], 2) ?>
+                                                    </span>
+                                                    <?php if ((int)$t['valor_maximo'] > 0): ?>
+                                                        <div class="text-muted">
+                                                            de <?= (int)$t['valor_maximo'] ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <span class="text-muted">—</span>
+                                                <?php endif; ?>
+                                                <div class="mt-1">
+                                                    <span class="<?= $clase_estado ?> small"><?= $estado ?></span>
+                                                </div>
+                                            </td>
+                                            <td class="small">
+                                                <?php
+                                                if ($t['calificacion'] !== null) {
+                                                    echo $t['comentarios_docente']
+                                                        ? nl2br(htmlspecialchars($t['comentarios_docente']))
+                                                        : '<span class="text-muted">Sin comentarios</span>';
+                                                } else {
+                                                    echo '<span class="text-muted">En espera de calificación</span>';
+                                                }
+                                                ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+            <?php endif; ?>
         </div>
-    <?php endif; ?>
+    </div>
 </div>
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

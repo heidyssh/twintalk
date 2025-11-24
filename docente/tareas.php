@@ -178,6 +178,7 @@ $sqlTar = "
         t.archivo_instrucciones,
         t.valor_maximo,
         h.id AS horario_id,
+        c.id AS curso_id,
         c.nombre_curso,
         d.nombre_dia,
         h.hora_inicio
@@ -188,6 +189,7 @@ $sqlTar = "
     WHERE h.docente_id = ?
       AND t.activo = 1
 ";
+
 
 if ($horario_id_param > 0) {
     $sqlTar .= " AND t.horario_id = ?";
@@ -341,8 +343,9 @@ include __DIR__ . '/../includes/header.php';
                         <?= $t['fecha_entrega'] ? date('d/m/Y', strtotime($t['fecha_entrega'])) : '-' ?>
                     </td>
                     <td class="small">
-                        <a href="/twintalk/docente/tarea_entregas.php?tarea_id=<?= $t['id'] ?>" class="btn btn-sm btn-outline-primary">
-                            Ver entregas
+                        <a href="/twintalk/docente/calificaciones.php?view=tareas&curso_id=<?= $t['curso_id'] ?>&tarea_id=<?= $t['id'] ?>" 
+                        class="btn btn-sm btn-outline-primary">
+                            Calificar tarea
                         </a>
                     </td>
                     <td class="text-end">
