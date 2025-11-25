@@ -197,6 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $tipos_evaluacion        = [];
 $estudiantes_curso_eval  = [];
 $calif_existentes_eval   = [];
+$historial_evaluaciones  = [];  // 🔹 NUEVO: para mostrar la tabla de evaluaciones
 
 if ($view === 'evaluaciones' && $curso_id > 0) {
 
@@ -225,7 +226,7 @@ if ($view === 'evaluaciones' && $curso_id > 0) {
     $estudiantes_curso_eval = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
-    // Calificaciones existentes para el tipo de evaluación seleccionado
+    // Calificaciones existentes para el tipo de evaluación seleccionado (para rellenar inputs)
     if ($tipo_evaluacion_id) {
         $sqlCal = "
             SELECT matricula_id, puntaje
@@ -247,6 +248,33 @@ if ($view === 'evaluaciones' && $curso_id > 0) {
         }
         $stmt->close();
     }
+
+    // 🔹 NUEVO: Historial de TODAS las evaluaciones del curso
+    $sqlHist = "
+        SELECT 
+            c.id,
+            c.matricula_id,
+            c.puntaje,
+            c.fecha_evaluacion,
+            c.comentarios,
+            te.nombre_evaluacion,
+            u.nombre,
+            u.apellido
+        FROM calificaciones c
+        INNER JOIN tipos_evaluacion te ON te.id = c.tipo_evaluacion_id
+        INNER JOIN matriculas m        ON m.id = c.matricula_id
+        INNER JOIN horarios h          ON h.id = m.horario_id
+        INNER JOIN estudiantes est     ON est.id = m.estudiante_id
+        INNER JOIN usuarios u          ON u.id = est.id
+        WHERE h.curso_id = ?
+          AND h.docente_id = ?
+        ORDER BY c.fecha_evaluacion DESC, te.nombre_evaluacion, u.apellido, u.nombre
+    ";
+    $stmt = $mysqli->prepare($sqlHist);
+    $stmt->bind_param("ii", $curso_id, $docenteId);
+    $stmt->execute();
+    $historial_evaluaciones = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
 }
 
 // -----------------------------------------------------
@@ -487,6 +515,51 @@ include __DIR__ . '/../includes/header.php';
                                 </p>
                             <?php endif; ?>
 
+                            <?php if (!empty($historial_evaluaciones)): ?>
+                                <hr class="mt-4">
+                                <h6 class="fw-bold">Historial de evaluaciones del curso</h6>
+                                <div class="table-responsive mt-2">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Tipo</th>
+                                                <th>Estudiante</th>
+                                                <th class="text-center">Nota</th>
+                                                <th>Comentario</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($historial_evaluaciones as $h): ?>
+                                                <tr>
+                                                    <td class="small">
+                                                        <?= $h['fecha_evaluacion']
+                                                            ? htmlspecialchars(date('d/m/Y', strtotime($h['fecha_evaluacion'])))
+                                                            : '—' ?>
+                                                    </td>
+                                                    <td class="small">
+                                                        <?= htmlspecialchars($h['nombre_evaluacion']) ?>
+                                                    </td>
+                                                    <td class="small">
+                                                        <?= htmlspecialchars($h['apellido'] . ', ' . $h['nombre']) ?>
+                                                    </td>
+                                                    <td class="text-center small">
+                                                        <?= number_format($h['puntaje'], 2) ?>
+                                                    </td>
+                                                    <td class="small">
+                                                        <?=
+                                                            $h['comentarios']
+                                                                ? nl2br(htmlspecialchars($h['comentarios']))
+                                                                : '<span class="text-muted">Sin comentarios</span>';
+                                                        ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php endif; ?>
+
                         <?php endif; ?>
 
                     </div>
@@ -494,7 +567,7 @@ include __DIR__ . '/../includes/header.php';
 
             <?php elseif ($view === 'tareas'): ?>
 
-                <!-- Vista: Tareas y entregas -->
+                <!-- Vista: Tareas y entregas (SIN CAMBIOS importantes, solo lo que ya tenías) -->
                 <div class="row">
                     <div class="col-lg-5 mb-3">
                         <div class="card card-soft h-100">

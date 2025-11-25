@@ -85,6 +85,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+        // 2.b) Guardar datos adicionales / información personal
+    elseif (isset($_POST['guardar_info_personal'])) {
+
+        $tipo_documento_id = (int)($_POST['tipo_documento_id'] ?? 0);
+        $numero_documento  = trim($_POST['numero_documento'] ?? '');
+        $fecha_nacimiento  = trim($_POST['fecha_nacimiento'] ?? '');
+        $direccion         = trim($_POST['direccion'] ?? '');
+        $ciudad            = trim($_POST['ciudad'] ?? '');
+        $pais              = trim($_POST['pais'] ?? '');
+
+        if ($tipo_documento_id <= 0) {
+            $error = "Selecciona un tipo de documento.";
+        } elseif ($numero_documento === '' || $fecha_nacimiento === '' || $direccion === '' || $ciudad === '' || $pais === '') {
+            $error = "Completa todos los datos adicionales.";
+        } else {
+
+            // Convertir dd/mm/aaaa a aaaa-mm-dd si viene así
+            if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $fecha_nacimiento, $m)) {
+                $fecha_nac_sql = "{$m[3]}-{$m[2]}-{$m[1]}";
+            } else {
+                $fecha_nac_sql = $fecha_nacimiento; // por si ya viene en formato SQL
+            }
+
+            // Ver si ya hay registro en informacion_personal
+            $stmt = $mysqli->prepare("SELECT id FROM informacion_personal WHERE usuario_id = ? LIMIT 1");
+            $stmt->bind_param("i", $usuario_id);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($row) {
+                // Actualizar
+                $info_id = (int)$row['id'];
+                $stmt = $mysqli->prepare("
+                    UPDATE informacion_personal
+                    SET tipo_documento_id = ?, numero_documento = ?, fecha_nacimiento = ?,
+                        direccion = ?, ciudad = ?, pais = ?
+                    WHERE id = ? AND usuario_id = ?
+                ");
+                $stmt->bind_param(
+                    "isssssii",
+                    $tipo_documento_id,
+                    $numero_documento,
+                    $fecha_nac_sql,
+                    $direccion,
+                    $ciudad,
+                    $pais,
+                    $info_id,
+                    $usuario_id
+                );
+            } else {
+                // Insertar nuevo
+                $stmt = $mysqli->prepare("
+                    INSERT INTO informacion_personal
+                        (usuario_id, tipo_documento_id, numero_documento, fecha_nacimiento, direccion, ciudad, pais)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->bind_param(
+                    "iisssss",
+                    $usuario_id,
+                    $tipo_documento_id,
+                    $numero_documento,
+                    $fecha_nac_sql,
+                    $direccion,
+                    $ciudad,
+                    $pais
+                );
+            }
+
+            if ($stmt->execute()) {
+                $mensaje = "Datos adicionales guardados correctamente.";
+            } else {
+                $error = "Error al guardar los datos adicionales.";
+            }
+            $stmt->close();
+        }
+    }
+
 
     // 3) Seleccionar avatar predeterminado
     elseif (isset($_POST['seleccionar_avatar'])) {
@@ -211,6 +289,27 @@ $usuario = $stmt->get_result()->fetch_assoc();
 
 // Avatar actual
 $avatar_actual = $usuario['foto_perfil'] ?: "/twintalk/assets/img/avatars/avatar1.png";
+// Cargar información personal (documentos, dirección, etc.)
+$stmt = $mysqli->prepare("
+    SELECT ip.*, td.tipo_documento
+    FROM informacion_personal ip
+    LEFT JOIN tipos_documento td ON td.id = ip.tipo_documento_id
+    WHERE ip.usuario_id = ?
+    LIMIT 1
+");
+$stmt->bind_param("i", $usuario_id);
+$stmt->execute();
+$info_personal = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+// Lista de tipos de documento para el combo
+$tipos_documento = [];
+$resTipos = $mysqli->query("SELECT id, tipo_documento FROM tipos_documento ORDER BY tipo_documento");
+if ($resTipos) {
+    while ($row = $resTipos->fetch_assoc()) {
+        $tipos_documento[] = $row;
+    }
+}
 
 // Cargar contactos de emergencia del estudiante
 $stmt = $mysqli->prepare("
@@ -231,7 +330,13 @@ $stmt->close();
 
 include __DIR__ . "/../includes/header.php";
 ?>
-
+<div class="container my-4">
+    <?php if (!empty($_GET['completar'])): ?>
+        <div class="alert alert-warning">
+            <strong>Antes de continuar:</strong> por favor completa tus datos personales y de documento.
+            Estos datos serán visibles para tus docentes y el administrador al momento de matricularte.
+        </div>
+    <?php endif; ?>
 <h1 class="h4 fw-bold mt-3">Mi perfil</h1>
 <div class="mb-3">
    <a href="/twintalk/student/dashboard.php" 
@@ -350,6 +455,74 @@ include __DIR__ . "/../includes/header.php";
         </div>
     </div>
 </div> <!-- cierra row g-3 existente -->
+<!-- Datos adicionales / documentos -->
+<div class="row g-3 mt-3">
+    <div class="col-md-8">
+        <div class="card card-soft p-3">
+            <h2 class="h6 fw-bold mb-3">Datos adicionales</h2>
+            <form method="post">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tipo de documento</label>
+                        <select name="tipo_documento_id" class="form-select" required>
+                            <option value="">Selecciona...</option>
+                            <?php
+                            $tipo_actual_id = $info_personal['tipo_documento_id'] ?? 0;
+                            foreach ($tipos_documento as $td): ?>
+                                <option value="<?= (int)$td['id'] ?>"
+                                    <?= ($tipo_actual_id == $td['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($td['tipo_documento']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Número de documento</label>
+                        <input type="text"
+                               name="numero_documento"
+                               class="form-control"
+                               required
+                               value="<?= htmlspecialchars($info_personal['numero_documento'] ?? '') ?>">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha de nacimiento</label>
+                        <input type="date"
+                               name="fecha_nacimiento"
+                               class="form-control"
+                               required
+                               value="<?= htmlspecialchars($info_personal['fecha_nacimiento'] ?? '') ?>">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Ciudad</label>
+                        <input type="text"
+                               name="ciudad"
+                               class="form-control"
+                               required
+                               value="<?= htmlspecialchars($info_personal['ciudad'] ?? '') ?>">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Dirección</label>
+                        <textarea name="direccion"
+                                  class="form-control"
+                                  rows="2"
+                                  required><?= htmlspecialchars($info_personal['direccion'] ?? '') ?></textarea>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">País</label>
+                        <input type="text"
+                               name="pais"
+                               class="form-control"
+                               required
+                               value="<?= htmlspecialchars($info_personal['pais'] ?? '') ?>">
+                    </div>
+                </div>
+                <button class="btn btn-tt-primary btn-sm" name="guardar_info_personal">
+                    Guardar datos adicionales
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Contactos de emergencia -->
 <div class="row g-3 mt-3">

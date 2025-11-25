@@ -3,7 +3,50 @@ require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
 require_role([3]); // solo estudiantes
 
-$usuario_id = $_SESSION['usuario_id'];
+$usuario_id = $_SESSION['usuario_id'] ?? 0;
+if (!$usuario_id) {
+    header("Location: /twintalk/login.php");
+    exit;
+}
+
+// ----------------------------------------------------------
+// Redirigir a PERFIL solo si es estudiante NUEVO:
+// - sin información personal
+// - y sin ninguna matrícula
+// ----------------------------------------------------------
+
+// 1) ¿Tiene información personal?
+$stmt = $mysqli->prepare("
+    SELECT id 
+    FROM informacion_personal 
+    WHERE usuario_id = ? 
+    LIMIT 1
+");
+$stmt->bind_param("i", $usuario_id);
+$stmt->execute();
+$tiene_info = (bool) $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+// 2) ¿Tiene alguna matrícula?
+$stmt = $mysqli->prepare("
+    SELECT COUNT(*) AS total
+    FROM matriculas
+    WHERE estudiante_id = ?
+");
+$stmt->bind_param("i", $usuario_id);
+$stmt->execute();
+$rowMat = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+$tiene_matriculas = $rowMat && $rowMat['total'] > 0;
+
+// 3) Si NO tiene info y NO tiene matrículas => usuario NUEVO
+if (!$tiene_info && !$tiene_matriculas) {
+    header("Location: /twintalk/student/perfil.php?completar=1");
+    exit;
+}
+
+
 
 // Cursos donde YA está matriculado
 $mis_cursos = $mysqli->prepare("
@@ -121,10 +164,10 @@ $stmtResumen->execute();
 $resResumen = $stmtResumen->get_result()->fetch_assoc();
 $stmtResumen->close();
 
-$total_tareas_entregadas  = (int)($resResumen['total_entregadas'] ?? 0);
-$total_tareas_calificadas = (int)($resResumen['total_calificadas'] ?? 0);
-$promedio_tareas          = $resResumen['promedio_calificacion'] !== null
-    ? (float)$resResumen['promedio_calificacion']
+$total_tareas_entregadas = (int) ($resResumen['total_entregadas'] ?? 0);
+$total_tareas_calificadas = (int) ($resResumen['total_calificadas'] ?? 0);
+$promedio_tareas = $resResumen['promedio_calificacion'] !== null
+    ? (float) $resResumen['promedio_calificacion']
     : null;
 
 // Tareas pendientes (tareas activas sin entrega en cursos donde la matrícula está activa)
@@ -151,7 +194,7 @@ $stmtPend->execute();
 $rowPend = $stmtPend->get_result()->fetch_assoc();
 $stmtPend->close();
 
-$total_tareas_pendientes = (int)($rowPend['total_pendientes'] ?? 0);
+$total_tareas_pendientes = (int) ($rowPend['total_pendientes'] ?? 0);
 
 
 include __DIR__ . "/../includes/header.php";
@@ -177,10 +220,10 @@ include __DIR__ . "/../includes/header.php";
             <p class="small text-muted mb-1">Tareas entregadas</p>
             <div class="d-flex justify-content-between align-items-end">
                 <span class="display-6 fw-bold">
-                    <?= (int)$total_tareas_entregadas ?>
+                    <?= (int) $total_tareas_entregadas ?>
                 </span>
                 <span class="small text-muted">
-                    Calificadas: <?= (int)$total_tareas_calificadas ?>
+                    Calificadas: <?= (int) $total_tareas_calificadas ?>
                 </span>
             </div>
         </div>
@@ -191,7 +234,7 @@ include __DIR__ . "/../includes/header.php";
             <p class="small text-muted mb-1">Tareas pendientes</p>
             <div class="d-flex justify-content-between align-items-end">
                 <span class="display-6 fw-bold">
-                    <?= (int)$total_tareas_pendientes ?>
+                    <?= (int) $total_tareas_pendientes ?>
                 </span>
                 <span class="small text-muted">
                     En tus cursos activos
@@ -231,32 +274,32 @@ include __DIR__ . "/../includes/header.php";
                 <div class="table-responsive table-rounded">
                     <table class="table align-middle mb-0">
                         <thead class="table-light">
-                        <tr>
-                            <th>Curso</th>
-                            <th>Docente</th>
-                            <th>Día</th>
-                            <th>Hora</th>
-                            <th>Acciones</th> <!-- 👈 nueva columna -->
-                        </tr>
+                            <tr>
+                                <th>Curso</th>
+                                <th>Docente</th>
+                                <th>Día</th>
+                                <th>Hora</th>
+                                <th>Acciones</th> <!-- 👈 nueva columna -->
+                            </tr>
                         </thead>
                         <tbody>
-                        <?php while ($row = $res_mis_cursos->fetch_assoc()): ?>
-                            <tr>
-                                <td>
-                                    <strong><?= htmlspecialchars($row['nombre_curso']) ?></strong><br>
-                                    <span class="badge-level">Nivel <?= htmlspecialchars($row['codigo_nivel']) ?></span>
-                                </td>
-                                <td><?= htmlspecialchars($row['docente_nombre'] . " " . $row['docente_apellido']) ?></td>
-                                <td><?= htmlspecialchars($row['nombre_dia']) ?></td>
-                                <td><?= substr($row['hora_inicio'],0,5) ?> - <?= substr($row['hora_fin'],0,5) ?></td>
-                                <td>
-                                    <a href="curso_detalle.php?horario_id=<?= (int)$row['horario_id'] ?>"
-                                       class="btn btn-sm btn-outline-secondary">
-                                        Ver detalles
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endwhile; ?>
+                            <?php while ($row = $res_mis_cursos->fetch_assoc()): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= htmlspecialchars($row['nombre_curso']) ?></strong><br>
+                                        <span class="badge-level">Nivel <?= htmlspecialchars($row['codigo_nivel']) ?></span>
+                                    </td>
+                                    <td><?= htmlspecialchars($row['docente_nombre'] . " " . $row['docente_apellido']) ?></td>
+                                    <td><?= htmlspecialchars($row['nombre_dia']) ?></td>
+                                    <td><?= substr($row['hora_inicio'], 0, 5) ?> - <?= substr($row['hora_fin'], 0, 5) ?></td>
+                                    <td>
+                                        <a href="curso_detalle.php?horario_id=<?= (int) $row['horario_id'] ?>"
+                                            class="btn btn-sm btn-outline-secondary">
+                                            Ver detalles
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
@@ -278,15 +321,15 @@ include __DIR__ . "/../includes/header.php";
                                 <span class="badge-level">Nivel <?= htmlspecialchars($row['codigo_nivel']) ?></span>
                                 <span class="small d-block text-muted">
                                     <?= htmlspecialchars($row['nombre_dia']) ?> ·
-                                    <?= substr($row['hora_inicio'],0,5) ?> - <?= substr($row['hora_fin'],0,5) ?>
+                                    <?= substr($row['hora_inicio'], 0, 5) ?> - <?= substr($row['hora_fin'], 0, 5) ?>
                                 </span>
                             </div>
                             <div class="text-end">
                                 <span class="small text-muted d-block mb-1">
-                                    Cupos: <?= (int)$row['cupos_disponibles'] ?>
+                                    Cupos: <?= (int) $row['cupos_disponibles'] ?>
                                 </span>
-                                <a href="cursos_disponibles.php?matricular=<?= (int)$row['horario_id'] ?>"
-                                   class="btn btn-sm btn-tt-primary">
+                                <a href="cursos_disponibles.php?matricular=<?= (int) $row['horario_id'] ?>"
+                                    class="btn btn-sm btn-tt-primary">
                                     Matricular
                                 </a>
                             </div>
@@ -340,7 +383,7 @@ include __DIR__ . "/../includes/header.php";
             <?php endif; ?>
         </div>
 
-                <div class="card card-soft p-3">
+        <div class="card card-soft p-3">
             <h2 class="h6 fw-bold mb-2">Mis últimas calificaciones de tareas</h2>
             <p class="small text-muted mb-2">
                 Revisa las notas más recientes de las tareas que has entregado.
@@ -389,11 +432,11 @@ include __DIR__ . "/../includes/header.php";
                 Ir a mi perfil
             </a>
             <a href="/twintalk/student/calendario.php" class="btn btn-outline-primary btn-sm">
-    Ver calendario de tareas
-</a>
-<a href="/twintalk/student/calificaciones.php" class="btn btn-outline-success btn-sm">
-    Ver mis calificaciones
-</a>
+                Ver calendario de tareas
+            </a>
+            <a href="/twintalk/student/calificaciones.php" class="btn btn-outline-success btn-sm">
+                Ver mis calificaciones
+            </a>
         </div>
     </div>
 </div>

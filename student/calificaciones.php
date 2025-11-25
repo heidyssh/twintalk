@@ -33,10 +33,14 @@ $stmt->close();
 // ---------------------------------------------------------------------
 // 2) Curso / horario seleccionado
 // ---------------------------------------------------------------------
-$horario_id_seleccionado = isset($_GET['horario_id']) ? (int)$_GET['horario_id'] : 0;
-$matricula_id     = null;
-$tareas           = [];
-$promedio_oficial = null;
+$horario_id_seleccionado = isset($_GET['horario_id']) ? (int) $_GET['horario_id'] : 0;
+$matricula_id      = null;
+$tareas            = [];
+$evaluaciones      = [];
+$nota_tareas       = 0.0;
+$nota_eval         = 0.0;
+$nota_general      = null; // suma tareas + evaluaciones
+$promedio_oficial  = null; // promedio de TODAS las notas (tareas + evals)
 
 if ($horario_id_seleccionado > 0) {
 
@@ -56,9 +60,9 @@ if ($horario_id_seleccionado > 0) {
     $stmt->close();
 
     if ($resMat) {
-        $matricula_id = (int)$resMat['matricula_id'];
+        $matricula_id = (int) $resMat['matricula_id'];
 
-        // 2.a) Traer detalle de tareas + entregas de ese curso
+        // 2.a) Detalle de tareas + entregas de ese curso
         $sqlTareas = "
             SELECT 
                 t.id AS tarea_id,
@@ -88,37 +92,73 @@ if ($horario_id_seleccionado > 0) {
         $tareas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
 
-        // 2.b) PROMEDIO OFICIAL: tareas + evaluaciones generales
-        //     (tomas TODO lo que tenga nota para este curso/matrícula)
-        $sqlProm = "
-            SELECT AVG(nota) AS promedio
-            FROM (
-                -- Notas de tareas
-                SELECT te.calificacion AS nota
-                FROM tareas_entregas te
-                INNER JOIN tareas t  ON t.id = te.tarea_id
-                INNER JOIN horarios h ON h.id = t.horario_id
-                WHERE te.matricula_id = ?
-                  AND h.id = ?
-                  AND te.calificacion IS NOT NULL
-
-                UNION ALL
-
-                -- Notas de evaluaciones generales (quiz, examen, etc.)
-                SELECT c.puntaje AS nota
-                FROM calificaciones c
-                WHERE c.matricula_id = ?
-                  AND c.puntaje IS NOT NULL
-            ) x
+        // 2.b) NOTAS DE TAREAS (suma y cantidad)
+        $sqlNotasTareas = "
+            SELECT 
+                SUM(te.calificacion) AS suma_tareas,
+                COUNT(*) AS cantidad_tareas
+            FROM tareas_entregas te
+            INNER JOIN tareas t  ON t.id = te.tarea_id
+            INNER JOIN horarios h ON h.id = t.horario_id
+            WHERE te.matricula_id = ?
+              AND h.id = ?
+              AND te.calificacion IS NOT NULL
         ";
-        $stmt = $mysqli->prepare($sqlProm);
-        $stmt->bind_param("iii", $matricula_id, $horario_id_seleccionado, $matricula_id);
+        $stmt = $mysqli->prepare($sqlNotasTareas);
+        $stmt->bind_param("ii", $matricula_id, $horario_id_seleccionado);
         $stmt->execute();
-        $resProm = $stmt->get_result()->fetch_assoc();
+        $rowT = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        if ($resProm && $resProm['promedio'] !== null) {
-            $promedio_oficial = (float)$resProm['promedio'];
+        $suma_tareas     = $rowT && $rowT['suma_tareas'] !== null ? (float) $rowT['suma_tareas'] : 0.0;
+        $cantidad_tareas = $rowT && $rowT['cantidad_tareas'] !== null ? (int)  $rowT['cantidad_tareas'] : 0;
+        $nota_tareas     = $suma_tareas;
+
+        // 2.c) NOTAS DE EVALUACIONES GENERALES (quiz, examen, etc.)
+        $sqlNotasEval = "
+            SELECT 
+                SUM(c.puntaje) AS suma_eval,
+                COUNT(*)       AS cantidad_eval
+            FROM calificaciones c
+            WHERE c.matricula_id = ?
+              AND c.puntaje IS NOT NULL
+        ";
+        $stmt = $mysqli->prepare($sqlNotasEval);
+        $stmt->bind_param("i", $matricula_id);
+        $stmt->execute();
+        $rowE = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $suma_eval     = $rowE && $rowE['suma_eval'] !== null ? (float) $rowE['suma_eval'] : 0.0;
+        $cantidad_eval = $rowE && $rowE['cantidad_eval'] !== null ? (int)  $rowE['cantidad_eval'] : 0;
+        $nota_eval     = $suma_eval;
+
+        // 2.d) Detalle de evaluaciones (para la tabla)
+        $sqlEvalDetalle = "
+            SELECT 
+                c.id,
+                c.puntaje,
+                c.fecha_evaluacion,
+                c.comentarios,
+                te.nombre_evaluacion
+            FROM calificaciones c
+            INNER JOIN tipos_evaluacion te ON te.id = c.tipo_evaluacion_id
+            WHERE c.matricula_id = ?
+              AND c.puntaje IS NOT NULL
+            ORDER BY c.fecha_evaluacion, c.id
+        ";
+        $stmt = $mysqli->prepare($sqlEvalDetalle);
+        $stmt->bind_param("i", $matricula_id);
+        $stmt->execute();
+        $evaluaciones = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        // 2.e) NOTA GENERAL y PROMEDIO
+        $nota_general = $nota_tareas + $nota_eval;
+        $total_items  = $cantidad_tareas + $cantidad_eval;
+
+        if ($total_items > 0) {
+            $promedio_oficial = $nota_general / $total_items;
         }
     }
 }
@@ -132,7 +172,7 @@ include __DIR__ . "/../includes/header.php";
         Mis calificaciones
     </h1>
     <p class="text-muted mb-4">
-        Selecciona un curso para ver tus tareas, notas y tu promedio actual.
+        Selecciona un curso para ver tus tareas, tus evaluaciones y tu <strong>nota general</strong>.
     </p>
 
     <div class="row">
@@ -149,8 +189,7 @@ include __DIR__ . "/../includes/header.php";
                             <select name="horario_id" class="form-select form-select-sm" onchange="this.form.submit()">
                                 <option value="">-- Selecciona --</option>
                                 <?php foreach ($cursos as $c): ?>
-                                    <option value="<?= $c['horario_id'] ?>"
-                                        <?= ($horario_id_seleccionado == $c['horario_id']) ? 'selected' : '' ?>>
+                                    <option value="<?= $c['horario_id'] ?>" <?= ($horario_id_seleccionado == $c['horario_id']) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($c['nombre_curso']) ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -164,7 +203,7 @@ include __DIR__ . "/../includes/header.php";
             </div>
         </div>
 
-        <!-- Columna derecha: detalle y promedio -->
+        <!-- Columna derecha: resumen + tablas -->
         <div class="col-md-8 mb-3">
             <?php if (!$horario_id_seleccionado || !$matricula_id): ?>
                 <div class="alert alert-info mb-0">
@@ -172,31 +211,39 @@ include __DIR__ . "/../includes/header.php";
                 </div>
             <?php else: ?>
 
-                <!-- Resumen del promedio -->
+                <!-- Resumen: nota general -->
                 <div class="card card-soft mb-3">
                     <div class="card-body d-flex justify-content-between align-items-center">
                         <div>
-                            <h2 class="h6 fw-bold mb-1 mb-md-0">Promedio del curso</h2>
-                            <p class="small text-muted mb-0">
-                                Este promedio se calcula con todas las tareas y evaluaciones registradas para este curso.
+                            <h2 class="h6 fw-bold mb-1 mb-md-0">Nota general del curso</h2>
+                            <p class="small text-muted mb-1">
+                                <strong>Nota general</strong> = suma de tus <strong>tareas</strong> +
+                                tus <strong>evaluaciones</strong> (quiz, exámenes, etc.).  
+                                El mínimo para aprobar es <strong>70 puntos</strong>.
                             </p>
+                            
                         </div>
                         <div class="text-end">
-                            <?php if ($promedio_oficial !== null): ?>
+                            <?php if ($nota_general !== null): ?>
                                 <?php
-                                    $aprobado    = ($promedio_oficial >= 70);
-                                    $badgeClass  = $aprobado ? "bg-success" : "bg-danger";
-                                    $textoEstado = $aprobado ? "Aprobado (≥ 70)" : "En riesgo (&lt; 70)";
+                                $aprobado   = ($nota_general >= 70);
+                                $badgeClass = $aprobado ? "bg-success" : "bg-danger";
+                                $textoEstado = $aprobado ? "Aprobado (≥ 70)" : "En riesgo (&lt; 70)";
                                 ?>
                                 <div class="display-6 fw-bold">
-                                    <?= number_format($promedio_oficial, 2) ?>
+                                    <?= number_format($nota_general, 2) ?>
                                 </div>
                                 <span class="badge <?= $badgeClass ?> mt-1">
                                     <?= $textoEstado ?>
                                 </span>
+                                <?php if ($promedio_oficial !== null): ?>
+                                    <div class="small text-muted mt-1">
+                                        Promedio: <?= number_format($promedio_oficial, 2) ?>
+                                    </div>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <span class="text-muted small">
-                                    Aún no hay suficientes calificaciones para calcular tu promedio.
+                                    Aún no hay suficientes calificaciones para calcular tu nota.
                                 </span>
                             <?php endif; ?>
                         </div>
@@ -204,9 +251,9 @@ include __DIR__ . "/../includes/header.php";
                 </div>
 
                 <!-- Detalle de tareas -->
-                <div class="card card-soft">
+                <div class="card card-soft mb-3">
                     <div class="card-header bg-white">
-                        <h2 class="h6 fw-bold mb-0">Detalle de tareas del curso seleccionado</h2>
+                        <h2 class="h6 fw-bold mb-0">Tareas del curso seleccionado</h2>
                     </div>
                     <div class="card-body p-0">
                         <?php if (empty($tareas)): ?>
@@ -227,8 +274,8 @@ include __DIR__ . "/../includes/header.php";
                                         </tr>
                                     </thead>
                                     <tbody>
-                                    <?php foreach ($tareas as $t): ?>
-                                        <?php
+                                        <?php foreach ($tareas as $t): ?>
+                                            <?php
                                             $fecha_pub = $t['fecha_publicacion']
                                                 ? date("d/m/Y", strtotime($t['fecha_publicacion']))
                                                 : "—";
@@ -249,53 +296,112 @@ include __DIR__ . "/../includes/header.php";
                                                 $estado = "Calificada";
                                                 $clase_estado = "badge bg-success";
                                             }
-                                        ?>
-                                        <tr>
-                                            <td>
-                                                <div class="fw-semibold small mb-0">
-                                                    <?= htmlspecialchars($t['titulo']) ?>
-                                                </div>
-                                                <?php if (!empty($t['descripcion'])): ?>
-                                                    <div class="small text-muted">
-                                                        <?= nl2br(htmlspecialchars($t['descripcion'])) ?>
+                                            ?>
+                                            <tr>
+                                                <td>
+                                                    <div class="fw-semibold small mb-0">
+                                                        <?= htmlspecialchars($t['titulo']) ?>
                                                     </div>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="text-center small"><?= $fecha_pub ?></td>
-                                            <td class="text-center small"><?= $fecha_lim ?></td>
-                                            <td class="text-center small">
-                                                <?= $fecha_entrega_real ? $fecha_entrega_real : '<span class="text-muted">Sin entregar</span>' ?>
-                                            </td>
-                                            <td class="text-center small">
-                                                <?php if ($t['calificacion'] !== null): ?>
-                                                    <span class="fw-bold">
-                                                        <?= number_format($t['calificacion'], 2) ?>
-                                                    </span>
-                                                    <?php if ((int)$t['valor_maximo'] > 0): ?>
-                                                        <div class="text-muted">
-                                                            de <?= (int)$t['valor_maximo'] ?>
+                                                    <?php if (!empty($t['descripcion'])): ?>
+                                                        <div class="small text-muted">
+                                                            <?= nl2br(htmlspecialchars($t['descripcion'])) ?>
                                                         </div>
                                                     <?php endif; ?>
-                                                <?php else: ?>
-                                                    <span class="text-muted">—</span>
-                                                <?php endif; ?>
-                                                <div class="mt-1">
-                                                    <span class="<?= $clase_estado ?> small"><?= $estado ?></span>
-                                                </div>
-                                            </td>
-                                            <td class="small">
-                                                <?php
-                                                if ($t['calificacion'] !== null) {
-                                                    echo $t['comentarios_docente']
-                                                        ? nl2br(htmlspecialchars($t['comentarios_docente']))
-                                                        : '<span class="text-muted">Sin comentarios</span>';
-                                                } else {
-                                                    echo '<span class="text-muted">En espera de calificación</span>';
-                                                }
-                                                ?>
-                                            </td>
+                                                </td>
+                                                <td class="text-center small"><?= $fecha_pub ?></td>
+                                                <td class="text-center small"><?= $fecha_lim ?></td>
+                                                <td class="text-center small">
+                                                    <?= $fecha_entrega_real ? $fecha_entrega_real : '<span class="text-muted">Sin entregar</span>' ?>
+                                                </td>
+                                                <td class="text-center small">
+                                                    <?php if ($t['calificacion'] !== null): ?>
+                                                        <span class="fw-bold">
+                                                            <?= number_format($t['calificacion'], 2) ?>
+                                                        </span>
+                                                        <?php if ((int) $t['valor_maximo'] > 0): ?>
+                                                            <div class="text-muted">
+                                                                de <?= (int) $t['valor_maximo'] ?> pts
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    <?php else: ?>
+                                                        <span class="text-muted d-block">Sin calificar</span>
+                                                        <?php if ((int) $t['valor_maximo'] > 0): ?>
+                                                            <div class="text-muted">
+                                                                Valor: <?= (int) $t['valor_maximo'] ?> pts
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+
+                                                    <div class="mt-1">
+                                                        <span class="<?= $clase_estado ?> small"><?= $estado ?></span>
+                                                    </div>
+                                                </td>
+
+                                                <td class="small">
+                                                    <?php
+                                                    if ($t['calificacion'] !== null) {
+                                                        echo $t['comentarios_docente']
+                                                            ? nl2br(htmlspecialchars($t['comentarios_docente']))
+                                                            : '<span class="text-muted">Sin comentarios</span>';
+                                                    } else {
+                                                        echo '<span class="text-muted">En espera de calificación</span>';
+                                                    }
+                                                    ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Detalle de evaluaciones (quiz, exámenes, etc.) -->
+                <div class="card card-soft">
+                    <div class="card-header bg-white">
+                        <h2 class="h6 fw-bold mb-0">Evaluaciones del curso (quiz, exámenes, etc.)</h2>
+                    </div>
+                    <div class="card-body p-0">
+                        <?php if (empty($evaluaciones)): ?>
+                            <p class="text-muted small m-3">
+                                No hay evaluaciones registradas para este curso todavía.
+                            </p>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Tipo de evaluación</th>
+                                            <th class="text-center">Fecha</th>
+                                            <th class="text-center">Nota</th>
+                                            <th>Comentario</th>
                                         </tr>
-                                    <?php endforeach; ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($evaluaciones as $e): ?>
+                                            <?php
+                                            $fecha_eval = $e['fecha_evaluacion']
+                                                ? date("d/m/Y", strtotime($e['fecha_evaluacion']))
+                                                : "—";
+                                            ?>
+                                            <tr>
+                                                <td class="small">
+                                                    <?= htmlspecialchars($e['nombre_evaluacion']) ?>
+                                                </td>
+                                                <td class="text-center small"><?= $fecha_eval ?></td>
+                                                <td class="text-center small">
+                                                    <?= number_format($e['puntaje'], 2) ?>
+                                                </td>
+                                                <td class="small">
+                                                    <?=
+                                                        $e['comentarios']
+                                                            ? nl2br(htmlspecialchars($e['comentarios']))
+                                                            : '<span class="text-muted">Sin comentarios</span>';
+                                                    ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
                                     </tbody>
                                 </table>
                             </div>
