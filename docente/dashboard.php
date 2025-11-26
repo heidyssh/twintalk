@@ -137,6 +137,26 @@ include __DIR__ . '/../includes/header.php';
             </a>
         </div>
 
+            <div class="col-md-6 col-xl-3">
+        <a href="/twintalk/docente/asistencia.php" class="text-decoration-none">
+            <div class="border rounded-4 p-3 h-100 bg-white shadow-sm hover-shadow-sm">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="me-2">
+                        <i class="fa-solid fa-user-check fa-lg text-success"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 text-secondary">Asistencia</h6>
+                        <small class="text-muted">Registrar asistencia por clase.</small>
+                    </div>
+                </div>
+                <p class="small text-muted mb-0">
+                    Inicia la clase, marca los estudiantes presentes y guarda el registro del día.
+                </p>
+            </div>
+        </a>
+    </div>
+
+
         <div class="col-md-4">
             <!-- AQUÍ CORREGIMOS: botón "Estudiantes" va a docente/estudiantes.php -->
             <a href="/twintalk/docente/estudiantes.php" class="text-decoration-none">

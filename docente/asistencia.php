@@ -4,8 +4,8 @@ require_once __DIR__ . '/../includes/auth.php';
 
 require_role([2]); // solo docentes
 
-$docenteId = $_SESSION['usuario_id'] ?? null;
-if (!$docenteId) {
+$docente_id = $_SESSION['usuario_id'] ?? 0;
+if ($docente_id <= 0) {
     header("Location: /twintalk/login.php");
     exit;
 }
@@ -14,43 +14,38 @@ $mensaje = "";
 $error   = "";
 
 // -----------------------------
-// 1. Recibir horario_id
+// 1) Obtener horarios del docente
 // -----------------------------
-$horario_id = isset($_GET['horario_id']) ? (int)$_GET['horario_id'] : 0;
-if ($horario_id <= 0) {
-    include __DIR__ . '/../includes/header.php';
-    echo '<div class="container mt-4">
-            <div class="alert alert-danger">Horario no válido.</div>
-          </div>';
-    include __DIR__ . '/../includes/footer.php';
-    exit;
-}
-
-// -----------------------------
-// 2. Verificar que el horario pertenezca a este docente
-// -----------------------------
-$stmt = $mysqli->prepare("
-    SELECT h.id,
-           c.nombre_curso,
-           c.descripcion,
-           h.hora_inicio,
-           h.hora_fin,
-           h.aula
+$stmtHor = $mysqli->prepare("
+    SELECT 
+        h.id,
+        c.nombre_curso,
+        ds.nombre_dia,
+        h.hora_inicio,
+        h.hora_fin,
+        h.aula
     FROM horarios h
-    INNER JOIN cursos c ON h.curso_id = c.id
-    WHERE h.id = ? AND h.docente_id = ?
-    LIMIT 1
+    INNER JOIN cursos c       ON h.curso_id = c.id
+    INNER JOIN dias_semana ds ON h.dia_semana_id = ds.id
+    WHERE h.docente_id = ?
+      AND h.activo = 1
+    ORDER BY ds.numero_dia, h.hora_inicio
 ");
-$stmt->bind_param("ii", $horario_id, $docenteId);
-$stmt->execute();
-$infoHorario = $stmt->get_result()->fetch_assoc();
-$stmt->close();
+$stmtHor->bind_param("i", $docente_id);
+$stmtHor->execute();
+$resHorarios = $stmtHor->get_result();
+$horarios_docente = [];
+while ($row = $resHorarios->fetch_assoc()) {
+    $horarios_docente[] = $row;
+}
+$stmtHor->close();
 
-if (!$infoHorario) {
+// Si no tiene horarios
+if (empty($horarios_docente)) {
     include __DIR__ . '/../includes/header.php';
-    echo '<div class="container mt-4">
-            <div class="alert alert-danger">
-                No tienes permiso para gestionar la asistencia de este horario.
+    echo '<div class="container py-4">
+            <div class="alert alert-warning">
+                No tienes horarios asignados actualmente.
             </div>
           </div>';
     include __DIR__ . '/../includes/footer.php';
@@ -58,245 +53,203 @@ if (!$infoHorario) {
 }
 
 // -----------------------------
-// 3. Determinar fecha de clase
+// 2) Horario seleccionado y fecha
 // -----------------------------
-if (isset($_GET['fecha']) && $_GET['fecha'] !== '') {
-    $fecha_clase = $_GET['fecha'];
-} else {
-    $fecha_clase = date("Y-m-d");
-}
+$horario_id_seleccionado = isset($_REQUEST['horario_id']) ? (int)$_REQUEST['horario_id'] : (int)$horarios_docente[0]['id'];
+$fecha_clase             = isset($_REQUEST['fecha_clase']) ? $_REQUEST['fecha_clase'] : date('Y-m-d');
 
-// Validar formato básico de la fecha (YYYY-MM-DD)
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_clase)) {
-    $fecha_clase = date("Y-m-d");
-}
-
-// -----------------------------
-// 4. Procesar envío de asistencia (POST)
-// -----------------------------
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-
-    $fecha_clase_post = $_POST['fecha_clase'] ?? date("Y-m-d");
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_clase_post)) {
-        $fecha_clase_post = date("Y-m-d");
-    }
-    $fecha_clase = $fecha_clase_post; // mantener la fecha seleccionada
-
-    if (!isset($_POST['asistencia']) || !is_array($_POST['asistencia']) || count($_POST['asistencia']) === 0) {
-        $error = "No se recibió información de asistencia.";
-    } else {
-        foreach ($_POST['asistencia'] as $matricula_id => $valor) {
-            $matricula_id = (int)$matricula_id;
-            $presente     = ($valor == "1") ? 1 : 0;
-
-            // Verificar si ya existe registro de asistencia para ese día
-            $check = $mysqli->prepare("
-                SELECT id
-                FROM asistencia
-                WHERE matricula_id = ? AND fecha_clase = ?
-                LIMIT 1
-            ");
-            $check->bind_param("is", $matricula_id, $fecha_clase_post);
-            $check->execute();
-            $resCheck = $check->get_result();
-            $rowAsis  = $resCheck->fetch_assoc();
-            $check->close();
-
-            if ($rowAsis) {
-                // Actualizar
-                $update = $mysqli->prepare("
-                    UPDATE asistencia
-                    SET presente = ?
-                    WHERE id = ?
-                ");
-                $asis_id = (int)$rowAsis['id'];
-                $update->bind_param("ii", $presente, $asis_id);
-                $update->execute();
-                $update->close();
-            } else {
-                // Insertar
-                $insert = $mysqli->prepare("
-                    INSERT INTO asistencia (matricula_id, fecha_clase, presente)
-                    VALUES (?, ?, ?)
-                ");
-                $insert->bind_param("isi", $matricula_id, $fecha_clase_post, $presente);
-                $insert->execute();
-                $insert->close();
-            }
-        }
-
-        $mensaje = "Asistencia registrada correctamente para la fecha $fecha_clase_post.";
+$horario_valido = false;
+foreach ($horarios_docente as $h) {
+    if ((int)$h['id'] === $horario_id_seleccionado) {
+        $horario_valido = true;
+        break;
     }
 }
 
+if (!$horario_valido) {
+    $error = "Horario no válido.";
+    $horario_id_seleccionado = (int)$horarios_docente[0]['id'];
+}
+
 // -----------------------------
-// 5. Obtener estudiantes matriculados en ese horario
+// 3) Guardar asistencia
 // -----------------------------
-$stmtEst = $mysqli->prepare("
-    SELECT m.id AS matricula_id,
-           u.nombre,
-           u.apellido,
-           u.foto_perfil
-    FROM matriculas m
-    INNER JOIN estudiantes e ON m.estudiante_id = e.id
-    INNER JOIN usuarios u ON e.id = u.id
-    WHERE m.horario_id = ?
-      AND m.estado_id = 1
-    ORDER BY u.nombre, u.apellido
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'guardar_asistencia') {
+
+    $stmtMat = $mysqli->prepare("
+        SELECT 
+            m.id AS matricula_id
+        FROM matriculas m
+        INNER JOIN estados_matricula em ON m.estado_id = em.id
+        WHERE m.horario_id = ?
+          AND em.nombre_estado <> 'Cancelada'
+    ");
+    $stmtMat->bind_param("i", $horario_id_seleccionado);
+    $stmtMat->execute();
+    $resMat = $stmtMat->get_result();
+    $matriculas_ids = [];
+    while ($row = $resMat->fetch_assoc()) {
+        $matriculas_ids[] = (int)$row['matricula_id'];
+    }
+    $stmtMat->close();
+
+    $presentes = $_POST['presente'] ?? [];
+
+    $stmtAsis = $mysqli->prepare("
+        INSERT INTO asistencia (matricula_id, fecha_clase, presente, observaciones)
+        VALUES (?, ?, ?, NULL)
+        ON DUPLICATE KEY UPDATE
+            presente = VALUES(presente),
+            fecha_registro = CURRENT_TIMESTAMP()
+    ");
+
+    foreach ($matriculas_ids as $mat_id) {
+        $presente = isset($presentes[$mat_id]) ? 1 : 0;
+        $stmtAsis->bind_param("isi", $mat_id, $fecha_clase, $presente);
+        $stmtAsis->execute();
+    }
+
+    $stmtAsis->close();
+
+    $mensaje = "Asistencia guardada correctamente.";
+}
+
+// -----------------------------
+// 4) Cargar asistencia y alumnos
+// -----------------------------
+$asistencia_map = [];
+$estudiantes = [];
+
+$stmtAsisDia = $mysqli->prepare("
+    SELECT 
+        matricula_id,
+        presente
+    FROM asistencia
+    WHERE fecha_clase = ?
 ");
-$stmtEst->bind_param("i", $horario_id);
+$stmtAsisDia->bind_param("s", $fecha_clase);
+$stmtAsisDia->execute();
+$resAsisDia = $stmtAsisDia->get_result();
+while ($row = $resAsisDia->fetch_assoc()) {
+    $asistencia_map[(int)$row['matricula_id']] = (int)$row['presente'];
+}
+$stmtAsisDia->close();
+
+$stmtEst = $mysqli->prepare("
+    SELECT 
+        m.id AS matricula_id,
+        u.nombre,
+        u.apellido,
+        u.email
+    FROM matriculas m
+    INNER JOIN estados_matricula em ON m.estado_id = em.id
+    INNER JOIN estudiantes e       ON m.estudiante_id = e.id
+    INNER JOIN usuarios u          ON e.id = u.id
+    WHERE m.horario_id = ?
+      AND em.nombre_estado <> 'Cancelada'
+    ORDER BY u.apellido, u.nombre
+");
+$stmtEst->bind_param("i", $horario_id_seleccionado);
 $stmtEst->execute();
 $resEst = $stmtEst->get_result();
-
-$matriculas_ids = [];
 while ($row = $resEst->fetch_assoc()) {
-    $matriculas_ids[] = $row['matricula_id'];
-    $listaEstudiantes[] = $row;
+    $estudiantes[] = $row;
 }
 $stmtEst->close();
 
-// Si no hay estudiantes, mostramos mensaje
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container py-4">
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h4 class="mb-0">Registro de asistencia</h4>
-            <small class="text-muted">
-                Curso: <strong><?= htmlspecialchars($infoHorario['nombre_curso']) ?></strong>
-                &middot; Aula: <?= htmlspecialchars($infoHorario['aula']) ?>
-            </small>
-        </div>
-
-        <!-- Selección de fecha -->
-        <form method="get" class="d-flex align-items-center gap-2">
-            <input type="hidden" name="horario_id" value="<?= $horario_id ?>">
-            <label class="form-label mb-0 small">Fecha:</label>
-            <input type="date"
-                   name="fecha"
-                   class="form-control form-control-sm"
-                   value="<?= htmlspecialchars($fecha_clase) ?>">
-            <button type="submit" class="btn btn-sm btn-outline-secondary">
-                Ir
-            </button>
-        </form>
-    </div>
+    <h3 class="mb-1">Registro de asistencia</h3>
+    <p class="text-muted">Marca los estudiantes presentes en la clase.</p>
 
     <?php if ($mensaje): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>
+        <div class="alert alert-success"><?= $mensaje ?></div>
     <?php endif; ?>
 
     <?php if ($error): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+        <div class="alert alert-danger"><?= $error ?></div>
     <?php endif; ?>
 
-    <?php if (empty($listaEstudiantes)): ?>
-        <div class="alert alert-warning mt-3">
-            No hay estudiantes matriculados en este horario con matrícula activa.
+    <!-- Filtros -->
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-6">
+            <label class="form-label">Horario</label>
+            <select name="horario_id" class="form-select" onchange="this.form.submit()">
+                <?php foreach ($horarios_docente as $h): ?>
+                    <option value="<?= $h['id'] ?>" <?= ($h['id'] == $horario_id_seleccionado ? 'selected' : '') ?>>
+                        <?= $h['nombre_curso'] ?> (<?= $h['nombre_dia'] ?> <?= substr($h['hora_inicio'],0,5) ?> - <?= substr($h['hora_fin'],0,5) ?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
         </div>
-    <?php else: ?>
 
-        <?php
-        // -----------------------------
-        // 6. Cargar asistencia existente para esa fecha
-        // -----------------------------
-        $asistencia_existente = [];
+        <div class="col-md-3">
+            <label class="form-label">Fecha de la clase</label>
+            <input type="date" name="fecha_clase" class="form-control" value="<?= $fecha_clase ?>" onchange="this.form.submit()">
+        </div>
 
-        if (!empty($matriculas_ids)) {
-            $ids_in = implode(',', array_map('intval', $matriculas_ids));
+        <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-outline-secondary w-100">
+                <i class="fa-solid fa-rotate"></i> Actualizar
+            </button>
+        </div>
+    </form>
 
-            $sqlAsis = "
-                SELECT matricula_id, presente
-                FROM asistencia
-                WHERE fecha_clase = ?
-                  AND matricula_id IN ($ids_in)
-            ";
-            $stmtAsis = $mysqli->prepare($sqlAsis);
-            $stmtAsis->bind_param("s", $fecha_clase);
-            $stmtAsis->execute();
-            $resAsis = $stmtAsis->get_result();
-            while ($rowA = $resAsis->fetch_assoc()) {
-                $asistencia_existente[(int)$rowA['matricula_id']] = (int)$rowA['presente'];
-            }
-            $stmtAsis->close();
-        }
-        ?>
+    <!-- Lista de alumnos -->
+    <form method="post">
+        <input type="hidden" name="accion" value="guardar_asistencia">
+        <input type="hidden" name="horario_id" value="<?= $horario_id_seleccionado ?>">
+        <input type="hidden" name="fecha_clase" value="<?= $fecha_clase ?>">
 
-        <form method="post" class="mt-3">
-
-            <input type="hidden" name="fecha_clase" value="<?= htmlspecialchars($fecha_clase) ?>">
-
-            <div class="card shadow-sm">
-                <div class="card-body">
-
-                    <p class="mb-3">
-                        Marca la asistencia de los estudiantes para la fecha:
-                        <strong><?= htmlspecialchars($fecha_clase) ?></strong>
-                    </p>
-
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width:70px;">Foto</th>
-                                    <th>Estudiante</th>
-                                    <th style="width:200px;">Asistencia</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            <?php foreach ($listaEstudiantes as $est): 
-                                $mat_id = (int)$est['matricula_id'];
-                                // valor por defecto: presente (1) si no hay registro
-                                $valor_actual = $asistencia_existente[$mat_id] ?? 1;
-                            ?>
-                                <tr>
-                                    <td>
-                                        <?php if (!empty($est['foto_perfil'])): ?>
-                                            <img src="<?= htmlspecialchars($est['foto_perfil']) ?>"
-                                                 class="rounded-circle"
-                                                 alt="Foto"
-                                                 width="48"
-                                                 height="48">
-                                        <?php else: ?>
-                                            <div class="bg-secondary text-white rounded-circle d-flex justify-content-center align-items-center"
-                                                 style="width:48px;height:48px;">
-                                                <i class="fa-solid fa-user"></i>
-                                            </div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <strong><?= htmlspecialchars($est['nombre'] . ' ' . $est['apellido']) ?></strong>
-                                    </td>
-                                    <td>
-                                        <select name="asistencia[<?= $mat_id ?>]" class="form-select form-select-sm">
-                                            <option value="1" <?= $valor_actual == 1 ? 'selected' : '' ?>>
-                                                Presente
-                                            </option>
-                                            <option value="0" <?= $valor_actual == 0 ? 'selected' : '' ?>>
-                                                Ausente
-                                            </option>
-                                        </select>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary mt-3 w-100">
-                        Guardar asistencia
-                    </button>
-
-                </div>
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <i class="fa-solid fa-user-check"></i> Lista de estudiantes
             </div>
 
-        </form>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Estudiante</th>
+                            <th>Correo</th>
+                            <th class="text-center">Presente</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php $i = 1; foreach ($estudiantes as $est): 
+                            $mat = $est['matricula_id'];
+                            $presente = $asistencia_map[$mat] ?? 0;
+                        ?>
+                        <tr>
+                            <td><?= $i++ ?></td>
+                            <td><?= $est['nombre'].' '.$est['apellido'] ?></td>
+                            <td><?= $est['email'] ?></td>
+                            <td class="text-center">
+                                <input 
+                                    type="checkbox" 
+                                    name="presente[<?= $mat ?>]" 
+                                    <?= $presente ? 'checked' : '' ?>
+                                >
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
 
-    <?php endif; ?>
+            <!-- ÚNICO BOTÓN -->
+            <div class="card-footer text-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i> Guardar asistencia
+                </button>
+            </div>
+        </div>
+    </form>
 
 </div>
 
-<?php
-include __DIR__ . '/../includes/footer.php';
+<?php include __DIR__ . '/../includes/footer.php'; ?>
