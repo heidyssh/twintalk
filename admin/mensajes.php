@@ -2,169 +2,477 @@
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
 
-require_role([1]); // solo admin
+require_role([1]); // SOLO ADMIN
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $usuario_id = $_SESSION['usuario_id'] ?? 0;
+$rol_id     = $_SESSION['rol_id'] ?? 0;
+
+if ($usuario_id <= 0) {
+    header("Location: /twintalk/login.php");
+    exit;
+}
+
 $mensaje = "";
 $error   = "";
 
-// Enviar mensaje
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enviar_mensaje'])) {
-    $email_dest = trim($_POST['email_dest'] ?? '');
-    $asunto     = trim($_POST['asunto'] ?? '');
-    $contenido  = trim($_POST['contenido'] ?? '');
+// -----------------------------
+// 1) Parámetros de vista
+// -----------------------------
+$view = isset($_GET['view']) ? $_GET['view'] : 'inbox'; // inbox | sent
+$view = ($view === 'sent') ? 'sent' : 'inbox';
 
-    if ($email_dest === '' || $contenido === '') {
-        $error = "Debes indicar correo destino y contenido.";
-    } else {
-        // Buscar usuario por email
-        $stmt = $mysqli->prepare("SELECT id FROM usuarios WHERE email = ? LIMIT 1");
-        $stmt->bind_param("s", $email_dest);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $dest = $res->fetch_assoc();
-        $stmt->close();
+// Para reply
+$reply_id             = isset($_GET['reply_id']) ? (int)$_GET['reply_id'] : 0;
+$reply_destinatario   = null;
+$reply_asunto         = "";
+$reply_contenido_cita = "";
 
-        if (!$dest) {
-            $error = "No se encontró un usuario con ese correo.";
+// URL base de este archivo
+$baseUrl = "/twintalk/admin/mensajes.php";
+
+// -----------------------------
+// 2) Procesar acciones (POST)
+// -----------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $accion = $_POST['accion'] ?? '';
+
+    // 2.1) Enviar mensaje
+    if ($accion === 'enviar_mensaje') {
+        $destinatario_id = isset($_POST['destinatario_id']) ? (int)$_POST['destinatario_id'] : 0;
+        $asunto          = trim($_POST['asunto'] ?? '');
+        $contenido       = trim($_POST['contenido'] ?? '');
+        $reply_de        = isset($_POST['reply_de']) ? (int)$_POST['reply_de'] : 0;
+
+        if ($destinatario_id <= 0 || $contenido === '') {
+            $error = "Debes seleccionar un destinatario y escribir un mensaje.";
         } else {
-            $dest_id = (int)$dest['id'];
+            // Manejo de archivo adjunto
+            $archivo_url    = null;
+            $tamano_archivo = null;
 
-            $stmt = $mysqli->prepare("
-                INSERT INTO mensajes (remitente_id, destinatario_id, asunto, contenido, fecha_envio, leido)
-                VALUES (?, ?, ?, ?, NOW(), 0)
-            ");
-            $stmt->bind_param("iiss", $usuario_id, $dest_id, $asunto, $contenido);
-            if ($stmt->execute()) {
-                $mensaje = "Mensaje enviado correctamente.";
-            } else {
-                $error = "No se pudo enviar el mensaje.";
+            if (isset($_FILES['archivo']) && $_FILES['archivo']['error'] === UPLOAD_ERR_OK) {
+                $tmp_name        = $_FILES['archivo']['tmp_name'];
+                $nombre_original = $_FILES['archivo']['name'];
+                $tamano_archivo  = (int)$_FILES['archivo']['size'];
+
+                $ext = strtolower(pathinfo($nombre_original, PATHINFO_EXTENSION));
+                $ext_permitidas = ['pdf','doc','docx','ppt','pptx','xls','xlsx','jpg','jpeg','png','zip','rar'];
+
+                if (!in_array($ext, $ext_permitidas)) {
+                    $error = "Tipo de archivo no permitido.";
+                } else {
+                    // Carpeta en la RAÍZ del proyecto
+                    $dir_subida = dirname(__DIR__) . "/uploads/mensajes";
+                    if (!is_dir($dir_subida)) {
+                        @mkdir($dir_subida, 0777, true);
+                    }
+
+                    $nombre_unico = "msg_" . uniqid() . "." . $ext;
+                    $ruta_fisica  = $dir_subida . "/" . $nombre_unico;
+                    $ruta_bd      = "/twintalk/uploads/mensajes/" . $nombre_unico;
+
+                    if (move_uploaded_file($tmp_name, $ruta_fisica)) {
+                        $archivo_url = $ruta_bd;
+                    } else {
+                        $error = "No se pudo guardar el archivo adjunto.";
+                    }
+                }
             }
+
+            if ($error === "") {
+                // Para reply, agregar "Re:" si no lo tiene
+                if ($reply_de > 0 && $asunto !== "" && stripos($asunto, "re:") !== 0) {
+                    $asunto = "Re: " . $asunto;
+                }
+
+                $stmt = $mysqli->prepare("
+                    INSERT INTO mensajes (remitente_id, destinatario_id, asunto, contenido, archivo_url, tamano_archivo)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->bind_param("iisssi",
+                    $usuario_id,
+                    $destinatario_id,
+                    $asunto,
+                    $contenido,
+                    $archivo_url,
+                    $tamano_archivo
+                );
+
+                if ($stmt->execute()) {
+                    $mensaje = "Mensaje enviado correctamente.";
+                } else {
+                    $error = "Error al enviar el mensaje: " . $stmt->error;
+                }
+                $stmt->close();
+            }
+        }
+    }
+
+    // 2.2) Eliminar mensaje
+    if ($accion === 'eliminar_mensaje') {
+        $mensaje_id = isset($_POST['mensaje_id']) ? (int)$_POST['mensaje_id'] : 0;
+
+        if ($mensaje_id > 0) {
+            // ADMIN puede borrar cualquier mensaje
+            $stmt = $mysqli->prepare("
+                SELECT archivo_url
+                FROM mensajes
+                WHERE id = ?
+                LIMIT 1
+            ");
+            $stmt->bind_param("i", $mensaje_id);
+            $stmt->execute();
+            $res   = $stmt->get_result();
+            $datos = $res->fetch_assoc();
             $stmt->close();
+
+            if ($datos) {
+                $archivo_url = $datos['archivo_url'];
+
+                $stmtDel = $mysqli->prepare("DELETE FROM mensajes WHERE id = ?");
+                $stmtDel->bind_param("i", $mensaje_id);
+
+                if ($stmtDel->execute()) {
+                    $mensaje = "Mensaje eliminado correctamente.";
+
+                    // Borrar archivo físico si existe
+                    if ($archivo_url && strpos($archivo_url, "/twintalk/uploads/mensajes/") === 0) {
+                        $root       = dirname(__DIR__); // C:\xampp\htdocs\twintalk
+                        $rel_path   = str_replace("/twintalk", "", $archivo_url);
+                        $ruta_fisica = $root . $rel_path;
+                        if (file_exists($ruta_fisica)) {
+                            @unlink($ruta_fisica);
+                        }
+                    }
+                } else {
+                    $error = "No se pudo eliminar el mensaje.";
+                }
+                $stmtDel->close();
+            } else {
+                $error = "El mensaje no existe.";
+            }
         }
     }
 }
 
-// Bandeja de entrada
+// -----------------------------
+// 3) Si viene reply_id (prellenar formulario)
+// -----------------------------
+if ($reply_id > 0) {
+    $stmt = $mysqli->prepare("
+        SELECT m.id, m.asunto, m.contenido, m.remitente_id,
+               u.nombre, u.apellido, u.email
+        FROM mensajes m
+        INNER JOIN usuarios u ON u.id = m.remitente_id
+        WHERE m.id = ? AND m.destinatario_id = ?
+        LIMIT 1
+    ");
+    $stmt->bind_param("ii", $reply_id, $usuario_id);
+    $stmt->execute();
+    $resReply = $stmt->get_result();
+    if ($rowRep = $resReply->fetch_assoc()) {
+        $reply_destinatario = $rowRep['remitente_id'];
+        $reply_asunto = (stripos($rowRep['asunto'], "re:") === 0)
+            ? $rowRep['asunto']
+            : "Re: " . $rowRep['asunto'];
+
+        $reply_contenido_cita = "\n\n----- Mensaje anterior de " .
+            $rowRep['nombre'] . " " . $rowRep['apellido'] . " (" . $rowRep['email'] . ") -----\n" .
+            $rowRep['contenido'];
+    }
+    $stmt->close();
+}
+
+// -----------------------------
+// 4) Lista de usuarios para combo destinatario
+// -----------------------------
+$usuarios_opciones = [];
 $stmt = $mysqli->prepare("
-    SELECT m.id, u.nombre, u.apellido, u.email, m.asunto, m.contenido, m.leido, m.fecha_envio
+    SELECT id, nombre, apellido, email
+    FROM usuarios
+    WHERE id <> ?
+    ORDER BY nombre, apellido
+");
+$stmt->bind_param("i", $usuario_id);
+$stmt->execute();
+$resUsers = $stmt->get_result();
+while ($u = $resUsers->fetch_assoc()) {
+    $usuarios_opciones[] = $u;
+}
+$stmt->close();
+
+// -----------------------------
+// 5) Inbox y enviados (solo los del usuario)
+// -----------------------------
+$stmt = $mysqli->prepare("
+    SELECT m.id, m.asunto, m.contenido, m.leido, m.fecha_envio,
+           u.nombre AS remitente_nombre,
+           u.apellido AS remitente_apellido,
+           u.email AS remitente_email,
+           m.archivo_url
     FROM mensajes m
-    INNER JOIN usuarios u ON m.remitente_id = u.id
+    INNER JOIN usuarios u ON u.id = m.remitente_id
     WHERE m.destinatario_id = ?
     ORDER BY m.fecha_envio DESC
 ");
 $stmt->bind_param("i", $usuario_id);
 $stmt->execute();
-$inbox = $stmt->get_result();
-$stmt->close();
+$resInbox = $stmt->get_result();
 
-// Enviados
-$stmt = $mysqli->prepare("
-    SELECT m.id, u.nombre, u.apellido, u.email, m.asunto, m.contenido, m.leido, m.fecha_envio
+$stmt2 = $mysqli->prepare("
+    SELECT m.id, m.asunto, m.contenido, m.leido, m.fecha_envio,
+           u.nombre AS destinatario_nombre,
+           u.apellido AS destinatario_apellido,
+           u.email AS destinatario_email,
+           m.archivo_url
     FROM mensajes m
-    INNER JOIN usuarios u ON m.destinatario_id = u.id
+    INNER JOIN usuarios u ON u.id = m.destinatario_id
     WHERE m.remitente_id = ?
     ORDER BY m.fecha_envio DESC
 ");
-$stmt->bind_param("i", $usuario_id);
-$stmt->execute();
-$sent = $stmt->get_result();
-$stmt->close();
+$stmt2->bind_param("i", $usuario_id);
+$stmt2->execute();
+$resSent = $stmt2->get_result();
 
 include __DIR__ . "/../includes/header.php";
 ?>
 
-<h1 class="h4 fw-bold mt-3">Mensajes internos (Admin)</h1>
+<div class="container mt-4">
+    <h1 class="h4 mb-3">
+        <i class="fa-regular fa-envelope me-2"></i>
+        Mensajes internos (Admin)
+    </h1>
 
-<?php if ($mensaje): ?><div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div><?php endif; ?>
-<?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
+    <?php if ($mensaje): ?>
+        <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>
+    <?php endif; ?>
 
-<div class="row g-3 mt-2">
-    <div class="col-lg-4">
-        <div class="card card-soft p-3">
-            <h2 class="h6 fw-bold mb-3">Nuevo mensaje</h2>
-            <form method="post">
-                <div class="mb-2">
-                    <label class="form-label">Para (correo)</label>
-                    <input type="email" name="email_dest" class="form-control" required>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Asunto</label>
-                    <input type="text" name="asunto" class="form-control">
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Mensaje</label>
-                    <textarea name="contenido" class="form-control" rows="4" required></textarea>
-                </div>
-                <button class="btn btn-tt-primary btn-sm" name="enviar_mensaje">Enviar</button>
-            </form>
-        </div>
-    </div>
+    <?php if ($error): ?>
+        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
 
-    <div class="col-lg-8">
-        <ul class="nav nav-tabs" id="tabMensajes" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#inbox" type="button">
-                    Bandeja de entrada
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#sent" type="button">
-                    Enviados
-                </button>
-            </li>
-        </ul>
+    <!-- Tabs bandeja -->
+    <ul class="nav nav-pills mb-3">
+        <li class="nav-item">
+            <a class="nav-link <?= $view === 'inbox' ? 'active' : '' ?>"
+               href="<?= $baseUrl ?>?view=inbox">
+                Bandeja de entrada
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?= $view === 'sent' ? 'active' : '' ?>"
+               href="<?= $baseUrl ?>?view=sent">
+                Enviados
+            </a>
+        </li>
+    </ul>
 
-        <div class="tab-content border border-top-0 p-3 rounded-bottom">
-            <div class="tab-pane fade show active" id="inbox">
-                <?php if ($inbox && $inbox->num_rows > 0): ?>
-                    <div class="list-group list-group-flush">
-                        <?php while ($m = $inbox->fetch_assoc()): ?>
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <strong><?= htmlspecialchars($m['asunto'] ?: '(Sin asunto)') ?></strong><br>
-                                        <small class="text-muted">
-                                            De: <?= htmlspecialchars($m['nombre'] . ' ' . $m['apellido']) ?>
-                                            (<?= htmlspecialchars($m['email']) ?>)
-                                            · <?= htmlspecialchars($m['fecha_envio']) ?>
-                                        </small>
-                                    </div>
-                                </div>
-                                <p class="mb-0 mt-2"><?= nl2br(htmlspecialchars($m['contenido'])) ?></p>
+    <div class="row">
+        <!-- Formulario nuevo mensaje / reply -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">
+                        <?= $reply_destinatario ? 'Responder mensaje' : 'Nuevo mensaje' ?>
+                    </h5>
+                    <form method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="accion" value="enviar_mensaje">
+                        <input type="hidden" name="reply_de" value="<?= $reply_id ?>">
+
+                        <!-- Destinatario -->
+                        <div class="mb-3">
+                            <label class="form-label">Para</label>
+                            <select name="destinatario_id" class="form-select" required>
+                                <option value="">-- Selecciona destinatario --</option>
+                                <?php foreach ($usuarios_opciones as $u): ?>
+                                    <?php
+                                    $selected = "";
+                                    if ($reply_destinatario && $reply_destinatario == $u['id']) {
+                                        $selected = "selected";
+                                    }
+                                    ?>
+                                    <option value="<?= $u['id'] ?>" <?= $selected ?>>
+                                        <?= htmlspecialchars($u['nombre'] . " " . $u['apellido'] . " - " . $u['email']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <!-- Asunto -->
+                        <div class="mb-3">
+                            <label class="form-label">Asunto</label>
+                            <input type="text" name="asunto" class="form-control"
+                                   value="<?= htmlspecialchars($reply_asunto) ?>">
+                        </div>
+
+                        <!-- Contenido -->
+                        <div class="mb-3">
+                            <label class="form-label">Mensaje</label>
+                            <textarea name="contenido" rows="5" class="form-control" required><?=
+                                htmlspecialchars($reply_contenido_cita)
+                            ?></textarea>
+                        </div>
+
+                        <!-- Archivo -->
+                        <div class="mb-3">
+                            <label class="form-label">Adjuntar archivo (opcional)</label>
+                            <input type="file" name="archivo" class="form-control">
+                            <div class="form-text">
+                                Extensiones típicas: pdf, doc, docx, ppt, jpg, png, zip, rar.
                             </div>
-                        <?php endwhile; ?>
-                    </div>
-                <?php else: ?>
-                    <p class="text-muted small mb-0">No tienes mensajes en la bandeja de entrada.</p>
-                <?php endif; ?>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fa-regular fa-paper-plane me-1"></i>
+                            Enviar
+                        </button>
+                    </form>
+                </div>
             </div>
+        </div>
 
-            <div class="tab-pane fade" id="sent">
-                <?php if ($sent && $sent->num_rows > 0): ?>
-                    <div class="list-group list-group-flush">
-                        <?php while ($m = $sent->fetch_assoc()): ?>
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <strong><?= htmlspecialchars($m['asunto'] ?: '(Sin asunto)') ?></strong><br>
-                                        <small class="text-muted">
-                                            Para: <?= htmlspecialchars($m['nombre'] . ' ' . $m['apellido']) ?>
-                                            (<?= htmlspecialchars($m['email']) ?>)
-                                            · <?= htmlspecialchars($m['fecha_envio']) ?>
-                                        </small>
-                                    </div>
-                                </div>
-                                <p class="mb-0 mt-2"><?= nl2br(htmlspecialchars($m['contenido'])) ?></p>
+        <!-- Listado de mensajes -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <?php if ($view === 'inbox'): ?>
+                        <h5 class="card-title mb-3">Bandeja de entrada</h5>
+                        <?php if ($resInbox->num_rows === 0): ?>
+                            <p class="text-muted">No tienes mensajes recibidos.</p>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                    <tr>
+                                        <th>De</th>
+                                        <th>Asunto</th>
+                                        <th>Adjunto</th>
+                                        <th>Fecha</th>
+                                        <th class="text-end">Acciones</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php while ($m = $resInbox->fetch_assoc()): ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?= htmlspecialchars($m['remitente_nombre'] . " " . $m['remitente_apellido']) ?></strong><br>
+                                                <small class="text-muted"><?= htmlspecialchars($m['remitente_email']) ?></small>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold">
+                                                    <?= $m['asunto'] ? htmlspecialchars($m['asunto']) : '(Sin asunto)' ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    <?= nl2br(htmlspecialchars(mb_strimwidth($m['contenido'], 0, 80, '...'))) ?>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($m['archivo_url'])): ?>
+                                                    <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                        <i class="fa-solid fa-paperclip"></i>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-muted small">--</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    <?= htmlspecialchars($m['fecha_envio']) ?>
+                                                </small>
+                                            </td>
+                                            <td class="text-end">
+                                                <a href="<?= $baseUrl ?>?view=inbox&reply_id=<?= $m['id'] ?>"
+                                                   class="btn btn-sm btn-outline-primary mb-1">
+                                                    <i class="fa-solid fa-reply"></i>
+                                                </a>
+                                                <form method="post" class="d-inline"
+                                                      onsubmit="return confirm('¿Eliminar este mensaje?');">
+                                                    <input type="hidden" name="accion" value="eliminar_mensaje">
+                                                    <input type="hidden" name="mensaje_id" value="<?= $m['id'] ?>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                    </tbody>
+                                </table>
                             </div>
-                        <?php endwhile; ?>
-                    </div>
-                <?php else: ?>
-                    <p class="text-muted small mb-0">No tienes mensajes enviados.</p>
-                <?php endif; ?>
+                        <?php endif; ?>
+
+                    <?php else: ?>
+                        <h5 class="card-title mb-3">Mensajes enviados</h5>
+                        <?php if ($resSent->num_rows === 0): ?>
+                            <p class="text-muted">No has enviado mensajes.</p>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                    <tr>
+                                        <th>Para</th>
+                                        <th>Asunto</th>
+                                        <th>Adjunto</th>
+                                        <th>Fecha</th>
+                                        <th class="text-end">Acciones</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php while ($m = $resSent->fetch_assoc()): ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?= htmlspecialchars($m['destinatario_nombre'] . " " . $m['destinatario_apellido']) ?></strong><br>
+                                                <small class="text-muted"><?= htmlspecialchars($m['destinatario_email']) ?></small>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold">
+                                                    <?= $m['asunto'] ? htmlspecialchars($m['asunto']) : '(Sin asunto)' ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    <?= nl2br(htmlspecialchars(mb_strimwidth($m['contenido'], 0, 80, '...'))) ?>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($m['archivo_url'])): ?>
+                                                    <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                        <i class="fa-solid fa-paperclip"></i>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-muted small">--</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    <?= htmlspecialchars($m['fecha_envio']) ?>
+                                                </small>
+                                            </td>
+                                            <td class="text-end">
+                                                <form method="post" class="d-inline"
+                                                      onsubmit="return confirm('¿Eliminar este mensaje?');">
+                                                    <input type="hidden" name="accion" value="eliminar_mensaje">
+                                                    <input type="hidden" name="mensaje_id" value="<?= $m['id'] ?>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<?php include __DIR__ . "/../includes/footer.php"; ?>
+<?php
+include __DIR__ . "/../includes/footer.php";
