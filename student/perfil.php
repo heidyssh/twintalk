@@ -1,668 +1,453 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([3]); // estudiante
+require_role([3]);
 
 $usuario_id = $_SESSION['usuario_id'];
 $mensaje = "";
 $error = "";
 
-// Avatares de ejemplo (predeterminados)
+// ================= AVATARES =================
 $lista_avatars = [
-    "/twintalk/assets/img/avatars/avatar1.jpg",
-    "/twintalk/assets/img/avatars/avatar2.jpg",
-    "/twintalk/assets/img/avatars/avatar3.jpg",
-    "/twintalk/assets/img/avatars/avatar4.jpg",
-    "/twintalk/assets/img/avatars/avatar5.jpg",
-    "/twintalk/assets/img/avatars/avatar6.jpg",
-    "/twintalk/assets/img/avatars/avatar7.jpg",
-    "/twintalk/assets/img/avatars/avatar8.jpg",
-    "/twintalk/assets/img/avatars/avatar9.jpg",
-    "/twintalk/assets/img/avatars/avatar10.jpg",
-    "/twintalk/assets/img/avatars/avatar11.jpg",
-    "/twintalk/assets/img/avatars/avatar12.jpg",
-    "/twintalk/assets/img/avatars/avatar13.jpg",
-    "/twintalk/assets/img/avatars/avatar14.jpg",
-    "/twintalk/assets/img/avatars/avatar15.jpg",
-    "/twintalk/assets/img/avatars/avatar16.jpg",
-    "/twintalk/assets/img/avatars/avatar17.jpg",
-    "/twintalk/assets/img/avatars/avatar19.jpg",
-    "/twintalk/assets/img/avatars/avatar20.jpg",
-    "/twintalk/assets/img/avatars/avatar21.jpg",
-    "/twintalk/assets/img/avatars/avatar22.jpg",
-    "/twintalk/assets/img/avatars/avatar23.jpg",
-    "/twintalk/assets/img/avatars/avatar24.jpg",
-    "/twintalk/assets/img/avatars/avatar25.jpg",
-    "/twintalk/assets/img/avatars/avatar26.jpg",
-    "/twintalk/assets/img/avatars/avatar27.jpg",
+    "/twintalk/assets/img/avatars/avatar1.jpg","/twintalk/assets/img/avatars/avatar2.jpg",
+    "/twintalk/assets/img/avatars/avatar3.jpg","/twintalk/assets/img/avatars/avatar4.jpg",
+    "/twintalk/assets/img/avatars/avatar5.jpg","/twintalk/assets/img/avatars/avatar6.jpg",
+    "/twintalk/assets/img/avatars/avatar7.jpg","/twintalk/assets/img/avatars/avatar8.jpg",
+    "/twintalk/assets/img/avatars/avatar9.jpg","/twintalk/assets/img/avatars/avatar10.jpg",
+    "/twintalk/assets/img/avatars/avatar11.jpg","/twintalk/assets/img/avatars/avatar12.jpg",
+    "/twintalk/assets/img/avatars/avatar13.jpg","/twintalk/assets/img/avatars/avatar14.jpg",
+    "/twintalk/assets/img/avatars/avatar15.jpg","/twintalk/assets/img/avatars/avatar16.jpg",
+    "/twintalk/assets/img/avatars/avatar17.jpg","/twintalk/assets/img/avatars/avatar19.jpg",
+    "/twintalk/assets/img/avatars/avatar20.jpg","/twintalk/assets/img/avatars/avatar21.jpg",
+    "/twintalk/assets/img/avatars/avatar22.jpg","/twintalk/assets/img/avatars/avatar23.jpg",
+    "/twintalk/assets/img/avatars/avatar24.jpg","/twintalk/assets/img/avatars/avatar25.jpg",
+    "/twintalk/assets/img/avatars/avatar26.jpg","/twintalk/assets/img/avatars/avatar27.jpg",
     "/twintalk/assets/img/avatars/avatar28.jpg",
 ];
 
-// Carpeta para avatares subidos por usuario
-$uploadDir = __DIR__ . "/../uploads/avatars/";
-$uploadUrlBase = "/twintalk/uploads/avatars/";
+// ================= RUTAS =================
+$uploadDirAvatar = __DIR__ . "/../uploads/avatars/";
+$uploadDirDocumento = __DIR__ . "/../uploads/documentos/";
+$urlAvatar = "/twintalk/uploads/avatars/";
+$urlDocumento = "/twintalk/uploads/documentos/";
 
-// Asegurar que la carpeta exista (por si acaso)
-if (!is_dir($uploadDir)) {
-    @mkdir($uploadDir, 0777, true);
-}
+if (!is_dir($uploadDirAvatar)) mkdir($uploadDirAvatar, 0777, true);
+if (!is_dir($uploadDirDocumento)) mkdir($uploadDirDocumento, 0777, true);
+
+// ================= PETICIONES =================
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // 1) Actualizar datos personales
+    // ------ DATOS PERSONALES ------
     if (isset($_POST['actualizar_perfil'])) {
-        $nombre = trim($_POST['nombre'] ?? '');
-        $apellido = trim($_POST['apellido'] ?? '');
-        $telefono = trim($_POST['telefono'] ?? '');
+        $stmt = $mysqli->prepare("UPDATE usuarios SET nombre=?, apellido=?, telefono=? WHERE id=?");
+        $stmt->bind_param("sssi", $_POST['nombre'], $_POST['apellido'], $_POST['telefono'], $usuario_id);
+        $stmt->execute();
+        $stmt->close();
 
-        $stmt = $mysqli->prepare("UPDATE usuarios SET nombre = ?, apellido = ?, telefono = ? WHERE id = ?");
-        $stmt->bind_param("sssi", $nombre, $apellido, $telefono, $usuario_id);
-        if ($stmt->execute()) {
-            $_SESSION['nombre'] = $nombre;
-            $_SESSION['apellido'] = $apellido;
-            $mensaje = "Perfil actualizado.";
-        } else {
-            $error = "Error al actualizar perfil.";
-        }
+        $_SESSION['nombre'] = $_POST['nombre'];
+        $_SESSION['apellido'] = $_POST['apellido'];
+        $mensaje = "Datos actualizados.";
     }
 
-    // 2) Cambiar contraseña
+    // ------ CONTRASEÑA ------
     elseif (isset($_POST['cambiar_password'])) {
-        $pass1 = $_POST['password'] ?? '';
-        $pass2 = $_POST['password2'] ?? '';
-        if ($pass1 === '' || $pass2 === '') {
-            $error = "Debes escribir la nueva contraseña dos veces.";
-        } elseif ($pass1 !== $pass2) {
+        if ($_POST['password'] === "" || $_POST['password2'] === "")
+            $error = "Debes completar ambas contraseñas.";
+        elseif ($_POST['password'] !== $_POST['password2'])
             $error = "Las contraseñas no coinciden.";
-        } else {
-            $hash = password_hash($pass1, PASSWORD_BCRYPT);
-            $stmt = $mysqli->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ?");
+        else {
+            $hash = password_hash($_POST['password'], PASSWORD_BCRYPT);
+            $stmt = $mysqli->prepare("UPDATE usuarios SET password_hash=? WHERE id=?");
             $stmt->bind_param("si", $hash, $usuario_id);
-            if ($stmt->execute()) {
-                $mensaje = "Contraseña actualizada.";
-            } else {
-                $error = "Error al actualizar contraseña.";
-            }
-        }
-    }
-        // 2.b) Guardar datos adicionales / información personal
-    elseif (isset($_POST['guardar_info_personal'])) {
-
-        $tipo_documento_id = (int)($_POST['tipo_documento_id'] ?? 0);
-        $numero_documento  = trim($_POST['numero_documento'] ?? '');
-        $fecha_nacimiento  = trim($_POST['fecha_nacimiento'] ?? '');
-        $direccion         = trim($_POST['direccion'] ?? '');
-        $ciudad            = trim($_POST['ciudad'] ?? '');
-        $pais              = trim($_POST['pais'] ?? '');
-
-        if ($tipo_documento_id <= 0) {
-            $error = "Selecciona un tipo de documento.";
-        } elseif ($numero_documento === '' || $fecha_nacimiento === '' || $direccion === '' || $ciudad === '' || $pais === '') {
-            $error = "Completa todos los datos adicionales.";
-        } else {
-
-            // Convertir dd/mm/aaaa a aaaa-mm-dd si viene así
-            if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $fecha_nacimiento, $m)) {
-                $fecha_nac_sql = "{$m[3]}-{$m[2]}-{$m[1]}";
-            } else {
-                $fecha_nac_sql = $fecha_nacimiento; // por si ya viene en formato SQL
-            }
-
-            // Ver si ya hay registro en informacion_personal
-            $stmt = $mysqli->prepare("SELECT id FROM informacion_personal WHERE usuario_id = ? LIMIT 1");
-            $stmt->bind_param("i", $usuario_id);
             $stmt->execute();
-            $row = $stmt->get_result()->fetch_assoc();
             $stmt->close();
-
-            if ($row) {
-                // Actualizar
-                $info_id = (int)$row['id'];
-                $stmt = $mysqli->prepare("
-                    UPDATE informacion_personal
-                    SET tipo_documento_id = ?, numero_documento = ?, fecha_nacimiento = ?,
-                        direccion = ?, ciudad = ?, pais = ?
-                    WHERE id = ? AND usuario_id = ?
-                ");
-                $stmt->bind_param(
-                    "isssssii",
-                    $tipo_documento_id,
-                    $numero_documento,
-                    $fecha_nac_sql,
-                    $direccion,
-                    $ciudad,
-                    $pais,
-                    $info_id,
-                    $usuario_id
-                );
-            } else {
-                // Insertar nuevo
-                $stmt = $mysqli->prepare("
-                    INSERT INTO informacion_personal
-                        (usuario_id, tipo_documento_id, numero_documento, fecha_nacimiento, direccion, ciudad, pais)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ");
-                $stmt->bind_param(
-                    "iisssss",
-                    $usuario_id,
-                    $tipo_documento_id,
-                    $numero_documento,
-                    $fecha_nac_sql,
-                    $direccion,
-                    $ciudad,
-                    $pais
-                );
-            }
-
-            if ($stmt->execute()) {
-                $mensaje = "Datos adicionales guardados correctamente.";
-            } else {
-                $error = "Error al guardar los datos adicionales.";
-            }
-            $stmt->close();
+            $mensaje = "Contraseña actualizada.";
         }
     }
 
-
-    // 3) Seleccionar avatar predeterminado
+    // ------ AVATAR SELECCIONADO ------
     elseif (isset($_POST['seleccionar_avatar'])) {
-        $avatar = $_POST['avatar'] ?? '';
-        if (in_array($avatar, $lista_avatars, true)) {
-            $stmt = $mysqli->prepare("UPDATE usuarios SET foto_perfil = ? WHERE id = ?");
+        $avatar = $_POST['avatar'];
+        if (in_array($avatar, $lista_avatars)) {
+            $stmt = $mysqli->prepare("UPDATE usuarios SET foto_perfil=? WHERE id=?");
             $stmt->bind_param("si", $avatar, $usuario_id);
-            if ($stmt->execute()) {
-                $_SESSION['foto_perfil'] = $avatar;
-                $mensaje = "Avatar actualizado.";
-            } else {
-                $error = "Error al actualizar avatar.";
-            }
-        } else {
-            $error = "Avatar seleccionado no válido.";
+            $stmt->execute();
+            $stmt->close();
+            $_SESSION['foto_perfil'] = $avatar;
+            $mensaje = "Avatar actualizado.";
         }
     }
 
-    // 4) Subir avatar desde la computadora
-    elseif (isset($_POST['subir_avatar']) && isset($_FILES['avatar_file'])) {
+    // ------ AVATAR SUBIDO ------
+    elseif (isset($_POST['subir_avatar']) && !empty($_FILES['avatar_file']['name'])) {
         $file = $_FILES['avatar_file'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ["jpg","jpeg","png"])) $error = "Formato inválido.";
+        else {
+            $nombre = "user_{$usuario_id}_" . time() . ".$ext";
+            move_uploaded_file($file['tmp_name'], $uploadDirAvatar.$nombre);
+            $ruta = $urlAvatar . $nombre;
 
-        if ($file['error'] === UPLOAD_ERR_OK) {
-            $allowed = [
-                'image/png'  => 'png',
-                'image/jpeg' => 'jpg',
-                'image/jpg'  => 'jpg',
-            ];
+            $stmt = $mysqli->prepare("UPDATE usuarios SET foto_perfil=? WHERE id=?");
+            $stmt->bind_param("si", $ruta, $usuario_id);
+            $stmt->execute();
+            $stmt->close();
 
-            if (!array_key_exists($file['type'], $allowed)) {
-                $error = "Formato de imagen no permitido. Usa PNG o JPG.";
-            } elseif ($file['size'] > 2 * 1024 * 1024) { // 2 MB
-                $error = "La imagen es muy pesada. Máximo 2MB.";
-            } else {
-                $ext = $allowed[$file['type']];
-                $filename = "user_" . $usuario_id . "_" . time() . "." . $ext;
-
-                $destinoFs = $uploadDir . $filename;         // ruta física
-                $destinoUrl = $uploadUrlBase . $filename;    // ruta para guardar en BD
-
-                if (move_uploaded_file($file['tmp_name'], $destinoFs)) {
-                    // Guardar ruta en BD
-                    $stmt = $mysqli->prepare("UPDATE usuarios SET foto_perfil = ? WHERE id = ?");
-                    $stmt->bind_param("si", $destinoUrl, $usuario_id);
-                    if ($stmt->execute()) {
-                         $_SESSION['foto_perfil'] = $destinoUrl;  // 🔴 ACTUALIZA SESIÓN
-                        $mensaje = "Avatar subido y actualizado correctamente.";
-                    } else {
-                        $error = "Se subió la imagen pero falló al guardar en la base de datos.";
-                    }
-                } else {
-                    $error = "No se pudo guardar el archivo en el servidor.";
-                }
-            }
-        } else {
-            $error = "Ocurrió un error al subir la imagen (código: {$file['error']}).";
+            $_SESSION['foto_perfil'] = $ruta;
+            $mensaje = "Avatar subido.";
         }
     }
-        // 5) Gestionar contactos de emergencia
+
+    // ------ DATOS ADICIONALES ------
+    elseif (isset($_POST['guardar_info'])) {
+
+        $stmt = $mysqli->prepare("SELECT id FROM informacion_personal WHERE usuario_id=? LIMIT 1");
+        $stmt->bind_param("i", $usuario_id);
+        $stmt->execute();
+        $existe = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($existe) {
+            $stmt = $mysqli->prepare("
+                UPDATE informacion_personal
+                SET numero_documento=?, fecha_nacimiento=?, direccion=?, ciudad=?, pais=?
+                WHERE usuario_id=?
+            ");
+            $stmt->bind_param("sssssi",
+                $_POST['numero_documento'], $_POST['fecha_nacimiento'], $_POST['direccion'],
+                $_POST['ciudad'], $_POST['pais'], $usuario_id
+            );
+        } else {
+            $stmt = $mysqli->prepare("
+                INSERT INTO informacion_personal 
+                (usuario_id, numero_documento, fecha_nacimiento, direccion, ciudad, pais)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->bind_param("isssss",
+                $usuario_id, $_POST['numero_documento'], $_POST['fecha_nacimiento'],
+                $_POST['direccion'], $_POST['ciudad'], $_POST['pais']
+            );
+        }
+
+        $stmt->execute();
+        $stmt->close();
+        $mensaje = "Datos adicionales guardados.";
+    }
+
+    // ------ DOCUMENTO ------
+    elseif (isset($_POST['subir_documento'])) {
+        $file = $_FILES['documento_file'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+        if (!in_array($ext, ["pdf","jpg","jpeg","png"])) {
+            $error = "Formato inválido.";
+        } else {
+            $nombre = "doc_{$usuario_id}_" . time() . ".$ext";
+            move_uploaded_file($file['tmp_name'], $uploadDirDocumento.$nombre);
+            $ruta = $urlDocumento . $nombre;
+
+            $stmt = $mysqli->prepare("
+                UPDATE informacion_personal SET archivo_documento=? WHERE usuario_id=?
+            ");
+            $stmt->bind_param("si", $ruta, $usuario_id);
+            $stmt->execute();
+            $stmt->close();
+
+            $mensaje = "Documento subido.";
+        }
+    }
+
+    // ------ CONTACTOS ------
     elseif (isset($_POST['guardar_contacto'])) {
-        $contacto_id        = (int)($_POST['contacto_id'] ?? 0);
-        $nombre_contacto    = trim($_POST['nombre_contacto'] ?? '');
-        $telefono_contacto  = trim($_POST['telefono_contacto'] ?? '');
-        $parentesco         = trim($_POST['parentesco'] ?? '');
-        $principal          = isset($_POST['principal']) ? 1 : 0;
+        $principal = isset($_POST['principal']) ? 1 : 0;
+        if ($principal)
+            $mysqli->query("UPDATE contactos_emergencia SET principal=0 WHERE estudiante_id=$usuario_id");
 
-        if ($nombre_contacto === '' || $telefono_contacto === '') {
-            $error = "Nombre y teléfono del contacto son obligatorios.";
-        } else {
-            // Si se marca como principal, quitar principal de los demás
-            if ($principal === 1) {
-                $stmt = $mysqli->prepare("UPDATE contactos_emergencia SET principal = 0 WHERE estudiante_id = ?");
-                $stmt->bind_param("i", $usuario_id);
-                $stmt->execute();
-                $stmt->close();
-            }
-
-            if ($contacto_id > 0) {
-                // Actualizar
-                $stmt = $mysqli->prepare("
-                    UPDATE contactos_emergencia
-                    SET nombre_contacto = ?, telefono_contacto = ?, parentesco = ?, principal = ?
-                    WHERE id = ? AND estudiante_id = ?
-                ");
-                $stmt->bind_param("sssiii", $nombre_contacto, $telefono_contacto, $parentesco, $principal, $contacto_id, $usuario_id);
-            } else {
-                // Insertar nuevo
-                $stmt = $mysqli->prepare("
-                    INSERT INTO contactos_emergencia (estudiante_id, nombre_contacto, telefono_contacto, parentesco, principal)
-                    VALUES (?, ?, ?, ?, ?)
-                ");
-                $stmt->bind_param("isssi", $usuario_id, $nombre_contacto, $telefono_contacto, $parentesco, $principal);
-            }
-
-            if ($stmt->execute()) {
-                $mensaje = "Contacto de emergencia guardado correctamente.";
-            } else {
-                $error = "Error al guardar el contacto de emergencia.";
-            }
-            $stmt->close();
-        }
+        $stmt = $mysqli->prepare("
+            INSERT INTO contactos_emergencia (estudiante_id, nombre_contacto, telefono_contacto, parentesco, principal)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $stmt->bind_param("isssi",
+            $usuario_id, $_POST['nombre_contacto'], $_POST['telefono_contacto'],
+            $_POST['parentesco'], $principal
+        );
+        $stmt->execute();
+        $stmt->close();
+        $mensaje = "Contacto guardado.";
     }
+
     elseif (isset($_POST['eliminar_contacto'])) {
-        $contacto_id = (int)($_POST['contacto_id'] ?? 0);
-        if ($contacto_id > 0) {
-            $stmt = $mysqli->prepare("DELETE FROM contactos_emergencia WHERE id = ? AND estudiante_id = ?");
-            $stmt->bind_param("ii", $contacto_id, $usuario_id);
-            if ($stmt->execute()) {
-                $mensaje = "Contacto eliminado.";
-            } else {
-                $error = "No se pudo eliminar el contacto.";
-            }
-            $stmt->close();
-        }
+        $stmt = $mysqli->prepare("DELETE FROM contactos_emergencia WHERE id=? AND estudiante_id=?");
+        $stmt->bind_param("ii", $_POST['contacto_id'], $usuario_id);
+        $stmt->execute();
+        $stmt->close();
+        $mensaje = "Contacto eliminado.";
     }
-
 }
 
-// Obtener datos del usuario
-$stmt = $mysqli->prepare("SELECT nombre, apellido, email, telefono, foto_perfil FROM usuarios WHERE id = ?");
+// ================= CARGA DE DATOS =================
+
+$stmt = $mysqli->prepare("SELECT * FROM usuarios WHERE id=?");
 $stmt->bind_param("i", $usuario_id);
 $stmt->execute();
 $usuario = $stmt->get_result()->fetch_assoc();
-
-// Avatar actual
-$avatar_actual = $usuario['foto_perfil'] ?: "/twintalk/assets/img/avatars/avatar1.png";
-// Cargar información personal (documentos, dirección, etc.)
-$stmt = $mysqli->prepare("
-    SELECT ip.*, td.tipo_documento
-    FROM informacion_personal ip
-    LEFT JOIN tipos_documento td ON td.id = ip.tipo_documento_id
-    WHERE ip.usuario_id = ?
-    LIMIT 1
-");
-$stmt->bind_param("i", $usuario_id);
-$stmt->execute();
-$info_personal = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// Lista de tipos de documento para el combo
-$tipos_documento = [];
-$resTipos = $mysqli->query("SELECT id, tipo_documento FROM tipos_documento ORDER BY tipo_documento");
-if ($resTipos) {
-    while ($row = $resTipos->fetch_assoc()) {
-        $tipos_documento[] = $row;
-    }
-}
+$avatar_actual = $usuario['foto_perfil'];
 
-// Cargar contactos de emergencia del estudiante
-$stmt = $mysqli->prepare("
-    SELECT id, nombre_contacto, telefono_contacto, parentesco, principal
-    FROM contactos_emergencia
-    WHERE estudiante_id = ?
-    ORDER BY principal DESC, id ASC
-");
+$stmt = $mysqli->prepare("SELECT * FROM informacion_personal WHERE usuario_id=?");
 $stmt->bind_param("i", $usuario_id);
 $stmt->execute();
-$contactos_result = $stmt->get_result();
-$contactos = [];
-while ($row = $contactos_result->fetch_assoc()) {
-    $contactos[] = $row;
-}
+$info = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-
-include __DIR__ . "/../includes/header.php";
+include __DIR__ . '/../includes/header.php';
 ?>
-<div class="container my-4">
-    <?php if (!empty($_GET['completar'])): ?>
-        <div class="alert alert-warning">
-            <strong>Antes de continuar:</strong> por favor completa tus datos personales y de documento.
-            Estos datos serán visibles para tus docentes y el administrador al momento de matricularte.
-        </div>
-    <?php endif; ?>
-<h1 class="h4 fw-bold mt-3">Mi perfil</h1>
-<div class="mb-3">
-   <a href="/twintalk/student/dashboard.php" 
-   class="btn btn-outline-secondary btn-sm">
-   ← Regresar
-</a>
-</div>
-<?php if ($mensaje): ?><div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div><?php endif; ?>
-<?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
-<div class="row g-3 mt-2">
-    <!-- Datos personales -->
+<style>
+.section-title { font-weight: bold; font-size: 15px; margin-bottom: 12px; }
+.avatar-option img { width:50px;height:50px;border-radius:50%;object-fit:cover;cursor:pointer;border:2px solid transparent; }
+.avatar-option img:hover { border-color:#0d6efd; }
+.avatar-preview { width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #ddd; }
+.card-soft { border-radius: 12px; }
+</style>
+
+<div class="container my-4">
+
+<a href="/twintalk/student/dashboard.php" class="btn btn-outline-secondary btn-sm mb-3">← Regresar</a>
+
+<?php if ($mensaje): ?><div class="alert alert-success"><?= $mensaje ?></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-danger"><?= $error ?></div><?php endif; ?>
+
+<h1 class="h4 fw-bold mb-3">Mi perfil</h1>
+
+
+<!-- ====================================================== -->
+<!-- FILA 1 — DATOS PERSONALES + CONTRASEÑA -->
+<!-- ====================================================== -->
+<div class="row g-3">
+
+    <!-- DATOS PERSONALES -->
     <div class="col-md-6">
-        <div class="card card-soft p-3 h-100">
-            <h2 class="h6 fw-bold mb-3">Datos personales</h2>
+        <div class="card card-soft p-3">
+            <div class="section-title">Datos personales</div>
+
             <form method="post">
-                <div class="mb-3">
-                    <label class="form-label">Nombre</label>
-                    <input class="form-control" name="nombre" value="<?= htmlspecialchars($usuario['nombre']) ?>">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Apellido</label>
-                    <input class="form-control" name="apellido" value="<?= htmlspecialchars($usuario['apellido']) ?>">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Correo (solo lectura)</label>
-                    <input class="form-control" value="<?= htmlspecialchars($usuario['email']) ?>" disabled>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Teléfono</label>
-                    <input class="form-control" name="telefono" value="<?= htmlspecialchars($usuario['telefono']) ?>">
-                </div>
-                <button class="btn btn-tt-primary" name="actualizar_perfil">Guardar cambios</button>
+                <label>Nombre</label>
+                <input name="nombre" class="form-control mb-2" value="<?= $usuario['nombre'] ?>">
+
+                <label>Apellido</label>
+                <input name="apellido" class="form-control mb-2" value="<?= $usuario['apellido'] ?>">
+
+                <label>Correo</label>
+                <input class="form-control mb-2" value="<?= $usuario['email'] ?>" disabled>
+
+                <label>Teléfono</label>
+                <input name="telefono" class="form-control mb-3" value="<?= $usuario['telefono'] ?>">
+
+                <button class="btn btn-tt-primary btn-sm" name="actualizar_perfil">Guardar</button>
             </form>
         </div>
     </div>
 
-    <!-- Contraseña + Avatares -->
+    <!-- CONTRASEÑA -->
     <div class="col-md-6">
-        <!-- Cambio de contraseña -->
-        <div class="card card-soft p-3 mb-3">
-            <h2 class="h6 fw-bold mb-3">Cambio de contraseña</h2>
+        <div class="card card-soft p-3">
+            <div class="section-title">Cambiar contraseña</div>
+
             <form method="post">
-                <div class="mb-3">
-                    <label class="form-label">Nueva contraseña</label>
-                    <div class="position-relative">
-                        <input type="password"
-                               name="password"
-                               class="form-control pe-5"
-                               id="perfil_password">
-                        <button type="button"
-                                class="btn btn-link p-0 border-0 position-absolute top-50 end-0 translate-middle-y me-3"
-                                title="Mostrar/ocultar contraseña"
-                                onclick="ttTogglePassword('perfil_password', this)">
-                            <i class="fa-solid fa-eye small text-muted"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Repetir nueva contraseña</label>
-                    <div class="position-relative">
-                        <input type="password"
-                               name="password2"
-                               class="form-control pe-5"
-                               id="perfil_password2">
-                        <button type="button"
-                                class="btn btn-link p-0 border-0 position-absolute top-50 end-0 translate-middle-y me-3"
-                                title="Mostrar/ocultar contraseña"
-                                onclick="ttTogglePassword('perfil_password2', this)">
-                            <i class="fa-solid fa-eye small text-muted"></i>
-                        </button>
-                    </div>
-                </div>
-                <button class="btn btn-outline-secondary" name="cambiar_password">Actualizar contraseña</button>
+                <label>Nueva contraseña</label>
+                <input type="password" name="password" class="form-control mb-2">
+
+                <label>Repetir contraseña</label>
+                <input type="password" name="password2" class="form-control mb-3">
+
+                <button class="btn btn-outline-secondary btn-sm" name="cambiar_password">Actualizar</button>
             </form>
         </div>
+    </div>
 
-        <!-- Avatares -->
+</div>
+
+
+<!-- ====================================================== -->
+<!-- FILA 2 — AVATAR COMPLETO -->
+<!-- ====================================================== -->
+<div class="row g-3 mt-2">
+    <div class="col-md-12">
         <div class="card card-soft p-3">
-            <h2 class="h6 fw-bold mb-3">Avatar</h2>
 
-            <div class="mb-3 text-center">
-                <span class="small text-muted d-block mb-1">Avatar actual:</span>
-                <img src="<?= htmlspecialchars($avatar_actual) ?>" class="avatar-preview" alt="Avatar actual">
+            <div class="section-title text-center">Avatar</div>
+
+            <div class="text-center mb-3">
+                <img src="<?= $avatar_actual ?>" class="avatar-preview">
             </div>
 
-            <!-- Elegir avatar predeterminado -->
-            <form method="post" class="mb-3">
-                <span class="small text-muted d-block mb-1">Elegir un avatar predeterminado:</span>
-                <div class="d-flex flex-wrap gap-2 mb-2">
+            <!-- Avatar predeterminado -->
+            <form method="post" class="text-center mb-4">
+                <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
                     <?php foreach ($lista_avatars as $av): ?>
-                        <label class="border rounded-3 p-1" style="cursor:pointer;">
-                            <input type="radio" name="avatar" value="<?= htmlspecialchars($av) ?>"
-                                   class="form-check-input me-1" <?= $av === $avatar_actual ? 'checked' : '' ?>>
-                            <img src="<?= htmlspecialchars($av) ?>" class="avatar-option" alt="Avatar">
+                        <label class="avatar-option">
+                            <input type="radio" name="avatar" value="<?= $av ?>" <?= $av == $avatar_actual ? "checked" : "" ?> hidden>
+                            <img src="<?= $av ?>">
                         </label>
                     <?php endforeach; ?>
                 </div>
-                <button class="btn btn-sm btn-tt-primary" name="seleccionar_avatar">
-                    Guardar avatar predeterminado
-                </button>
+                <button class="btn btn-tt-primary btn-sm mt-2" name="seleccionar_avatar">Usar avatar seleccionado</button>
             </form>
 
-            <!-- Subir avatar propio -->
-            <form method="post" enctype="multipart/form-data">
-                <span class="small text-muted d-block mb-1">O subir tu propia foto:</span>
-                <div class="mb-2">
-                    <input type="file" name="avatar_file" class="form-control form-control-sm"
-                           accept="image/png, image/jpeg">
-                    <small class="text-muted">Formatos permitidos: PNG, JPG. Máx: 2MB.</small>
-                </div>
-                <button class="btn btn-sm btn-outline-secondary" name="subir_avatar">
-                    Subir y usar esta imagen
-                </button>
+            <!-- Subir avatar -->
+            <form method="post" enctype="multipart/form-data" class="text-center">
+                <input type="file" name="avatar_file" class="form-control mb-2" style="max-width:300px;margin:auto;">
+                <button class="btn btn-outline-secondary btn-sm" name="subir_avatar">Subir foto</button>
             </form>
-        </div>
-    </div>
-</div> <!-- cierra row g-3 existente -->
-<!-- Datos adicionales / documentos -->
-<div class="row g-3 mt-3">
-    <div class="col-md-8">
-        <div class="card card-soft p-3">
-            <h2 class="h6 fw-bold mb-3">Datos adicionales</h2>
-            <form method="post">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Tipo de documento</label>
-                        <select name="tipo_documento_id" class="form-select" required>
-                            <option value="">Selecciona...</option>
-                            <?php
-                            $tipo_actual_id = $info_personal['tipo_documento_id'] ?? 0;
-                            foreach ($tipos_documento as $td): ?>
-                                <option value="<?= (int)$td['id'] ?>"
-                                    <?= ($tipo_actual_id == $td['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($td['tipo_documento']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Número de documento</label>
-                        <input type="text"
-                               name="numero_documento"
-                               class="form-control"
-                               required
-                               value="<?= htmlspecialchars($info_personal['numero_documento'] ?? '') ?>">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Fecha de nacimiento</label>
-                        <input type="date"
-                               name="fecha_nacimiento"
-                               class="form-control"
-                               required
-                               value="<?= htmlspecialchars($info_personal['fecha_nacimiento'] ?? '') ?>">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Ciudad</label>
-                        <input type="text"
-                               name="ciudad"
-                               class="form-control"
-                               required
-                               value="<?= htmlspecialchars($info_personal['ciudad'] ?? '') ?>">
-                    </div>
-                    <div class="col-12 mb-3">
-                        <label class="form-label">Dirección</label>
-                        <textarea name="direccion"
-                                  class="form-control"
-                                  rows="2"
-                                  required><?= htmlspecialchars($info_personal['direccion'] ?? '') ?></textarea>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">País</label>
-                        <input type="text"
-                               name="pais"
-                               class="form-control"
-                               required
-                               value="<?= htmlspecialchars($info_personal['pais'] ?? '') ?>">
-                    </div>
-                </div>
-                <button class="btn btn-tt-primary btn-sm" name="guardar_info_personal">
-                    Guardar datos adicionales
-                </button>
-            </form>
+
         </div>
     </div>
 </div>
 
-<!-- Contactos de emergencia -->
-<div class="row g-3 mt-3">
-    <div class="col-md-8">
+
+<!-- ====================================================== -->
+<!-- FILA 3 — DATOS ADICIONALES + DOCUMENTOS -->
+<!-- ====================================================== -->
+<div class="row g-3 mt-2">
+
+    <!-- Datos adicionales -->
+    <div class="col-md-6">
         <div class="card card-soft p-3">
-            <h2 class="h6 fw-bold mb-3">Contactos de emergencia</h2>
+            <div class="section-title">Datos adicionales</div>
 
-            <?php if (!empty($contactos)): ?>
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle">
-                        <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Teléfono</th>
-                                <th>Parentesco</th>
-                                <th>Principal</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        <?php foreach ($contactos as $c): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($c['nombre_contacto']) ?></td>
-                                <td><?= htmlspecialchars($c['telefono_contacto']) ?></td>
-                                <td><?= htmlspecialchars($c['parentesco'] ?: '-') ?></td>
-                                <td>
-                                    <?php if ($c['principal']): ?>
-                                        <span class="badge bg-success">Principal</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-light text-muted">Secundario</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-end">
-                                    <!-- Botón rápido para cargar en el formulario -->
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-primary"
-                                            onclick="ttEditarContacto(
-                                                <?= (int)$c['id'] ?>,
-                                                '<?= htmlspecialchars($c['nombre_contacto'], ENT_QUOTES) ?>',
-                                                '<?= htmlspecialchars($c['telefono_contacto'], ENT_QUOTES) ?>',
-                                                '<?= htmlspecialchars($c['parentesco'] ?? '', ENT_QUOTES) ?>',
-                                                <?= (int)$c['principal'] ?>
-                                            )">
-                                        Editar
-                                    </button>
+            <form method="post">
+                <label>Número de documento</label>
+                <input name="numero_documento" class="form-control mb-2" value="<?= $info['numero_documento'] ?? '' ?>">
 
-                                    <form method="post" class="d-inline"
-                                          onsubmit="return confirm('¿Eliminar este contacto?');">
-                                        <input type="hidden" name="contacto_id" value="<?= (int)$c['id'] ?>">
-                                        <button class="btn btn-sm btn-outline-danger" name="eliminar_contacto">
-                                            Eliminar
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php else: ?>
-                <p class="text-muted small mb-2">
-                    Aún no tienes contactos de emergencia registrados.
+                <label>Fecha nacimiento</label>
+                <input type="date" name="fecha_nacimiento" class="form-control mb-2" value="<?= $info['fecha_nacimiento'] ?? '' ?>">
+
+                <label>Ciudad</label>
+                <input name="ciudad" class="form-control mb-2" value="<?= $info['ciudad'] ?? '' ?>">
+
+                <label>País</label>
+                <input name="pais" class="form-control mb-2" value="<?= $info['pais'] ?? '' ?>">
+
+                <label>Dirección</label>
+                <textarea name="direccion" class="form-control mb-2"><?= $info['direccion'] ?? '' ?></textarea>
+
+                <button class="btn btn-tt-primary btn-sm mt-2" name="guardar_info">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Documento -->
+    <div class="col-md-6">
+        <div class="card card-soft p-3">
+            <div class="section-title">Documento personal</div>
+
+            <?php if (!empty($info['archivo_documento'])): ?>
+                <p class="small">
+                    Actual:
+                    <a href="<?= $info['archivo_documento'] ?>" target="_blank">Ver documento</a>
                 </p>
+            <?php else: ?>
+                <p class="text-muted small">No has subido un documento.</p>
+            <?php endif; ?>
+
+            <form method="post" enctype="multipart/form-data">
+                <input type="file" name="documento_file" class="form-control mb-2">
+                <button class="btn btn-tt-primary btn-sm" name="subir_documento">Subir documento</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+
+<!-- ====================================================== -->
+<!-- FILA 4 — CONTACTOS DE EMERGENCIA -->
+<!-- ====================================================== -->
+<div class="row g-3 mt-2 mb-4">
+    <div class="col-md-12">
+        <div class="card card-soft p-3">
+
+            <div class="section-title">Contactos de emergencia</div>
+
+            <?php
+            $stmt = $mysqli->prepare("SELECT * FROM contactos_emergencia WHERE estudiante_id=?");
+            $stmt->bind_param("i", $usuario_id);
+            $stmt->execute();
+            $contactos = $stmt->get_result();
+            ?>
+
+            <?php if ($contactos->num_rows > 0): ?>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Teléfono</th>
+                            <th>Parentesco</th>
+                            <th>Principal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php while ($c = $contactos->fetch_assoc()): ?>
+                        <tr>
+                            <td><?= $c['nombre_contacto'] ?></td>
+                            <td><?= $c['telefono_contacto'] ?></td>
+                            <td><?= $c['parentesco'] ?></td>
+                            <td><?= $c['principal'] ? "<span class='badge bg-success'>Sí</span>" : "No" ?></td>
+                            <td>
+                                <form method="post">
+                                    <input type="hidden" name="contacto_id" value="<?= $c['id'] ?>">
+                                    <button name="eliminar_contacto" class="btn btn-sm btn-outline-danger">
+                                        Eliminar
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p class="text-muted small">No hay contactos registrados.</p>
             <?php endif; ?>
 
             <hr>
 
-            <!-- Formulario para agregar/editar -->
+            <!-- Nuevo contacto -->
             <form method="post">
-                <input type="hidden" name="contacto_id" id="contacto_id" value="">
-                <div class="row">
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label">Nombre del contacto</label>
-                        <input type="text" name="nombre_contacto" id="nombre_contacto" class="form-control" required>
+                <div class="row g-2">
+
+                    <div class="col-md-4">
+                        <label>Nombre</label>
+                        <input name="nombre_contacto" class="form-control">
                     </div>
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label">Teléfono</label>
-                        <input type="text" name="telefono_contacto" id="telefono_contacto" class="form-control" required>
+
+                    <div class="col-md-4">
+                        <label>Teléfono</label>
+                        <input name="telefono_contacto" class="form-control">
                     </div>
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label">Parentesco</label>
-                        <input type="text" name="parentesco" id="parentesco" class="form-control">
+
+                    <div class="col-md-3">
+                        <label>Parentesco</label>
+                        <input name="parentesco" class="form-control">
                     </div>
-                    <div class="col-md-6 mb-2 d-flex align-items-center">
-                        <div class="form-check mt-4">
-                            <input class="form-check-input" type="checkbox" value="1" id="principal" name="principal">
-                            <label class="form-check-label" for="principal">
-                                Marcar como contacto principal
-                            </label>
-                        </div>
+
+                    <div class="col-md-1 d-flex align-items-end">
+                        <input type="checkbox" name="principal" class="form-check-input">
                     </div>
+
                 </div>
-                <button class="btn btn-tt-primary btn-sm" name="guardar_contacto">
+
+                <button class="btn btn-tt-primary btn-sm mt-3" name="guardar_contacto">
                     Guardar contacto
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary"
-                        onclick="ttLimpiarContacto()">
-                    Limpiar formulario
-                </button>
             </form>
+
         </div>
     </div>
 </div>
 
-<script>
-function ttEditarContacto(id, nombre, telefono, parentesco, principal) {
-    document.getElementById('contacto_id').value = id;
-    document.getElementById('nombre_contacto').value = nombre;
-    document.getElementById('telefono_contacto').value = telefono;
-    document.getElementById('parentesco').value = parentesco;
-    document.getElementById('principal').checked = principal === 1;
-}
-function ttLimpiarContacto() {
-    document.getElementById('contacto_id').value = '';
-    document.getElementById('nombre_contacto').value = '';
-    document.getElementById('telefono_contacto').value = '';
-    document.getElementById('parentesco').value = '';
-    document.getElementById('principal').checked = false;
-}
 
-<script>
-function ttTogglePassword(inputId, btn) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    const icon = btn.querySelector('i');
-
-    if (input.type === 'password') {
-        input.type = 'text';
-        if (icon) {
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        }
-    } else {
-        input.type = 'password';
-        if (icon) {
-            icon.classList.add('fa-eye');
-            icon.classList.remove('fa-eye-slash');
-        }
-    }
-}
-</script>
-
-<?php include __DIR__ . "/../includes/footer.php"; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>
