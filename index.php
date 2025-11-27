@@ -18,7 +18,40 @@ if (isset($_SESSION['usuario_id']) && !isset($_GET['public'])) {
 }
 
 require_once __DIR__ . "/config/db.php";
-include __DIR__ . "/includes/header.php";
+
+// -------------------------
+// Manejo del formulario de contacto
+// -------------------------
+$contacto_ok    = "";
+$contacto_error = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_contacto'])) {
+    $nombre   = trim($_POST['nombre']   ?? "");
+    $email    = trim($_POST['email']    ?? "");
+    $telefono = trim($_POST['telefono'] ?? "");
+    $programa = trim($_POST['programa'] ?? "");
+    $mensaje  = trim($_POST['mensaje']  ?? "");
+
+    if ($nombre === "" || $email === "" || $mensaje === "") {
+        $contacto_error = "Por favor completa al menos tu nombre, correo y mensaje.";
+    } else {
+        $stmt = $mysqli->prepare("
+            INSERT INTO mensajes_interes (nombre, email, telefono, programa, mensaje)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        if ($stmt) {
+            $stmt->bind_param("sssss", $nombre, $email, $telefono, $programa, $mensaje);
+            if ($stmt->execute()) {
+                $contacto_ok = "¡Gracias por escribirnos! Tu mensaje ha sido enviado y la administración lo revisará pronto.";
+            } else {
+                $contacto_error = "Ocurrió un error al guardar tu mensaje. Intenta de nuevo más tarde.";
+            }
+            $stmt->close();
+        } else {
+            $contacto_error = "No se pudo preparar el registro del mensaje.";
+        }
+    }
+}
 
 // Cursos activos que se mostrarán como programas
 $cursos = $mysqli->query("
@@ -32,6 +65,7 @@ $cursos = $mysqli->query("
     LIMIT 6
 ");
 
+include __DIR__ . "/includes/header.php";
 ?>
 
 <!-- HERO -->
@@ -120,7 +154,6 @@ $cursos = $mysqli->query("
     </div>
 </section>
 
-<!-- SEPARADOR SUAVE -->
 <hr class="section-divider">
 
 <!-- SOBRE NOSOTROS -->
@@ -153,7 +186,6 @@ $cursos = $mysqli->query("
     </div>
 </section>
 
-<!-- SEPARADOR -->
 <hr class="section-divider">
 
 <!-- PROGRAMAS / CURSOS -->
@@ -216,7 +248,6 @@ $cursos = $mysqli->query("
     </div>
 </section>
 
-<!-- SEPARADOR -->
 <hr class="section-divider">
 
 <!-- CÓMO FUNCIONA -->
@@ -259,7 +290,6 @@ $cursos = $mysqli->query("
     </div>
 </section>
 
-<!-- SEPARADOR -->
 <hr class="section-divider">
 
 <!-- MISIÓN / VISIÓN -->
@@ -293,10 +323,7 @@ $cursos = $mysqli->query("
     </div>
 </section>
 
-<!-- SEPARADOR -->
 <hr class="section-divider">
-
-<!-- SECCIÓN NUEVA: FUNDADORA -->
 
 <!-- SOBRE LA FUNDADORA -->
 <section id="fundadora" class="section-padding">
@@ -335,67 +362,165 @@ $cursos = $mysqli->query("
         </div>
     </div>
 </section>
-<!-- SEPARADOR -->
+
 <hr class="section-divider">
 
+<!-- CONTACTO (con mensajes guardados en la BD) -->
+<section id="contacto" class="section-padding bg-light">
+    <div class="row g-4 align-items-stretch">
 
-<!-- CONTACTO -->
-<section id="contacto" class="section-padding">
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <h2 class="section-title mb-3">Contáctanos 📩</h2>
-            <p class="text-muted">
-                Si necesitas más información sobre horarios, precios o niveles,
-                puedes escribirnos o visitarnos. ¡Con gusto te orientamos! 🙂
-            </p>
-            <ul class="list-unstyled small text-muted mb-3">
-                <li>
-                    <i class="fa-solid fa-location-dot me-2 text-primary"></i>
-                    La Ceiba, Atlántida, Honduras
-                </li>
-                <li>
-                    <i class="fa-solid fa-envelope me-2 text-primary"></i>
-                    <a href="mailto:twintalk39@gmail.com" class="text-decoration-none">
-                        twintalk39@gmail.com
-                    </a>
-                </li>
-                <li>
-                    <i class="fa-solid fa-clock me-2 text-primary"></i>
-                    Lunes a viernes, 8:00 a.m. – 6:00 p.m.
-                </li>
-            </ul>
-            <p class="small text-muted mb-0">
-                También puedes crear tu cuenta directamente en la plataforma y nos pondremos en contacto contigo
-                para completar el proceso de matrícula.
-            </p>
-        </div>
-        <div class="col-lg-6">
-            <div class="card card-soft p-3">
-                <h3 class="h6 fw-bold mb-2">Escríbenos un mensaje</h3>
-                <form>
-                    <div class="mb-2">
-                        <label class="form-label small">Nombre completo</label>
-                        <input type="text" class="form-control" placeholder="Tu nombre">
+        <!-- Columna: Información de contacto -->
+        <div class="col-lg-5">
+            <div class="card card-soft h-100 p-3 p-md-4">
+                <h2 class="section-title mb-3">Contáctanos 📩</h2>
+
+                <?php if ($contacto_ok): ?>
+                    <div class="alert alert-success small">
+                        <?= htmlspecialchars($contacto_ok) ?>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label small">Correo electrónico</label>
-                        <input type="email" class="form-control" placeholder="tucorreo@example.com">
+                <?php elseif ($contacto_error): ?>
+                    <div class="alert alert-danger small">
+                        <?= htmlspecialchars($contacto_error) ?>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label small">Mensaje</label>
-                        <textarea class="form-control" rows="3" placeholder="Cuéntanos qué información necesitas..."></textarea>
+                <?php endif; ?>
+
+                <p class="text-muted small">
+                    Si necesitas más información sobre horarios, precios o niveles,
+                    puedes escribirnos o visitarnos. ¡Con gusto te orientamos! 🙂
+                </p>
+
+                <div class="d-flex mb-3">
+                    <div class="me-3 mt-1">
+                        <span class="btn btn-sm btn-outline-primary rounded-circle">
+                            <i class="fa-solid fa-location-dot"></i>
+                        </span>
                     </div>
-                    <button type="button" class="btn btn-tt-primary btn-sm w-100" disabled>
-                        Enviar (demo para el proyecto)
-                    </button>
-                    <p class="small text-muted mt-2 mb-0">
-                        Este formulario es solo demostrativo para el proyecto académico.
-                    </p>
-                </form>
+                    <div>
+                        <div class="fw-semibold small">Ubicación</div>
+                        <div class="text-muted small">
+                            La Ceiba, Atlántida, Honduras
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex mb-3">
+                    <div class="me-3 mt-1">
+                        <span class="btn btn-sm btn-outline-success rounded-circle">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </span>
+                    </div>
+                    <div>
+                        <div class="fw-semibold small">WhatsApp</div>
+                        <div class="text-muted small">
+                            +504 0000-0000
+                            <!-- Cambia al número real -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex mb-3">
+                    <div class="me-3 mt-1">
+                        <span class="btn btn-sm btn-outline-danger rounded-circle">
+                            <i class="fa-solid fa-envelope"></i>
+                        </span>
+                    </div>
+                    <div>
+                        <div class="fw-semibold small">Correo electrónico</div>
+                        <div class="text-muted small">
+                            <a href="mailto:twintalk39@gmail.com" class="text-decoration-none">
+                                twintalk39@gmail.com
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex mb-3">
+                    <div class="me-3 mt-1">
+                        <span class="btn btn-sm btn-outline-secondary rounded-circle">
+                            <i class="fa-solid fa-clock"></i>
+                        </span>
+                    </div>
+                    <div>
+                        <div class="fw-semibold small">Horario de atención</div>
+                        <div class="text-muted small">
+                            Lunes a viernes · 8:00 a.m. – 6:00 p.m.<br>
+                            Sábados · 9:00 a.m. – 1:00 p.m.
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <p class="small text-muted mb-0">
+                    También puedes crear tu cuenta directamente en la plataforma y nos pondremos en contacto contigo
+                    para completar el proceso de matrícula.
+                </p>
             </div>
         </div>
+
+        <!-- Columna: Formulario de contacto -->
+        <div class="col-lg-7">
+            <div class="card card-soft h-100 p-3 p-md-4">
+                <h3 class="h6 fw-bold mb-3">
+                    <i class="fa-solid fa-paper-plane me-1"></i>
+                    Envíanos un mensaje
+                </h3>
+
+                <form action="#contacto" method="post">
+                    <input type="hidden" name="form_contacto" value="1">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Nombre completo</label>
+                            <input type="text" name="nombre" class="form-control"
+                                   placeholder="Tu nombre" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Correo electrónico</label>
+                            <input type="email" name="email" class="form-control"
+                                   placeholder="tucorreo@ejemplo.com" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Teléfono / WhatsApp</label>
+                            <input type="text" name="telefono" class="form-control"
+                                   placeholder="Tu número de contacto">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Programa de interés</label>
+                            <select name="programa" class="form-select">
+                                <option value="">Selecciona una opción</option>
+                                <option>Inglés para principiantes</option>
+                                <option>Inglés conversacional</option>
+                                <option>Inglés para negocios</option>
+                                <option>Preparación para exámenes</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Mensaje</label>
+                            <textarea name="mensaje" rows="4" class="form-control"
+                                      placeholder="Cuéntanos qué necesitas o en qué nivel de inglés te encuentras"
+                                      required></textarea>
+                        </div>
+
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-tt-primary px-4 rounded-pill">
+                                <i class="fa-solid fa-paper-plane me-1"></i>
+                                Enviar mensaje
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <p class="small text-muted mt-3 mb-0">
+                    Tu mensaje será revisado por la administración de TwinTalk English desde el panel del sistema. 💙
+                </p>
+            </div>
+        </div>
+
     </div>
 </section>
-
 
 <?php include __DIR__ . "/includes/footer.php"; ?>

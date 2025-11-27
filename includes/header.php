@@ -69,29 +69,80 @@ if (session_status() === PHP_SESSION_NONE) {
 
                         <ul class="dropdown-menu dropdown-menu-end">
 
-                            <?php if ($_SESSION['rol_id'] == 1): ?>
-                                <li><a class="dropdown-item" href="/twintalk/admin/dashboard.php">Panel administrador</a></li>
-                                <li><a class="dropdown-item" href="/twintalk/admin/perfil.php">Mi perfil</a></li>
+                            <!-- MENU ADMIN -->
+<?php if ($_SESSION['rol_id'] == 1): ?>
+    <li>
+        <a class="dropdown-item" href="/twintalk/admin/dashboard.php">
+            <i class="fa-solid fa-gauge-high me-1"></i> Panel administrador
+        </a>
+    </li>
 
-                            <?php elseif ($_SESSION['rol_id'] == 2): ?>
-                                <li><a class="dropdown-item" href="/twintalk/docente/dashboard.php">Panel docente</a></li>
-                                <li><a class="dropdown-item" href="/twintalk/docente/perfil.php">Mi perfil</a></li>
-                                <!-- Nuevo: mensajes docente -->
-                                <li><a class="dropdown-item" href="/twintalk/docente/mensajes.php">
-                                    <i class="fa-solid fa-envelope me-1"></i> Mensajes
-                                </a></li>
+    <li>
+        <a class="dropdown-item" href="/twintalk/admin/perfil.php">
+            <i class="fa-solid fa-user me-1"></i> Mi perfil
+        </a>
+    </li>
 
-                            <?php else: ?>
-                                <li><a class="dropdown-item" href="/twintalk/student/dashboard.php">Panel estudiante</a></li>
-                                <li><a class="dropdown-item" href="/twintalk/student/perfil.php">Mi perfil</a></li>
-                                <!-- Nuevo: mensajes estudiante -->
-                                <li><a class="dropdown-item" href="/twintalk/student/mensajes.php">
-                                    <i class="fa-solid fa-envelope me-1"></i> Mensajes
-                                </a></li>
+    <li>
+        <a class="dropdown-item" href="/twintalk/admin/docentes.php">
+            <i class="fa-solid fa-chalkboard-user me-1"></i> Docentes
+        </a>
+    </li>
+
+    <li>
+        <a class="dropdown-item" href="/twintalk/admin/mensajes_interes.php">
+            <i class="fa-solid fa-inbox me-1"></i> Mensajes de interés
+        </a>
+    </li>
+<?php endif; ?>
+
+
+                            <!-- MENU DOCENTE -->
+                            <?php if ($_SESSION['rol_id'] == 2): ?>
+                                <li>
+                                    <a class="dropdown-item" href="/twintalk/docente/dashboard.php">
+                                        <i class="fa-solid fa-school me-1"></i> Panel docente
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/twintalk/docente/perfil.php">
+                                        <i class="fa-solid fa-user me-1"></i> Mi perfil
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/twintalk/docente/mensajes.php">
+                                        <i class="fa-solid fa-envelope me-1"></i> Mensajes
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+
+                            <!-- MENU ESTUDIANTE -->
+                            <?php if ($_SESSION['rol_id'] == 3): ?>
+                                <li>
+                                    <a class="dropdown-item" href="/twintalk/student/dashboard.php">
+                                        <i class="fa-solid fa-graduation-cap me-1"></i> Panel estudiante
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/twintalk/student/perfil.php">
+                                        <i class="fa-solid fa-user me-1"></i> Mi perfil
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/twintalk/student/mensajes.php">
+                                        <i class="fa-solid fa-envelope me-1"></i> Mensajes
+                                    </a>
+                                </li>
                             <?php endif; ?>
 
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="/twintalk/logout.php">Cerrar sesión</a></li>
+
+                            <li>
+                                <a class="dropdown-item text-danger" href="/twintalk/logout.php">
+                                    <i class="fa-solid fa-right-from-bracket me-1"></i> Cerrar sesión
+                                </a>
+                            </li>
+
                         </ul>
                     </li>
 
