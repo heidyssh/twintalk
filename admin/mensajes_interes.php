@@ -26,9 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'marca
     }
 }
 
-// Traer mensajes
+// Traer mensajes con archivo incluido
 $result = $mysqli->query("
-    SELECT id, nombre, email, telefono, programa, mensaje, fecha_envio, leido
+    SELECT 
+        id, nombre, email, telefono, programa, mensaje, fecha_envio, leido, archivo
     FROM mensajes_interes
     ORDER BY fecha_envio DESC
 ");
@@ -53,7 +54,8 @@ include __DIR__ . "/../includes/header.php";
     <div class="card shadow-sm">
         <div class="card-body">
             <p class="text-muted small">
-                Aquí se muestran los mensajes enviados desde el formulario de contacto del sitio público.
+                Aquí se muestran los mensajes enviados desde el formulario de contacto del sitio público, 
+                junto con archivos adjuntos si los enviaron.
             </p>
 
             <div class="table-responsive">
@@ -64,7 +66,7 @@ include __DIR__ . "/../includes/header.php";
                             <th>Nombre</th>
                             <th>Contacto</th>
                             <th>Programa de interés</th>
-                            <th>Mensaje</th>
+                            <th>Mensaje / Archivo</th>
                             <th>Estado</th>
                             <th>Acción</th>
                         </tr>
@@ -76,9 +78,11 @@ include __DIR__ . "/../includes/header.php";
                                     <td class="small">
                                         <?= htmlspecialchars($row['fecha_envio']) ?>
                                     </td>
+
                                     <td class="small">
                                         <?= htmlspecialchars($row['nombre']) ?>
                                     </td>
+
                                     <td class="small">
                                         <div>
                                             <i class="fa-solid fa-envelope me-1 text-primary"></i>
@@ -86,6 +90,7 @@ include __DIR__ . "/../includes/header.php";
                                                 <?= htmlspecialchars($row['email']) ?>
                                             </a>
                                         </div>
+
                                         <?php if (!empty($row['telefono'])): ?>
                                             <div>
                                                 <i class="fa-solid fa-phone me-1 text-success"></i>
@@ -93,14 +98,28 @@ include __DIR__ . "/../includes/header.php";
                                             </div>
                                         <?php endif; ?>
                                     </td>
+
                                     <td class="small">
                                         <?= htmlspecialchars($row['programa'] ?: '—') ?>
                                     </td>
+
                                     <td class="small" style="max-width: 320px;">
-                                        <div class="text-wrap">
+                                        <div class="text-wrap mb-2">
                                             <?= nl2br(htmlspecialchars($row['mensaje'])) ?>
                                         </div>
+
+                                        <!-- ARCHIVO ADJUNTO -->
+                                        <?php if (!empty($row['archivo'])): ?>
+                                            <a href="<?= htmlspecialchars($row['archivo']) ?>" 
+                                               target="_blank" 
+                                               class="btn btn-sm btn-outline-primary">
+                                               <i class="fa-solid fa-file-arrow-down me-1"></i> Ver archivo
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="text-muted small">Sin archivo</span>
+                                        <?php endif; ?>
                                     </td>
+
                                     <td class="small">
                                         <?php if ((int)$row['leido'] === 1): ?>
                                             <span class="badge bg-success">Leído</span>
@@ -108,6 +127,7 @@ include __DIR__ . "/../includes/header.php";
                                             <span class="badge bg-warning text-dark">Nuevo</span>
                                         <?php endif; ?>
                                     </td>
+
                                     <td class="small">
                                         <?php if ((int)$row['leido'] === 0): ?>
                                             <form method="post" class="d-inline">
