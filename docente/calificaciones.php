@@ -11,15 +11,15 @@ if (!$docenteId) {
 }
 
 $mensaje = "";
-$error   = "";
+$error = "";
 
 // -----------------------------
 // 1. Parámetros de navegación
 // -----------------------------
-$view              = isset($_GET['view']) ? $_GET['view'] : 'evaluaciones'; // evaluaciones | tareas
-$curso_id          = isset($_GET['curso_id']) ? (int)$_GET['curso_id'] : 0;
-$tipo_evaluacion_id= isset($_GET['tipo_evaluacion_id']) ? (int)$_GET['tipo_evaluacion_id'] : 0;
-$tarea_id          = isset($_GET['tarea_id']) ? (int)$_GET['tarea_id'] : 0;
+$view = isset($_GET['view']) ? $_GET['view'] : 'evaluaciones'; // evaluaciones | tareas
+$curso_id = isset($_GET['curso_id']) ? (int) $_GET['curso_id'] : 0;
+$tipo_evaluacion_id = isset($_GET['tipo_evaluacion_id']) ? (int) $_GET['tipo_evaluacion_id'] : 0;
+$tarea_id = isset($_GET['tarea_id']) ? (int) $_GET['tarea_id'] : 0;
 
 // Normalizar vista
 if ($view !== 'evaluaciones' && $view !== 'tareas') {
@@ -44,7 +44,7 @@ $stmt->close();
 
 // Si no hay curso seleccionado y el docente tiene al menos uno, usamos el primero
 if ($curso_id <= 0 && !empty($cursos)) {
-    $curso_id = (int)$cursos[0]['curso_id'];
+    $curso_id = (int) $cursos[0]['curso_id'];
 }
 
 // -----------------------------------------------------
@@ -53,21 +53,134 @@ if ($curso_id <= 0 && !empty($cursos)) {
 //    B) Guardar calificaciones de una tarea específica
 // -----------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Acción genérica (extender fechas de tareas)
+    $accion = $_POST['accion'] ?? '';
+
+    // 1) Extender fecha de una tarea para TODOS los alumnos del curso
+    // 1) Extender fecha de una tarea para TODOS los alumnos del curso
+    if ($accion === 'extender_general_tarea') {
+        $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
+        $curso_id = (int) ($_POST['curso_id'] ?? 0);
+        $nueva_fecha = $_POST['nueva_fecha'] ?? '';
+
+        if ($tarea_id > 0 && $curso_id > 0 && $nueva_fecha !== '') {
+
+            // Borrar extensiones generales anteriores de esta tarea
+            $del = $mysqli->prepare("
+            DELETE FROM tareas_extensiones
+            WHERE tarea_id = ? AND matricula_id IS NULL
+        ");
+            $del->bind_param("i", $tarea_id);
+            $del->execute();
+            $del->close();
+
+            // Insertar la NUEVA fecha general
+            $stmt = $mysqli->prepare("
+            INSERT INTO tareas_extensiones (tarea_id, matricula_id, nueva_fecha)
+            VALUES (?, NULL, ?)
+        ");
+            $stmt->bind_param("is", $tarea_id, $nueva_fecha);
+            if ($stmt->execute()) {
+                $mensaje = "Se extendió la fecha de la tarea para toda la clase.";
+            } else {
+                $error = "No se pudo guardar la extensión general.";
+            }
+            $stmt->close();
+
+            // (Opcional) actualizar la fecha base de la tarea
+            $stmt = $mysqli->prepare("UPDATE tareas SET fecha_entrega = ? WHERE id = ?");
+            $stmt->bind_param("si", $nueva_fecha, $tarea_id);
+            $stmt->execute();
+            $stmt->close();
+
+            header("Location: calificaciones.php?view=tareas&curso_id={$curso_id}&tarea_id={$tarea_id}");
+            exit;
+        } else {
+            $error = "Datos inválidos para extensión general.";
+        }
+    }
+
+    // 2) Extender fecha SOLO para un alumno (matricula específica)
+    if ($accion === 'extender_tarea_alumno') {
+        $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
+        $curso_id = (int) ($_POST['curso_id'] ?? 0);
+        $matricula_id = (int) ($_POST['matricula_id'] ?? 0);
+        $nueva_fecha = $_POST['nueva_fecha'] ?? '';
+
+        if ($tarea_id > 0 && $curso_id > 0 && $matricula_id > 0 && $nueva_fecha !== '') {
+
+            // Borrar extensiones previas para este alumno en esta tarea
+            $del = $mysqli->prepare("
+            DELETE FROM tareas_extensiones
+            WHERE tarea_id = ? AND matricula_id = ?
+        ");
+            $del->bind_param("ii", $tarea_id, $matricula_id);
+            $del->execute();
+            $del->close();
+
+            // Insertar la nueva fecha del alumno
+            $stmt = $mysqli->prepare("
+            INSERT INTO tareas_extensiones (tarea_id, matricula_id, nueva_fecha)
+            VALUES (?, ?, ?)
+        ");
+            $stmt->bind_param("iis", $tarea_id, $matricula_id, $nueva_fecha);
+            if ($stmt->execute()) {
+                $mensaje = "Se extendió la fecha para ese alumno.";
+            } else {
+                $error = "No se pudo guardar la extensión individual.";
+            }
+            $stmt->close();
+
+            header("Location: calificaciones.php?view=tareas&curso_id={$curso_id}&tarea_id={$tarea_id}");
+            exit;
+        } else {
+            $error = "Datos inválidos para extensión individual.";
+        }
+    }
+
+
+    // 2) Extender fecha SOLO para un alumno (matricula específica)
+    if ($accion === 'extender_tarea_alumno') {
+        $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
+        $curso_id = (int) ($_POST['curso_id'] ?? 0);
+        $matricula_id = (int) ($_POST['matricula_id'] ?? 0);
+        $nueva_fecha = $_POST['nueva_fecha'] ?? '';
+
+        if ($tarea_id > 0 && $curso_id > 0 && $matricula_id > 0 && $nueva_fecha !== '') {
+
+            $stmt = $mysqli->prepare("
+                INSERT INTO tareas_extensiones (tarea_id, matricula_id, nueva_fecha)
+                VALUES (?, ?, ?)
+            ");
+            $stmt->bind_param("iis", $tarea_id, $matricula_id, $nueva_fecha);
+            if ($stmt->execute()) {
+                $mensaje = "Se extendió la fecha para ese alumno.";
+            } else {
+                $error = "No se pudo guardar la extensión individual.";
+            }
+            $stmt->close();
+
+            header("Location: calificaciones.php?view=tareas&curso_id={$curso_id}&tarea_id={$tarea_id}");
+            exit;
+        } else {
+            $error = "Datos inválidos para extensión individual.";
+        }
+    }
 
     // A) Guardar calificaciones generales (quiz, examen, etc.)
     if (isset($_POST['guardar_calificaciones'])) {
 
-        $curso_id           = (int)($_POST['curso_id'] ?? 0);
-        $tipo_evaluacion_id = (int)($_POST['tipo_evaluacion_id'] ?? 0);
-        $notas              = $_POST['nota'] ?? []; // [matricula_id => puntaje]
+        $curso_id = (int) ($_POST['curso_id'] ?? 0);
+        $tipo_evaluacion_id = (int) ($_POST['tipo_evaluacion_id'] ?? 0);
+        $notas = $_POST['nota'] ?? []; // [matricula_id => puntaje]
 
         if ($curso_id <= 0 || $tipo_evaluacion_id <= 0) {
             $error = "Faltan datos del curso o del tipo de evaluación.";
         } else {
 
             foreach ($notas as $matricula_id => $puntaje) {
-                $matricula_id = (int)$matricula_id;
-                $puntaje      = trim($puntaje);
+                $matricula_id = (int) $matricula_id;
+                $puntaje = trim($puntaje);
 
                 if ($puntaje === '') {
                     continue;
@@ -75,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!is_numeric($puntaje)) {
                     continue;
                 }
-                $puntaje = (float)$puntaje;
+                $puntaje = (float) $puntaje;
 
                 // Verificar si ya existe una calificación
                 $sqlExiste = "
@@ -92,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($row) {
                     // Actualizar
-                    $calif_id = (int)$row['id'];
+                    $calif_id = (int) $row['id'];
                     $sqlUpdate = "
                         UPDATE calificaciones
                         SET puntaje = ?, fecha_evaluacion = CURDATE(), publicado = 1
@@ -125,19 +238,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // B) Guardar calificaciones de una tarea
     if (isset($_POST['guardar_notas_tarea'])) {
 
-        $tarea_id = (int)($_POST['tarea_id'] ?? 0);
-        $curso_id = (int)($_POST['curso_id'] ?? 0);
+        $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
+        $curso_id = (int) ($_POST['curso_id'] ?? 0);
         $calificaciones = $_POST['calificacion'] ?? [];        // [matricula_id => nota]
-        $comentarios   = $_POST['comentario'] ?? [];           // [matricula_id => texto]
+        $comentarios = $_POST['comentario'] ?? [];           // [matricula_id => texto]
 
         if ($tarea_id <= 0 || $curso_id <= 0) {
             $error = "Tarea o curso no válidos.";
         } else {
 
             foreach ($calificaciones as $matricula_id => $nota) {
-                $matricula_id = (int)$matricula_id;
-                $nota         = trim($nota);
-                $comentario   = isset($comentarios[$matricula_id]) ? trim($comentarios[$matricula_id]) : '';
+                $matricula_id = (int) $matricula_id;
+                $nota = trim($nota);
+                $comentario = isset($comentarios[$matricula_id]) ? trim($comentarios[$matricula_id]) : '';
 
                 if ($nota === '' && $comentario === '') {
                     continue; // nada que guardar
@@ -160,16 +273,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     continue;
                 }
 
-                $entrega_id = (int)$rowEnt['id'];
+                $entrega_id = (int) $rowEnt['id'];
 
                 $notaFloat = null;
                 if ($nota !== '' && is_numeric($nota)) {
-                    $notaFloat = (float)$nota;
+                    $notaFloat = (float) $nota;
                 }
 
                 // Preparamos valores seguros para bind_param
                 $calificacion_param = $notaFloat !== null ? $notaFloat : 0.0;
-                $comentario_param   = $comentario;
+                $comentario_param = $comentario;
 
                 $sqlUpdate = "
                     UPDATE tareas_entregas
@@ -194,10 +307,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // -----------------------------------------------------
 // 4. Datos para vista "Evaluaciones generales"
 // -----------------------------------------------------
-$tipos_evaluacion        = [];
-$estudiantes_curso_eval  = [];
-$calif_existentes_eval   = [];
-$historial_evaluaciones  = [];  // 🔹 NUEVO: para mostrar la tabla de evaluaciones
+$tipos_evaluacion = [];
+$estudiantes_curso_eval = [];
+$calif_existentes_eval = [];
+$historial_evaluaciones = [];  // 🔹 NUEVO: para mostrar la tabla de evaluaciones
 
 if ($view === 'evaluaciones' && $curso_id > 0) {
 
@@ -280,9 +393,9 @@ if ($view === 'evaluaciones' && $curso_id > 0) {
 // -----------------------------------------------------
 // 5. Datos para vista "Tareas y entregas"
 // -----------------------------------------------------
-$tareas_curso      = [];
-$tarea_seleccionada= null;
-$entregas_tarea    = [];
+$tareas_curso = [];
+$tarea_seleccionada = null;
+$entregas_tarea = [];
 
 if ($view === 'tareas' && $curso_id > 0) {
 
@@ -357,8 +470,8 @@ include __DIR__ . '/../includes/header.php';
 
 <h1 class="h4 fw-bold mt-3">Calificaciones de docente</h1>
 <p class="text-muted">
-    Administra las notas de tus cursos. 
-    Usa <strong>Evaluaciones</strong> para exámenes/quiz/proyectos y 
+    Administra las notas de tus cursos.
+    Usa <strong>Evaluaciones</strong> para exámenes/quiz/proyectos y
     <strong>Tareas y entregas</strong> para calificar tareas enviadas por los estudiantes.
 </p>
 
@@ -373,13 +486,13 @@ include __DIR__ . '/../includes/header.php';
 <ul class="nav nav-pills mb-3">
     <li class="nav-item">
         <a class="nav-link <?= $view === 'evaluaciones' ? 'active' : '' ?>"
-           href="calificaciones.php?view=evaluaciones&curso_id=<?= $curso_id ?>">
+            href="calificaciones.php?view=evaluaciones&curso_id=<?= $curso_id ?>">
             <i class="fa-solid fa-file-pen me-1"></i> Evaluaciones generales
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link <?= $view === 'tareas' ? 'active' : '' ?>"
-           href="calificaciones.php?view=tareas&curso_id=<?= $curso_id ?>">
+            href="calificaciones.php?view=tareas&curso_id=<?= $curso_id ?>">
             <i class="fa-solid fa-list-check me-1"></i> Tareas y entregas
         </a>
     </li>
@@ -396,17 +509,16 @@ include __DIR__ . '/../includes/header.php';
                 <div class="list-group list-group-flush">
                     <?php foreach ($cursos as $c): ?>
                         <?php
-                            $isActive = ($curso_id == $c['curso_id']);
-                            $url = "calificaciones.php?view=" . urlencode($view) . "&curso_id=" . (int)$c['curso_id'];
-                            if ($view === 'evaluaciones' && $tipo_evaluacion_id) {
-                                $url .= "&tipo_evaluacion_id={$tipo_evaluacion_id}";
-                            }
-                            if ($view === 'tareas' && $tarea_id) {
-                                $url .= "&tarea_id={$tarea_id}";
-                            }
+                        $isActive = ($curso_id == $c['curso_id']);
+                        $url = "calificaciones.php?view=" . urlencode($view) . "&curso_id=" . (int) $c['curso_id'];
+                        if ($view === 'evaluaciones' && $tipo_evaluacion_id) {
+                            $url .= "&tipo_evaluacion_id={$tipo_evaluacion_id}";
+                        }
+                        if ($view === 'tareas' && $tarea_id) {
+                            $url .= "&tarea_id={$tarea_id}";
+                        }
                         ?>
-                        <a href="<?= $url ?>"
-                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
+                        <a href="<?= $url ?>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
                                   <?= $isActive ? 'active text-white' : '' ?>">
                             <span><?= htmlspecialchars($c['nombre_curso']) ?></span>
                         </a>
@@ -451,8 +563,7 @@ include __DIR__ . '/../includes/header.php';
                                     <select name="tipo_evaluacion_id" class="form-select form-select-sm">
                                         <option value="">-- Selecciona un tipo --</option>
                                         <?php foreach ($tipos_evaluacion as $te): ?>
-                                            <option value="<?= $te['id'] ?>"
-                                                <?= ($tipo_evaluacion_id == $te['id']) ? 'selected' : '' ?>>
+                                            <option value="<?= $te['id'] ?>" <?= ($tipo_evaluacion_id == $te['id']) ? 'selected' : '' ?>>
                                                 <?= htmlspecialchars($te['nombre_evaluacion']) ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -475,12 +586,12 @@ include __DIR__ . '/../includes/header.php';
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($estudiantes_curso_eval as $est): 
-                                                $mat_id   = $est['matricula_id'];
+                                            <?php foreach ($estudiantes_curso_eval as $est):
+                                                $mat_id = $est['matricula_id'];
                                                 $nota_val = isset($calif_existentes_eval[$mat_id])
                                                     ? $calif_existentes_eval[$mat_id]
                                                     : "";
-                                            ?>
+                                                ?>
                                                 <tr>
                                                     <td>
                                                         <div class="fw-semibold small mb-0">
@@ -491,10 +602,9 @@ include __DIR__ . '/../includes/header.php';
                                                         </div>
                                                     </td>
                                                     <td class="text-center">
-                                                        <input type="text"
-                                                               name="nota[<?= $mat_id ?>]"
-                                                               class="form-control form-control-sm text-center"
-                                                               value="<?= htmlspecialchars($nota_val) ?>">
+                                                        <input type="text" name="nota[<?= $mat_id ?>]"
+                                                            class="form-control form-control-sm text-center"
+                                                            value="<?= htmlspecialchars($nota_val) ?>">
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -549,8 +659,8 @@ include __DIR__ . '/../includes/header.php';
                                                     <td class="small">
                                                         <?=
                                                             $h['comentarios']
-                                                                ? nl2br(htmlspecialchars($h['comentarios']))
-                                                                : '<span class="text-muted">Sin comentarios</span>';
+                                                            ? nl2br(htmlspecialchars($h['comentarios']))
+                                                            : '<span class="text-muted">Sin comentarios</span>';
                                                         ?>
                                                     </td>
                                                 </tr>
@@ -584,13 +694,13 @@ include __DIR__ . '/../includes/header.php';
                                     </p>
                                 <?php else: ?>
                                     <div class="list-group list-group-flush">
-                                        <?php foreach ($tareas_curso as $t): 
+                                        <?php foreach ($tareas_curso as $t):
                                             $isSel = ($tarea_id == $t['id']);
-                                            $urlT  = "calificaciones.php?view=tareas&curso_id={$curso_id}&tarea_id={$t['id']}";
+                                            $urlT = "calificaciones.php?view=tareas&curso_id={$curso_id}&tarea_id={$t['id']}";
                                             $fecha_limite = $t['fecha_entrega'] ? date('d/m/Y', strtotime($t['fecha_entrega'])) : 'Sin límite';
-                                        ?>
-                                            <a href="<?= $urlT ?>" 
-                                               class="list-group-item list-group-item-action <?= $isSel ? 'active text-white' : '' ?>">
+                                            ?>
+                                            <a href="<?= $urlT ?>"
+                                                class="list-group-item list-group-item-action <?= $isSel ? 'active text-white' : '' ?>">
                                                 <div class="d-flex justify-content-between">
                                                     <div>
                                                         <div class="fw-semibold small mb-0">
@@ -598,7 +708,8 @@ include __DIR__ . '/../includes/header.php';
                                                         </div>
                                                         <?php if (!empty($t['descripcion'])): ?>
                                                             <div class="small <?= $isSel ? '' : 'text-muted' ?>">
-                                                                <?= htmlspecialchars(substr($t['descripcion'], 0, 60)) ?><?= strlen($t['descripcion']) > 60 ? '…' : '' ?>
+                                                                <?= htmlspecialchars(substr($t['descripcion'], 0, 60)) ?>
+                                                                <?= strlen($t['descripcion']) > 60 ? '…' : '' ?>
                                                             </div>
                                                         <?php endif; ?>
                                                     </div>
@@ -607,7 +718,7 @@ include __DIR__ . '/../includes/header.php';
                                                             Vence: <?= $fecha_limite ?>
                                                         </span>
                                                         <div class="small <?= $isSel ? '' : 'text-muted' ?>">
-                                                            Valor: <?= (int)$t['valor_maximo'] ?> pts
+                                                            Valor: <?= (int) $t['valor_maximo'] ?> pts
                                                         </div>
                                                     </div>
                                                 </div>
@@ -637,19 +748,75 @@ include __DIR__ . '/../includes/header.php';
                                 <?php else: ?>
 
                                     <?php
-                                        $fecha_pub = $tarea_seleccionada['fecha_publicacion']
-                                            ? date('d/m/Y H:i', strtotime($tarea_seleccionada['fecha_publicacion']))
-                                            : '—';
-                                        $fecha_lim = $tarea_seleccionada['fecha_entrega']
-                                            ? date('d/m/Y', strtotime($tarea_seleccionada['fecha_entrega']))
-                                            : 'Sin límite';
+                                    $fecha_pub = $tarea_seleccionada['fecha_publicacion']
+                                        ? date('d/m/Y H:i', strtotime($tarea_seleccionada['fecha_publicacion']))
+                                        : '—';
+
+                                    // Fecha base
+                                    $fechaBase = $tarea_seleccionada['fecha_entrega']; // Y-m-d o null
+                                    $fechaFinal = $fechaBase;
+
+                                    // ¿Hay extensión GENERAL para esta tarea?
+                                    $extStmt = $mysqli->prepare("
+        SELECT MAX(nueva_fecha) AS max_fecha
+        FROM tareas_extensiones
+        WHERE tarea_id = ?
+          AND matricula_id IS NULL
+    ");
+                                    $extStmt->bind_param("i", $tarea_seleccionada['id']);
+                                    $extStmt->execute();
+                                    $extData = $extStmt->get_result()->fetch_assoc();
+                                    $extStmt->close();
+
+                                    $hay_extension_general = !empty($extData['max_fecha']);
+
+                                    if ($hay_extension_general) {
+                                        if (empty($fechaFinal) || $extData['max_fecha'] > $fechaFinal) {
+                                            $fechaFinal = $extData['max_fecha'];
+                                        }
+                                    }
+
+                                    $fecha_lim_mostrar = $fechaFinal
+                                        ? date('d/m/Y', strtotime($fechaFinal))
+                                        : 'Sin límite';
                                     ?>
-                                    <div class="border-bottom small p-2 px-3">
-                                        <strong><?= htmlspecialchars($tarea_seleccionada['titulo']) ?></strong><br>
-                                        <span class="text-muted">
-                                            Publicada: <?= $fecha_pub ?> · Vence: <?= $fecha_lim ?> · Valor: <?= (int)$tarea_seleccionada['valor_maximo'] ?> pts
-                                        </span>
+                                    <div class="border-bottom small p-3">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                            <div>
+                                                <div class="fw-semibold mb-1">
+                                                    <?= htmlspecialchars($tarea_seleccionada['titulo']) ?>
+                                                </div>
+                                                <div class="text-muted">
+                                                    Publicada: <?= $fecha_pub ?> ·
+                                                    Fecha límite actual: <strong><?= $fecha_lim_mostrar ?></strong> ·
+                                                    Valor: <?= (int) $tarea_seleccionada['valor_maximo'] ?> pts
+
+                                                    <?php if ($hay_extension_general): ?>
+                                                        <span class="badge bg-info-subtle text-info border ms-1">
+                                                            Fecha extendida
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+
+                                            <!-- Form compacto para extender fecha a TODA la clase -->
+                                            <form method="post" class="d-flex align-items-center gap-2">
+                                                <input type="hidden" name="accion" value="extender_general_tarea">
+                                                <input type="hidden" name="curso_id" value="<?= $curso_id ?>">
+                                                <input type="hidden" name="tarea_id" value="<?= (int) $tarea_seleccionada['id'] ?>">
+
+                                                <label class="small mb-0">Extender para toda la clase:</label>
+
+                                                <input type="date" name="nueva_fecha" class="form-control form-control-sm" required>
+
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fa-solid fa-calendar-plus me-1"></i> Aplicar
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
+
+
 
                                     <?php if (empty($entregas_tarea)): ?>
                                         <p class="text-muted small m-3">
@@ -665,10 +832,30 @@ include __DIR__ . '/../includes/header.php';
                                                         <th class="text-center">Entrega</th>
                                                         <th class="text-center" style="width:90px;">Nota</th>
                                                         <th>Comentario</th>
+                                                        <th class="text-center" style="width:170px;">Extender fecha</th>
                                                     </tr>
                                                 </thead>
+
                                                 <tbody>
-                                                    <?php foreach ($entregas_tarea as $e): ?>
+                                                    <?php foreach ($entregas_tarea as $e):
+                                                        // Buscar extensión específica para este alumno (si existe)
+                                                        $extAlumnoFecha = null;
+                                                        $stmtExtAl = $mysqli->prepare("
+                                                            SELECT MAX(nueva_fecha) AS max_fecha
+                                                            FROM tareas_extensiones
+                                                            WHERE tarea_id = ?
+                                                            AND matricula_id = ?
+                                                        ");
+                                                        $stmtExtAl->bind_param("ii", $tarea_id, $e['matricula_id']);
+                                                        $stmtExtAl->execute();
+                                                        $extAlData = $stmtExtAl->get_result()->fetch_assoc();
+                                                        $stmtExtAl->close();
+
+                                                        if (!empty($extAlData['max_fecha'])) {
+                                                            $extAlumnoFecha = $extAlData['max_fecha']; // Y-m-d
+                                                        }
+                                                        ?>
+
                                                         <tr>
                                                             <td>
                                                                 <div class="fw-semibold small mb-0">
@@ -678,43 +865,75 @@ include __DIR__ . '/../includes/header.php';
                                                                     <?= htmlspecialchars($e['email']) ?>
                                                                 </div>
                                                             </td>
+
                                                             <td class="text-center small">
                                                                 <?php if ($e['entrega_id']): ?>
                                                                     <div class="d-flex flex-column align-items-center">
-                                                                        <a href="<?= htmlspecialchars($e['archivo_url']) ?>" target="_blank" class="small">
+                                                                        <a href="<?= htmlspecialchars($e['archivo_url']) ?>" target="_blank"
+                                                                            class="small">
                                                                             Ver archivo
                                                                         </a>
                                                                         <span class="text-muted">
                                                                             <?= date('d/m/Y H:i', strtotime($e['fecha_entrega'])) ?>
                                                                         </span>
                                                                     </div>
+
                                                                 <?php else: ?>
                                                                     <span class="badge bg-secondary">Sin entrega</span>
+
                                                                 <?php endif; ?>
                                                             </td>
+
                                                             <td class="text-center">
                                                                 <?php if ($e['entrega_id']): ?>
-                                                                    <input type="text"
-                                                                           name="calificacion[<?= (int)$e['matricula_id'] ?>]"
-                                                                           class="form-control form-control-sm text-center"
-                                                                           value="<?= $e['calificacion'] !== null ? htmlspecialchars($e['calificacion']) : '' ?>">
+                                                                    <input type="text" name="calificacion[<?= (int) $e['matricula_id'] ?>]"
+                                                                        class="form-control form-control-sm text-center"
+                                                                        value="<?= $e['calificacion'] !== null ? htmlspecialchars($e['calificacion']) : '' ?>">
+
                                                                 <?php else: ?>
                                                                     <span class="text-muted small">—</span>
+
                                                                 <?php endif; ?>
                                                             </td>
+
                                                             <td>
                                                                 <?php if ($e['entrega_id']): ?>
-                                                                    <textarea
-                                                                        name="comentario[<?= (int)$e['matricula_id'] ?>]"
-                                                                        class="form-control form-control-sm"
-                                                                        rows="1"
+                                                                    <textarea name="comentario[<?= (int) $e['matricula_id'] ?>]"
+                                                                        class="form-control form-control-sm" rows="1"
                                                                         placeholder="Comentario opcional..."><?= htmlspecialchars($e['comentarios_docente'] ?? '') ?></textarea>
+
                                                                 <?php else: ?>
                                                                     <span class="text-muted small">
                                                                         No puedes calificar si no hay entrega.
                                                                     </span>
+
                                                                 <?php endif; ?>
                                                             </td>
+
+                                                            <!-- NUEVO: Extender fecha solo para este alumno -->
+                                                            <td class="text-center">
+                                                                <form method="post" class="d-flex flex-column align-items-center gap-1">
+
+                                                                    <input type="hidden" name="accion" value="extender_tarea_alumno">
+                                                                    <input type="hidden" name="curso_id" value="<?= $curso_id ?>">
+                                                                    <input type="hidden" name="tarea_id" value="<?= $tarea_id ?>">
+                                                                    <input type="hidden" name="matricula_id"
+                                                                        value="<?= (int) $e['matricula_id'] ?>">
+
+                                                                    <input type="date" name="nueva_fecha"
+                                                                        class="form-control form-control-sm text-center"
+                                                                        style="max-width: 150px;"
+                                                                        value="<?= $extAlumnoFecha ? htmlspecialchars($extAlumnoFecha) : '' ?>"
+                                                                        required>
+
+                                                                    <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                                                        <i class="fa-solid fa-calendar-check me-1"></i>
+                                                                        Guardar
+                                                                    </button>
+
+                                                                </form>
+                                                            </td>
+
                                                         </tr>
                                                     <?php endforeach; ?>
                                                 </tbody>

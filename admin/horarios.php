@@ -4,11 +4,11 @@ require_once __DIR__ . "/../includes/auth.php";
 require_role([1]); // solo admin
 
 $mensaje = "";
-$error   = "";
+$error = "";
 
 // Curso filtrado opcional
 $curso_id_filtro = isset($_GET['curso_id']) && ctype_digit($_GET['curso_id'])
-    ? (int)$_GET['curso_id']
+    ? (int) $_GET['curso_id']
     : 0;
 
 // Cursos activos
@@ -45,19 +45,27 @@ if ($res_dias) {
 
 // Crear horario
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_horario'])) {
-    $curso_id       = (int)($_POST['curso_id'] ?? 0);
-    $docente_id     = (int)($_POST['docente_id'] ?? 0);
-    $dia_semana_id  = (int)($_POST['dia_semana_id'] ?? 0);
-    $hora_inicio    = $_POST['hora_inicio'] ?? '';
-    $hora_fin       = $_POST['hora_fin'] ?? '';
-    $aula           = trim($_POST['aula'] ?? '');
-    $fecha_inicio   = $_POST['fecha_inicio'] ?? '';
-    $fecha_fin      = $_POST['fecha_fin'] ?? '';
-    $cupos          = (int)($_POST['cupos_disponibles'] ?? 0);
+    $curso_id = (int) ($_POST['curso_id'] ?? 0);
+    $docente_id = (int) ($_POST['docente_id'] ?? 0);
+    $dia_semana_id = (int) ($_POST['dia_semana_id'] ?? 0);
+    $hora_inicio = $_POST['hora_inicio'] ?? '';
+    $hora_fin = $_POST['hora_fin'] ?? '';
+    $aula = trim($_POST['aula'] ?? '');
+    $fecha_inicio = $_POST['fecha_inicio'] ?? '';
+    $cupos = (int) ($_POST['cupos_disponibles'] ?? 0);
 
-    if ($curso_id <= 0 || $docente_id <= 0 || $dia_semana_id <= 0 ||
+    // Calcular fecha_fin automáticamente: 3 meses después de fecha_inicio
+    if ($fecha_inicio !== '') {
+        $fecha_fin = date('Y-m-d', strtotime($fecha_inicio . ' +3 months'));
+    } else {
+        $fecha_fin = '';
+    }
+
+    if (
+        $curso_id <= 0 || $docente_id <= 0 || $dia_semana_id <= 0 ||
         $hora_inicio === '' || $hora_fin === '' || $fecha_inicio === '' ||
-        $fecha_fin === '' || $cupos <= 0) {
+        $cupos <= 0
+    ) {
         $error = "Completa todos los campos obligatorios del horario.";
     } else {
         // 🔗 Asegurar que el docente también exista en la tabla `docentes`
@@ -109,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_horario'])) {
 
 // Desactivar horario
 if (isset($_GET['desactivar']) && ctype_digit($_GET['desactivar'])) {
-    $id_h = (int)$_GET['desactivar'];
+    $id_h = (int) $_GET['desactivar'];
     $stmt = $mysqli->prepare("UPDATE horarios SET activo = 0 WHERE id = ?");
     $stmt->bind_param("i", $id_h);
     if ($stmt->execute()) {
@@ -161,8 +169,7 @@ include __DIR__ . "/../includes/header.php";
                         <select name="curso_id" class="form-select" required>
                             <option value="">Selecciona un curso</option>
                             <?php foreach ($cursos_data as $c): ?>
-                                <option value="<?= (int)$c['id'] ?>"
-                                    <?= $curso_id_filtro == $c['id'] ? 'selected' : '' ?>>
+                                <option value="<?= (int) $c['id'] ?>" <?= $curso_id_filtro == $c['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($c['nombre_curso']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -174,7 +181,7 @@ include __DIR__ . "/../includes/header.php";
                         <select name="docente_id" class="form-select" required>
                             <option value="">Selecciona un docente</option>
                             <?php foreach ($docentes_data as $d): ?>
-                                <option value="<?= (int)$d['id'] ?>">
+                                <option value="<?= (int) $d['id'] ?>">
                                     <?= htmlspecialchars($d['nombre'] . " " . $d['apellido']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -189,7 +196,7 @@ include __DIR__ . "/../includes/header.php";
                         <select name="dia_semana_id" class="form-select" required>
                             <option value="">Selecciona un día</option>
                             <?php foreach ($dias_data as $d): ?>
-                                <option value="<?= (int)$d['id'] ?>">
+                                <option value="<?= (int) $d['id'] ?>">
                                     <?= htmlspecialchars($d['nombre_dia']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -218,10 +225,14 @@ include __DIR__ . "/../includes/header.php";
                             <input type="date" name="fecha_inicio" class="form-control" required>
                         </div>
                         <div class="col-md-6 mb-2">
-                            <label class="form-label">Fecha fin *</label>
-                            <input type="date" name="fecha_fin" class="form-control" required>
+                            <label class="form-label">Fecha fin (automática)</label>
+                            <input type="date" name="fecha_fin" class="form-control" readonly>
+                            <div class="form-text">
+                                Se calculará automáticamente a 3 meses de la fecha de inicio.
+                            </div>
                         </div>
                     </div>
+
 
                     <div class="mb-2">
                         <label class="form-label">Cupos disponibles *</label>
@@ -249,8 +260,7 @@ include __DIR__ . "/../includes/header.php";
                         <select name="curso_id" class="form-select">
                             <option value="0">Todos los cursos</option>
                             <?php foreach ($cursos_data as $c): ?>
-                                <option value="<?= (int)$c['id'] ?>"
-                                    <?= $curso_id_filtro == $c['id'] ? 'selected' : '' ?>>
+                                <option value="<?= (int) $c['id'] ?>" <?= $curso_id_filtro == $c['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($c['nombre_curso']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -283,40 +293,43 @@ include __DIR__ . "/../includes/header.php";
                             </tr>
                         </thead>
                         <tbody>
-                        <?php if ($horarios && $horarios->num_rows > 0): ?>
-                            <?php while ($h = $horarios->fetch_assoc()): ?>
+                            <?php if ($horarios && $horarios->num_rows > 0): ?>
+                                <?php while ($h = $horarios->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($h['nombre_curso']) ?></td>
+                                        <td><?= htmlspecialchars($h['docente_nombre'] . " " . $h['docente_apellido']) ?></td>
+                                        <td><?= htmlspecialchars($h['nombre_dia']) ?></td>
+                                        <td><?= htmlspecialchars(substr($h['hora_inicio'], 0, 5) . " - " . substr($h['hora_fin'], 0, 5)) ?>
+                                        </td>
+                                        <td>
+                                            <?= htmlspecialchars($h['fecha_inicio']) ?><br>
+                                            <span class="small text-muted">hasta</span><br>
+                                            <?= htmlspecialchars($h['fecha_fin']) ?>
+                                        </td>
+                                        <td><?= (int) $h['cupos_disponibles'] ?></td>
+                                        <td>
+                                            <?php if ($h['activo']): ?>
+                                                <span class="badge bg-success">Activo</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-secondary">Inactivo</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($h['activo']): ?>
+                                                <a href="horarios.php?desactivar=<?= (int) $h['id'] ?>"
+                                                    class="btn btn-outline-danger btn-sm"
+                                                    onclick="return confirm('¿Desactivar este horario?');">
+                                                    Desactivar
+                                                </a>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($h['nombre_curso']) ?></td>
-                                    <td><?= htmlspecialchars($h['docente_nombre'] . " " . $h['docente_apellido']) ?></td>
-                                    <td><?= htmlspecialchars($h['nombre_dia']) ?></td>
-                                    <td><?= htmlspecialchars(substr($h['hora_inicio'], 0, 5) . " - " . substr($h['hora_fin'], 0, 5)) ?></td>
-                                    <td>
-                                        <?= htmlspecialchars($h['fecha_inicio']) ?><br>
-                                        <span class="small text-muted">hasta</span><br>
-                                        <?= htmlspecialchars($h['fecha_fin']) ?>
-                                    </td>
-                                    <td><?= (int)$h['cupos_disponibles'] ?></td>
-                                    <td>
-                                        <?php if ($h['activo']): ?>
-                                            <span class="badge bg-success">Activo</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary">Inactivo</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if ($h['activo']): ?>
-                                            <a href="horarios.php?desactivar=<?= (int)$h['id'] ?>"
-                                               class="btn btn-outline-danger btn-sm"
-                                               onclick="return confirm('¿Desactivar este horario?');">
-                                                Desactivar
-                                            </a>
-                                        <?php endif; ?>
-                                    </td>
+                                    <td colspan="8" class="text-muted">No hay horarios registrados.</td>
                                 </tr>
-                            <?php endwhile; ?>
-                        <?php else: ?>
-                            <tr><td colspan="8" class="text-muted">No hay horarios registrados.</td></tr>
-                        <?php endif; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>

@@ -118,7 +118,6 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
             </div>
-        </div>
     </div>
 
     <!-- Accesos rápidos -->
@@ -156,7 +155,6 @@ include __DIR__ . '/../includes/header.php';
         </a>
     </div>
 
-
         <div class="col-md-4">
             <!-- AQUÍ CORREGIMOS: botón "Estudiantes" va a docente/estudiantes.php -->
             <a href="/twintalk/docente/estudiantes.php" class="text-decoration-none">
@@ -182,6 +180,20 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                     <p class="small text-muted mb-0">
                         Ver y gestionar calificaciones de tus estudiantes.
+                    </p>
+                </div>
+            </a>
+        </div>
+                <!-- NUEVA TARJETA: REPORTES -->
+        <div class="col-md-4">
+            <a href="/twintalk/docente/reportes.php" class="text-decoration-none">
+                <div class="border rounded-4 p-3 h-100 bg-white">
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="fa-solid fa-chart-line me-2 text-info"></i>
+                        <span class="fw-semibold small">Reportes</span>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Ver reporte mensual y trimestral de tus clases.
                     </p>
                 </div>
             </a>

@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('America/Tegucigalpa');
 $host = "127.0.0.1";        // igual que en config.inc.php
 $user = "root";             // igual
 $pass = "";                 // sin contraseña

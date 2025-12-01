@@ -4,7 +4,7 @@ require_once __DIR__ . "/../includes/auth.php";
 require_role([3]); // solo estudiantes
 
 $usuario_id = $_SESSION['usuario_id'] ?? 0;
-$horario_id = isset($_GET['horario_id']) ? (int)$_GET['horario_id'] : 0;
+$horario_id = isset($_GET['horario_id']) ? (int) $_GET['horario_id'] : 0;
 
 if ($horario_id <= 0) {
     include __DIR__ . "/../includes/header.php";
@@ -34,10 +34,10 @@ if (!$matricula) {
     exit;
 }
 
-$matricula_id = (int)$matricula['matricula_id'];
+$matricula_id = (int) $matricula['matricula_id'];
 
 $mensaje_tarea = "";
-$error_tarea   = "";
+$error_tarea = "";
 
 // Carpeta para archivos de tareas de estudiantes
 $uploadDirTareas = __DIR__ . '/../uploads/tareas/';
@@ -47,7 +47,7 @@ if (!is_dir($uploadDirTareas)) {
 
 // Manejar subida de tarea del estudiante
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir_tarea') {
-    $tarea_id = (int)($_POST['tarea_id'] ?? 0);
+    $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
 
     if ($tarea_id <= 0 || !isset($_FILES['archivo_tarea'])) {
         $error_tarea = "Datos de tarea inválidos.";
@@ -65,25 +65,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir
         } else {
             $tareaRow = $resValT->fetch_assoc();
 
-            $hoy = date('Y-m-d');
-            if (!empty($tareaRow['fecha_entrega'])
-                && $hoy > $tareaRow['fecha_entrega']
-                && (int)$tareaRow['permitir_atraso'] === 0) {
+            // ===============================
+            //  NUEVA LÓGICA: FECHA LÍMITE REAL
+            //  (tarea + extensiones del docente)
+            // ===============================
+            $fecha_limite = $tareaRow['fecha_entrega']; // fecha original (puede ser null)
 
-                $error_tarea = "⛔ Ya pasó la fecha de entrega y el docente no habilitó entregas tardías.";
+            // Buscar extensiones para esta tarea:
+            // - generales (matricula_id IS NULL)
+            // - o específicas para este estudiante
+            $stmtExt = $mysqli->prepare("
+                SELECT MAX(nueva_fecha) AS max_fecha
+                FROM tareas_extensiones
+                WHERE tarea_id = ?
+                  AND (matricula_id = ? OR matricula_id IS NULL)
+            ");
+            $stmtExt->bind_param("ii", $tarea_id, $matricula_id);
+            $stmtExt->execute();
+            $resExt = $stmtExt->get_result();
+            $extRow = $resExt->fetch_assoc();
+            $stmtExt->close();
+
+            if (!empty($extRow['max_fecha'])) {
+                // Si la tarea no tenía fecha o la extensión es mayor, usamos la extensión
+                if (empty($fecha_limite) || $extRow['max_fecha'] > $fecha_limite) {
+                    $fecha_limite = $extRow['max_fecha'];
+                }
+            }
+
+            $hoy = date('Y-m-d');
+
+            // Validar contra la fecha límite final
+            if (
+                !empty($fecha_limite)
+                && $hoy > $fecha_limite
+                && (int) $tareaRow['permitir_atraso'] === 0
+            ) {
+
+                $error_tarea = "⛔ Ya pasó la fecha de entrega y el docente no habilitó entregas tardías para ti.";
             } else {
                 $file = $_FILES['archivo_tarea'];
                 if ($file['error'] !== UPLOAD_ERR_OK) {
                     $error_tarea = "Error al subir el archivo.";
                 } else {
                     $nombreOriginal = $file['name'];
-                    $tmpName        = $file['tmp_name'];
-                    $ext            = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
-                    $nuevoNombre    = uniqid('entrega_') . ($ext ? '.' . $ext : '');
-                    $rutaDestino    = $uploadDirTareas . $nuevoNombre;
+                    $tmpName = $file['tmp_name'];
+                    $ext = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
+                    $nuevoNombre = uniqid('entrega_') . ($ext ? '.' . $ext : '');
+                    $rutaDestino = $uploadDirTareas . $nuevoNombre;
 
                     if (move_uploaded_file($tmpName, $rutaDestino)) {
-                        $archivo_url    = '/twintalk/uploads/tareas/' . $nuevoNombre;
+                        $archivo_url = '/twintalk/uploads/tareas/' . $nuevoNombre;
                         $tamano_archivo = $file['size'];
 
                         // Ver si ya existe entrega
@@ -244,6 +276,25 @@ $stmtTar->bind_param(
 $stmtTar->execute();
 $tareas = $stmtTar->get_result();
 $stmtTar->close();
+// 4.b Extensiones de tareas para este estudiante (y generales)
+$extensiones_por_tarea = [];
+
+$extSql = "
+    SELECT tarea_id, MAX(nueva_fecha) AS max_fecha
+    FROM tareas_extensiones
+    WHERE matricula_id = ? OR matricula_id IS NULL
+    GROUP BY tarea_id
+";
+if ($stmtExtAll = $mysqli->prepare($extSql)) {
+    $stmtExtAll->bind_param("i", $matricula_id);
+    $stmtExtAll->execute();
+    $resExtAll = $stmtExtAll->get_result();
+    while ($rowExt = $resExtAll->fetch_assoc()) {
+        $extensiones_por_tarea[(int) $rowExt['tarea_id']] = $rowExt['max_fecha'];
+    }
+    $stmtExtAll->close();
+}
+
 
 // 5) Anuncios específicos del curso
 $anSql = "
@@ -288,7 +339,7 @@ include __DIR__ . "/../includes/header.php";
 </h1>
 
 <p class="text-muted mb-3">
-    Nivel <?= htmlspecialchars($curso['codigo_nivel']) ?> • 
+    Nivel <?= htmlspecialchars($curso['codigo_nivel']) ?> •
     <?= htmlspecialchars($curso['nombre_nivel']) ?> •
     <?= htmlspecialchars($curso['nombre_dia']) ?>,
     <?= substr($curso['hora_inicio'], 0, 5) ?> - <?= substr($curso['hora_fin'], 0, 5) ?> •
@@ -365,16 +416,37 @@ include __DIR__ . "/../includes/header.php";
 
                     <?php while ($t = $tareas->fetch_assoc()): ?>
                         <?php
-                            $hoy       = date('Y-m-d');
-                            $fechaPub  = $t['fecha_publicacion'] ? date('d/m/Y H:i', strtotime($t['fecha_publicacion'])) : null;
-                            $fechaLim  = $t['fecha_entrega'] ? date('d/m/Y', strtotime($t['fecha_entrega'])) : null;
-                            $vencida   = ($t['fecha_entrega'] && $t['fecha_entrega'] < $hoy);
-                            $entregada = !empty($t['mi_archivo']);
-                            $valorMax  = isset($t['valor_maximo']) ? (int)$t['valor_maximo'] : 100;
+                        $hoy = date('Y-m-d');
+                        $fechaPub = $t['fecha_publicacion'] ? date('d/m/Y H:i', strtotime($t['fecha_publicacion'])) : null;
+
+                        // Fecha base de la tarea (tabla tareas)
+                        $fechaBaseBD = $t['fecha_entrega']; // Y-m-d o null
+                        $fechaLimiteRealBD = $fechaBaseBD;
+
+                        // Extensión (si existe) para esta tarea
+                        $extFecha = $extensiones_por_tarea[(int) $t['id']] ?? null;
+
+                        if (!empty($extFecha)) {
+                            // Usamos la mayor fecha entre la base y la extensión
+                            if (empty($fechaLimiteRealBD) || $extFecha > $fechaLimiteRealBD) {
+                                $fechaLimiteRealBD = $extFecha;
+                            }
+                        }
+
+                        // Para mostrar en la badge
+                        $fechaLim = $fechaLimiteRealBD ? date('d/m/Y', strtotime($fechaLimiteRealBD)) : null;
+
+                        $entregada = !empty($t['mi_archivo']);
+                        $valorMax = isset($t['valor_maximo']) ? (int) $t['valor_maximo'] : 100;
+
+                        // ¿Está vencida según la FECHA FINAL real y sin entrega?
+                        $vencida = (!empty($fechaLimiteRealBD) && $fechaLimiteRealBD < $hoy && !$entregada);
+
+                        // Para saber si de verdad hubo extensión aplicada
+                        $extension_aplicada = (!empty($extFecha) && $fechaLimiteRealBD === $extFecha);
                         ?>
 
-                        <li class="list-group-item py-3">
-
+                        <li class="list-group-item py-3 mb-2 rounded-3">
                             <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
 
                                 <div class="flex-grow-1">
@@ -385,20 +457,27 @@ include __DIR__ . "/../includes/header.php";
                                         <strong class="small"><?= htmlspecialchars($t['titulo']) ?></strong>
 
                                         <?php if ($fechaPub): ?>
-                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small">
+                                            <span
+                                                class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small">
                                                 Publicada: <?= $fechaPub ?>
                                             </span>
                                         <?php endif; ?>
 
                                         <?php if ($fechaLim): ?>
-                                            <span class="badge small 
-                                                <?= $vencida && !$entregada 
-                                                    ? 'bg-danger-subtle text-danger border border-danger-subtle' 
+                                            <span
+                                                hclass="badge small 
+                                                <?= $vencida && !$entregada
+                                                    ? 'bg-danger-subtle text-danger border border-danger-subtle'
                                                     : 'bg-primary-subtle text-primary border border-primary-subtle' ?>">
                                                 Vence: <?= $fechaLim ?>
                                             </span>
                                         <?php endif; ?>
-
+                                        <?php if ($extension_aplicada): ?>
+                                            <div class="small text-info mt-1">
+                                                <i class="fa-solid fa-clock-rotate-left me-1"></i>
+                                                Fecha extendida por el docente hasta <?= $fechaLim ?>
+                                            </div>
+                                        <?php endif; ?>
                                         <span class="badge bg-light text-secondary border border-secondary-subtle small">
                                             Valor: <?= $valorMax ?> pts
                                         </span>
@@ -416,7 +495,8 @@ include __DIR__ . "/../includes/header.php";
                                         <p class="small mb-2">
                                             <i class="fa-solid fa-paperclip me-1"></i>
                                             Instrucciones:
-                                            <a href="<?= htmlspecialchars($t['archivo_instrucciones']) ?>" target="_blank">Ver archivo</a>
+                                            <a href="<?= htmlspecialchars($t['archivo_instrucciones']) ?>" target="_blank">Ver
+                                                archivo</a>
                                         </p>
                                     <?php endif; ?>
 
@@ -428,7 +508,8 @@ include __DIR__ . "/../includes/header.php";
 
                                                 <div>
                                                     <span class="small fw-semibold">Tu entrega</span><br>
-                                                    <a href="<?= htmlspecialchars($t['mi_archivo']) ?>" target="_blank" class="small">
+                                                    <a href="<?= htmlspecialchars($t['mi_archivo']) ?>" target="_blank"
+                                                        class="small">
                                                         Ver archivo enviado
                                                     </a>
                                                 </div>
@@ -475,17 +556,20 @@ include __DIR__ . "/../includes/header.php";
                                 <!-- Columna derecha: subida -->
                                 <div style="min-width: 230px;">
 
-                                    <?php if ($t['fecha_entrega'] && $t['fecha_entrega'] < $hoy && empty($t['mi_archivo'])): ?>
+                                    <?php if ($vencida): ?>
                                         <span class="badge bg-danger-subtle text-danger d-block text-center small mb-2">
                                             Entrega vencida
                                         </span>
                                     <?php endif; ?>
 
+
+
                                     <form method="post" enctype="multipart/form-data">
                                         <input type="hidden" name="accion" value="subir_tarea">
                                         <input type="hidden" name="tarea_id" value="<?= $t['id'] ?>">
 
-                                        <input type="file" name="archivo_tarea" class="form-control form-control-sm mb-2" required>
+                                        <input type="file" name="archivo_tarea" class="form-control form-control-sm mb-2"
+                                            required>
 
                                         <button type="submit" class="btn btn-sm btn-primary w-100">
                                             <?= $t['mi_archivo'] ? 'Reemplazar archivo' : 'Subir archivo' ?>
@@ -557,14 +641,13 @@ include __DIR__ . "/../includes/header.php";
             <div class="d-flex align-items-center">
 
                 <?php if (!empty($curso['foto_perfil'])): ?>
-                    <img src="<?= htmlspecialchars($curso['foto_perfil']) ?>"
-                         class="rounded-circle me-2"
-                         style="width:48px;height:48px;object-fit:cover;">
+                    <img src="<?= htmlspecialchars($curso['foto_perfil']) ?>" class="rounded-circle me-2"
+                        style="width:48px;height:48px;object-fit:cover;">
                 <?php else: ?>
                     <div class="rounded-circle bg-light d-flex justify-content-center align-items-center me-2"
-                         style="width:48px;height:48px;">
+                        style="width:48px;height:48px;">
                         <span class="fw-bold">
-                            <?= strtoupper(substr($curso['docente_nombre'],0,1) . substr($curso['docente_apellido'],0,1)) ?>
+                            <?= strtoupper(substr($curso['docente_nombre'], 0, 1) . substr($curso['docente_apellido'], 0, 1)) ?>
                         </span>
                     </div>
                 <?php endif; ?>

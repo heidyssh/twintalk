@@ -222,27 +222,67 @@ include __DIR__ . "/includes/header.php";
 
 <hr class="section-divider">
 
-<!-- FUNDADORA -->
+<!-- FUNDADORA / HISTORIA -->
 <section id="fundadora" class="section-padding">
-    <div class="row g-4 align-items-center">
-        <div class="col-lg-5">
-            <div class="card card-soft p-3 text-center h-100">
-                <img src="/twintalk/assets/img/dueña.jpg" class="img-fluid rounded-4 mb-3" style="max-height:320px;">
-                <p class="small text-muted mb-0">Kiara Saunders · Fundadora</p>
-            </div>
-        </div>
-        <div class="col-lg-7">
-            <div class="card card-soft p-3 h-100">
-                <h2 class="section-title h4 mb-2">La historia detrás 💡</h2>
-                <p class="small text-muted">TwinTalk nació como un sueño de emprendimiento con propósito.</p>
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <!-- Card grande que contiene foto + historia -->
+            <div class="card card-soft p-3 p-md-4">
+                <div class="row g-4 align-items-center">
+                    
+                    <!-- FOTO -->
+                    <div class="col-lg-5">
+                        <div class="card card-soft h-100 p-2 p-md-3 text-center">
+                            <img src="/twintalk/assets/img/dueña.jpg"
+                                 class="img-fluid rounded-4 mb-3"
+                                 style="max-height:320px; object-fit:cover; width:100%;">
+                            <p class="small text-muted mb-0">
+                                Kiara Saunders · Fundadora y directora de TwinTalk English
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIA -->
+                    <div class="col-lg-7">
+                        <div class="card card-soft h-100 p-3 p-md-4">
+                            <h2 class="h4 fw-bold mb-3">
+                                La historia detrás de TwinTalk English 💡
+                            </h2>
+
+                            <p class="small text-muted mb-2">
+                                TwinTalk English nació como un sueño de emprendimiento de 
+                                <strong>Kiara Saunders</strong>, quien comenzó dando clases
+                                personalizadas de inglés a estudiantes que querían mejorar sus
+                                oportunidades académicas y laborales en La Ceiba.
+                            </p>
+
+                            <p class="small text-muted mb-2">
+                                Al ver que muchos alumnos tenían miedo de hablar, pero muchísimo
+                                potencial, decidió crear una academia pequeña, cercana y humana,
+                                donde cada estudiante fuera escuchado, acompañado y motivado a 
+                                <strong>perder el miedo al inglés</strong> paso a paso.
+                            </p>
+
+                            <p class="small text-muted mb-0">
+                                Hoy, TwinTalk English es un espacio donde niños, jóvenes y adultos
+                                pueden aprender en grupos reducidos, con metodologías prácticas y
+                                un ambiente de confianza. La visión de Kiara es que más personas de
+                                la región puedan acceder a becas, mejores trabajos y experiencias
+                                internacionales gracias al inglés. 🌍📚
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>
 </section>
 
+
 <hr class="section-divider">
 
-<!-- CONTACTO (con mensajes guardados en la BD) --> <section id="contacto" class="section-padding bg-light"> <div class="row g-4 align-items-stretch"> <!-- Columna: Información de contacto --> <div class="col-lg-5"> <div class="card card-soft h-100 p-3 p-md-4"> <h2 class="section-title mb-3">Contáctanos 📩</h2> <?php if ($contacto_ok): ?> <div class="alert alert-success small"> <?= htmlspecialchars($contacto_ok) ?> </div> <?php elseif ($contacto_error): ?> <div class="alert alert-danger small"> <?= htmlspecialchars($contacto_error) ?> </div> <?php endif; ?> <p class="text-muted small"> Si necesitas más información sobre horarios, precios o niveles, puedes escribirnos o visitarnos. ¡Con gusto te orientamos! 🙂 </p> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-primary rounded-circle"> <i class="fa-solid fa-location-dot"></i> </span> </div> <div> <div class="fw-semibold small">Ubicación</div> <div class="text-muted small"> La Ceiba, Atlántida, Honduras </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-success rounded-circle"> <i class="fa-brands fa-whatsapp"></i> </span> </div> <div> <div class="fw-semibold small">WhatsApp</div> <div class="text-muted small"> +504 0000-0000 <!-- Cambia al número real --> </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-danger rounded-circle"> <i class="fa-solid fa-envelope"></i> </span> </div> <div> <div class="fw-semibold small">Correo electrónico</div> <div class="text-muted small"> <a href="mailto:twintalk39@gmail.com" class="text-decoration-none"> twintalk39@gmail.com </a> </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-secondary rounded-circle"> <i class="fa-solid fa-clock"></i> </span> </div> <div> <div class="fw-semibold small">Horario de atención</div> <div class="text-muted small"> Lunes a viernes · 8:00 a.m. – 6:00 p.m.<br> Sábados · 9:00 a.m. – 1:00 p.m. </div> </div> </div> <hr> <p class="small text-muted mb-0"> También puedes crear tu cuenta directamente en la plataforma y nos pondremos en contacto contigo para completar el proceso de matrícula. </p> </div> </div>
+<!-- CONTACTO (con mensajes guardados en la BD) --> <section id="contacto" class="section-padding bg-light"> <div class="row g-4 align-items-stretch"> <!-- Columna: Información de contacto --> <div class="col-lg-5"> <div class="card card-soft h-100 p-3 p-md-4"> <h2 class="section-title mb-3">Contáctanos 📩</h2> <?php if ($contacto_ok): ?> <div class="alert alert-success small"> <?= htmlspecialchars($contacto_ok) ?> </div> <?php elseif ($contacto_error): ?> <div class="alert alert-danger small"> <?= htmlspecialchars($contacto_error) ?> </div> <?php endif; ?> <p class="text-muted small"> Si necesitas más información sobre horarios, precios o niveles, puedes escribirnos o visitarnos. ¡Con gusto te orientamos! 🙂 </p> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-primary rounded-circle"> <i class="fa-solid fa-location-dot"></i> </span> </div> <div> <div class="fw-semibold small">Ubicación</div> <div class="text-muted small"> La Ceiba, Atlántida, Honduras </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-success rounded-circle"> <i class="fa-brands fa-whatsapp"></i> </span> </div> <div> <div class="fw-semibold small">WhatsApp</div> <div class="text-muted small"> +504 9838-9820 <!-- Cambia al número real --> </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-danger rounded-circle"> <i class="fa-solid fa-envelope"></i> </span> </div> <div> <div class="fw-semibold small">Correo electrónico</div> <div class="text-muted small"> <a href="mailto:twintalk39@gmail.com" class="text-decoration-none"> twintalk39@gmail.com </a> </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-secondary rounded-circle"> <i class="fa-solid fa-clock"></i> </span> </div> <div> <div class="fw-semibold small">Horario de atención</div> <div class="text-muted small"> Lunes a viernes · 8:00 a.m. – 6:00 p.m.<br> Sábados · 9:00 a.m. – 1:00 p.m. </div> </div> </div> <hr> <p class="small text-muted mb-0"> También puedes crear tu cuenta directamente en la plataforma y nos pondremos en contacto contigo para completar el proceso de matrícula. </p> </div> </div>
 
         <!-- FORM -->
         <div class="col-lg-7">

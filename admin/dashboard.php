@@ -6,22 +6,23 @@ require_role([1]);
 $nombre_admin = $_SESSION['nombre'] ?? 'Administrador';
 
 // Helper rápido para contar
-function tt_contar($mysqli, $sql) {
+function tt_contar($mysqli, $sql)
+{
     $res = $mysqli->query($sql);
     if ($res && ($row = $res->fetch_assoc())) {
-        return (int)($row['c'] ?? 0);
+        return (int) ($row['c'] ?? 0);
     }
     return 0;
 }
 
-$total_usuarios    = tt_contar($mysqli, "SELECT COUNT(*) AS c FROM usuarios");
+$total_usuarios = tt_contar($mysqli, "SELECT COUNT(*) AS c FROM usuarios");
 $total_estudiantes = tt_contar($mysqli, "SELECT COUNT(*) AS c FROM estudiantes");
-$total_docentes    = tt_contar($mysqli, "SELECT COUNT(*) AS c FROM docentes");
-$total_cursos      = tt_contar($mysqli, "SELECT COUNT(*) AS c FROM cursos");
-$total_matriculas  = tt_contar($mysqli, "SELECT COUNT(*) AS c FROM matriculas");
+$total_docentes = tt_contar($mysqli, "SELECT COUNT(*) AS c FROM docentes");
+$total_cursos = tt_contar($mysqli, "SELECT COUNT(*) AS c FROM cursos");
+$total_matriculas = tt_contar($mysqli, "SELECT COUNT(*) AS c FROM matriculas");
 
-$total_anuncios         = 0;
-$total_materiales       = 0;
+$total_anuncios = 0;
+$total_materiales = 0;
 $total_horarios_activos = 0;
 
 $resExtras = $mysqli->query("
@@ -31,9 +32,9 @@ $resExtras = $mysqli->query("
         (SELECT COUNT(*) FROM horarios WHERE activo = 1) AS total_horarios_activos
 ");
 if ($resExtras && ($rowE = $resExtras->fetch_assoc())) {
-    $total_anuncios         = (int)($rowE['total_anuncios'] ?? 0);
-    $total_materiales       = (int)($rowE['total_materiales'] ?? 0);
-    $total_horarios_activos = (int)($rowE['total_horarios_activos'] ?? 0);
+    $total_anuncios = (int) ($rowE['total_anuncios'] ?? 0);
+    $total_materiales = (int) ($rowE['total_materiales'] ?? 0);
+    $total_horarios_activos = (int) ($rowE['total_horarios_activos'] ?? 0);
 }
 
 $ultimos_usuarios = $mysqli->query("
@@ -245,19 +246,33 @@ include __DIR__ . "/../includes/header.php";
                         </div>
                     </a>
                 </div>
+                <!-- NUEVA TARJETA: REPORTE MENSUAL -->
                 <div class="col-6">
-    <a href="/twintalk/index.php?public=1" class="text-decoration-none">
-        <div class="border rounded-4 p-3 h-100 bg-white">
-            <div class="d-flex align-items-center mb-1">
-                <i class="fa-solid fa-globe me-2 text-secondary"></i>
-                <span class="fw-semibold small">Vista pública</span>
-            </div>
-            <p class="small text-muted mb-0">
-                Ir al sitio principal que ven los visitantes.
-            </p>
-        </div>
-    </a>
-</div>
+                    <a href="reportes_mensuales.php" class="text-decoration-none">
+                        <div class="border rounded-4 p-3 h-100 bg-white">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fa-solid fa-chart-column me-2 text-success"></i>
+                                <span class="fw-semibold small">Reporte mensual</span>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Ver resumen mensual de matrículas, ingresos y actividad.
+                            </p>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6">
+                    <a href="/twintalk/index.php?public=1" class="text-decoration-none">
+                        <div class="border rounded-4 p-3 h-100 bg-white">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fa-solid fa-globe me-2 text-secondary"></i>
+                                <span class="fw-semibold small">Vista pública</span>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Ir al sitio principal que ven los visitantes.
+                            </p>
+                        </div>
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -268,41 +283,42 @@ include __DIR__ . "/../includes/header.php";
             <div class="table-responsive">
                 <table class="table table-sm table-borderless align-middle mb-0">
                     <tbody>
-                    <?php if ($ultimos_usuarios && $ultimos_usuarios->num_rows > 0): ?>
-                        <?php while ($u = $ultimos_usuarios->fetch_assoc()): ?>
+                        <?php if ($ultimos_usuarios && $ultimos_usuarios->num_rows > 0): ?>
+                            <?php while ($u = $ultimos_usuarios->fetch_assoc()): ?>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div
+                                                class="avatar-sm me-2 bg-light d-flex align-items-center justify-content-center">
+                                                <i class="fa-regular fa-circle-user text-secondary"></i>
+                                            </div>
+                                            <div>
+                                                <div class="small fw-semibold">
+                                                    <?= htmlspecialchars($u['nombre'] . " " . $u['apellido']) ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    <?= htmlspecialchars($u['email']) ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-light text-secondary">
+                                            <?= htmlspecialchars($u['nombre_rol']) ?>
+                                        </span>
+                                        <div class="small text-muted">
+                                            <?= htmlspecialchars(substr($u['fecha_registro'], 0, 10)) ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        <?php else: ?>
                             <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar-sm me-2 bg-light d-flex align-items-center justify-content-center">
-                                            <i class="fa-regular fa-circle-user text-secondary"></i>
-                                        </div>
-                                        <div>
-                                            <div class="small fw-semibold">
-                                                <?= htmlspecialchars($u['nombre'] . " " . $u['apellido']) ?>
-                                            </div>
-                                            <div class="small text-muted">
-                                                <?= htmlspecialchars($u['email']) ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="text-end">
-                                    <span class="badge bg-light text-secondary">
-                                        <?= htmlspecialchars($u['nombre_rol']) ?>
-                                    </span>
-                                    <div class="small text-muted">
-                                        <?= htmlspecialchars(substr($u['fecha_registro'], 0, 10)) ?>
-                                    </div>
+                                <td class="small text-muted">
+                                    Aún no hay usuarios registrados aparte del administrador.
                                 </td>
                             </tr>
-                        <?php endwhile; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td class="small text-muted">
-                                Aún no hay usuarios registrados aparte del administrador.
-                            </td>
-                        </tr>
-                    <?php endif; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -322,7 +338,8 @@ include __DIR__ . "/../includes/header.php";
             <?php if ($proximos_horarios && $proximos_horarios->num_rows > 0): ?>
                 <div class="list-group list-group-flush">
                     <?php while ($h = $proximos_horarios->fetch_assoc()): ?>
-                        <a href="horarios.php?curso_id=<?= (int)$h['curso_id'] ?>" class="list-group-item px-0 text-decoration-none text-reset">
+                        <a href="horarios.php?curso_id=<?= (int) $h['curso_id'] ?>"
+                            class="list-group-item px-0 text-decoration-none text-reset">
                             <div class="d-flex justify-content-between">
                                 <div>
                                     <div class="fw-semibold small">
@@ -348,7 +365,7 @@ include __DIR__ . "/../includes/header.php";
                                         Inicio: <?= htmlspecialchars($h['fecha_inicio']) ?>
                                     </span>
                                     <div class="small text-muted">
-                                        Cupos: <?= (int)$h['cupos_disponibles'] ?>
+                                        Cupos: <?= (int) $h['cupos_disponibles'] ?>
                                     </div>
                                 </div>
                             </div>
