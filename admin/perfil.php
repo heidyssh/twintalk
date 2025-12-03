@@ -169,7 +169,7 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-    <h1 class="h4 fw-bold mb-3">Mi Perfil (Administrador)</h1>
+    <h1 class="h4 fw-bold mb-3">Mi Perfil</h1>
 
     <?php if ($mensaje): ?>
         <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>

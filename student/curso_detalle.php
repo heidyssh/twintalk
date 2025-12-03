@@ -688,6 +688,10 @@ include __DIR__ . "/../includes/header.php";
     </div>
 </div>
 
-<a href="dashboard.php" class="btn btn-link px-0">‹ Volver a mis cursos</a>
+<a href="dashboard.php" class="btn btn-link px-0"
+   style="color:#A45A6A; font-weight:500; text-decoration:none;">
+    ‹ Volver a mis cursos
+</a>
+
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

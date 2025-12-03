@@ -1,9 +1,9 @@
 <?php
-require_once __DIR__ . "/../config/db.php";
-require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../../config/db.php";
+require_once __DIR__ . "/../../includes/auth.php";
 require_role([1]); // admin
 
-require_once __DIR__ . "/../vendor/autoload.php";
+require_once __DIR__ . "/../../vendor/autoload.php";
 use Dompdf\Dompdf;
 
 $curso_id = isset($_GET['curso_id']) ? (int)$_GET['curso_id'] : 0;
@@ -82,7 +82,7 @@ $tareas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
 // ===== Logo en base64 =====
-$logoPath = __DIR__ . '/../assets/img/logo.png';
+$logoPath = __DIR__ . '/../../assets/img/logo.png';
 $logoBase64 = '';
 if (file_exists($logoPath)) {
     $logoData   = base64_encode(file_get_contents($logoPath));

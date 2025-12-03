@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . "/../config/db.php";
-require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../../config/db.php";
+require_once __DIR__ . "/../../includes/auth.php";
 
 require_role([1]); // admin
 
@@ -44,7 +44,7 @@ ORDER BY c.nombre_curso;
 $res = $mysqli->query($sqlCursos);
 $cursos = $res->fetch_all(MYSQLI_ASSOC);
 
-include __DIR__ . "/../includes/header.php";
+include __DIR__ . "/../../includes/header.php";
 ?>
 
 <div class="container mt-4">
@@ -105,4 +105,4 @@ include __DIR__ . "/../includes/header.php";
 </div>
 
 <?php
-include __DIR__ . "/../includes/footer.php";
+include __DIR__ . "/../../includes/footer.php";

@@ -242,9 +242,12 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container mt-4">
-    <h1 class="h4 mb-3">
+
+    <!-- Título principal -->
+    <h1 class="h4 mb-3 fw-bold" style="color:#A45A6A;">
         <i class="fa-regular fa-envelope me-2"></i>
-        Mensajes internos (Admin)
+        Mensajes internos
+        <small class="text-muted" style="font-size:0.8rem;"> · Admin</small>
     </h1>
 
     <?php if ($mensaje): ?>
@@ -256,37 +259,51 @@ include __DIR__ . "/../includes/header.php";
     <?php endif; ?>
 
     <!-- Tabs bandeja -->
-    <ul class="nav nav-pills mb-3">
+    <ul class="nav nav-pills mb-3" style="gap:6px;">
         <li class="nav-item">
             <a class="nav-link <?= $view === 'inbox' ? 'active' : '' ?>"
-               href="<?= $baseUrl ?>?view=inbox">
+               href="<?= $baseUrl ?>?view=inbox"
+               style="<?= $view==='inbox'
+                    ? 'background:#A45A6A;border-color:#A45A6A;'
+                    : 'color:#A45A6A;border:1px solid #A45A6A;background:#fff;' ?>">
+                <i class="fa-regular fa-folder-open me-1"></i>
                 Bandeja de entrada
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?= $view === 'sent' ? 'active' : '' ?>"
-               href="<?= $baseUrl ?>?view=sent">
+               href="<?= $baseUrl ?>?view=sent"
+               style="<?= $view==='sent'
+                    ? 'background:#A45A6A;border-color:#A45A6A;'
+                    : 'color:#A45A6A;border:1px solid #A45A6A;background:#fff;' ?>">
+                <i class="fa-regular fa-paper-plane me-1"></i>
                 Enviados
             </a>
         </li>
     </ul>
 
     <div class="row">
-        <!-- Formulario nuevo mensaje / reply -->
+        <!-- Columna izquierda: nuevo mensaje -->
         <div class="col-lg-4 mb-4">
-            <div class="card shadow-sm border-0">
+            <div class="card shadow-sm border-0" style="border-radius:12px;border-left:4px solid #A45A6A;">
                 <div class="card-body">
-                    <h5 class="card-title mb-3">
+                    <h5 class="card-title mb-1" style="color:#A45A6A;">
+                        <i class="fa-regular fa-pen-to-square me-1"></i>
                         <?= $reply_destinatario ? 'Responder mensaje' : 'Nuevo mensaje' ?>
                     </h5>
+                    <p class="small text-muted mb-3">
+                        Redacta un mensaje interno a docentes, estudiantes o administración.
+                    </p>
+
                     <form method="post" enctype="multipart/form-data">
                         <input type="hidden" name="accion" value="enviar_mensaje">
                         <input type="hidden" name="reply_de" value="<?= $reply_id ?>">
 
                         <!-- Destinatario -->
                         <div class="mb-3">
-                            <label class="form-label">Para</label>
-                            <select name="destinatario_id" class="form-select" required>
+                            <label class="form-label small">Para</label>
+                            <select name="destinatario_id" class="form-select form-select-sm"
+                                    style="border-color:#E0B6C1;" required>
                                 <option value="">-- Selecciona destinatario --</option>
                                 <?php foreach ($usuarios_opciones as $u): ?>
                                     <?php
@@ -304,29 +321,35 @@ include __DIR__ . "/../includes/header.php";
 
                         <!-- Asunto -->
                         <div class="mb-3">
-                            <label class="form-label">Asunto</label>
-                            <input type="text" name="asunto" class="form-control"
+                            <label class="form-label small">Asunto</label>
+                            <input type="text" name="asunto" class="form-control form-control-sm"
+                                   style="border-color:#E0B6C1;"
                                    value="<?= htmlspecialchars($reply_asunto) ?>">
                         </div>
 
                         <!-- Contenido -->
                         <div class="mb-3">
-                            <label class="form-label">Mensaje</label>
-                            <textarea name="contenido" rows="5" class="form-control" required><?=
+                            <label class="form-label small">Mensaje</label>
+                            <textarea name="contenido" rows="5"
+                                      class="form-control form-control-sm"
+                                      style="border-color:#E0B6C1;" required><?=
                                 htmlspecialchars($reply_contenido_cita)
                             ?></textarea>
                         </div>
 
                         <!-- Archivo -->
                         <div class="mb-3">
-                            <label class="form-label">Adjuntar archivo (opcional)</label>
-                            <input type="file" name="archivo" class="form-control">
+                            <label class="form-label small">Adjuntar archivo (opcional)</label>
+                            <input type="file" name="archivo" class="form-control form-control-sm"
+                                   style="border-color:#E0B6C1;">
                             <div class="form-text">
                                 Extensiones típicas: pdf, doc, docx, ppt, jpg, png, zip, rar.
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-100">
+                        <button type="submit"
+                                class="btn w-100"
+                                style="background:#A45A6A;color:#fff;border-radius:999px;">
                             <i class="fa-regular fa-paper-plane me-1"></i>
                             Enviar
                         </button>
@@ -335,25 +358,36 @@ include __DIR__ . "/../includes/header.php";
             </div>
         </div>
 
-        <!-- Listado de mensajes -->
+        <!-- Columna derecha: bandeja -->
         <div class="col-lg-8">
-            <div class="card shadow-sm border-0">
+            <div class="card shadow-sm border-0" style="border-radius:12px;">
                 <div class="card-body">
+
                     <?php if ($view === 'inbox'): ?>
-                        <h5 class="card-title mb-3">Bandeja de entrada</h5>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h5 class="card-title mb-0" style="color:#A45A6A;">
+                                    <i class="fa-regular fa-folder-open me-1"></i>
+                                    Bandeja de entrada
+                                </h5>
+                                <small class="text-muted">Mensajes recibidos.</small>
+                            </div>
+                        </div>
+
                         <?php if ($resInbox->num_rows === 0): ?>
-                            <p class="text-muted">No tienes mensajes recibidos.</p>
+                            <p class="text-muted mb-0">No tienes mensajes recibidos.</p>
                         <?php else: ?>
                             <div class="table-responsive">
-                                <table class="table table-sm align-middle">
-                                    <thead>
-                                    <tr>
-                                        <th>De</th>
-                                        <th>Asunto</th>
-                                        <th>Adjunto</th>
-                                        <th>Fecha</th>
-                                        <th class="text-end">Acciones</th>
-                                    </tr>
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead style="background:#FBE9F0;color:#A45A6A;">
+                                        <tr>
+                                            <th>De</th>
+                                            <th>Asunto</th>
+                                            <th>Adjunto</th>
+                                            <th>Fecha</th>
+                                            <th class="text-end">Acciones</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
                                     <?php while ($m = $resInbox->fetch_assoc()): ?>
@@ -370,9 +404,11 @@ include __DIR__ . "/../includes/header.php";
                                                     <?= nl2br(htmlspecialchars(mb_strimwidth($m['contenido'], 0, 80, '...'))) ?>
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td class="text-center">
                                                 <?php if (!empty($m['archivo_url'])): ?>
-                                                    <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                    <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank"
+                                                       class="btn btn-sm"
+                                                       style="border:1px solid #A45A6A;color:#A45A6A;">
                                                         <i class="fa-solid fa-paperclip"></i>
                                                     </a>
                                                 <?php else: ?>
@@ -386,14 +422,16 @@ include __DIR__ . "/../includes/header.php";
                                             </td>
                                             <td class="text-end">
                                                 <a href="<?= $baseUrl ?>?view=inbox&reply_id=<?= $m['id'] ?>"
-                                                   class="btn btn-sm btn-outline-primary mb-1">
+                                                   class="btn btn-sm me-1"
+                                                   style="border:1px solid #A45A6A;color:#A45A6A;">
                                                     <i class="fa-solid fa-reply"></i>
                                                 </a>
                                                 <form method="post" class="d-inline"
                                                       onsubmit="return confirm('¿Eliminar este mensaje?');">
                                                     <input type="hidden" name="accion" value="eliminar_mensaje">
                                                     <input type="hidden" name="mensaje_id" value="<?= $m['id'] ?>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <button type="submit" class="btn btn-sm"
+                                                            style="border:1px solid #d9534f;color:#d9534f;">
                                                         <i class="fa-solid fa-trash"></i>
                                                     </button>
                                                 </form>
@@ -406,20 +444,30 @@ include __DIR__ . "/../includes/header.php";
                         <?php endif; ?>
 
                     <?php else: ?>
-                        <h5 class="card-title mb-3">Mensajes enviados</h5>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h5 class="card-title mb-0" style="color:#A45A6A;">
+                                    <i class="fa-regular fa-paper-plane me-1"></i>
+                                    Mensajes enviados
+                                </h5>
+                                <small class="text-muted">Historial de mensajes enviados.</small>
+                            </div>
+                        </div>
+
                         <?php if ($resSent->num_rows === 0): ?>
-                            <p class="text-muted">No has enviado mensajes.</p>
+                            <p class="text-muted mb-0">No has enviado mensajes.</p>
                         <?php else: ?>
                             <div class="table-responsive">
-                                <table class="table table-sm align-middle">
-                                    <thead>
-                                    <tr>
-                                        <th>Para</th>
-                                        <th>Asunto</th>
-                                        <th>Adjunto</th>
-                                        <th>Fecha</th>
-                                        <th class="text-end">Acciones</th>
-                                    </tr>
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead style="background:#FBE9F0;color:#A45A6A;">
+                                        <tr>
+                                            <th>Para</th>
+                                            <th>Asunto</th>
+                                            <th>Adjunto</th>
+                                            <th>Fecha</th>
+                                            <th class="text-end">Acciones</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
                                     <?php while ($m = $resSent->fetch_assoc()): ?>
@@ -436,9 +484,11 @@ include __DIR__ . "/../includes/header.php";
                                                     <?= nl2br(htmlspecialchars(mb_strimwidth($m['contenido'], 0, 80, '...'))) ?>
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td class="text-center">
                                                 <?php if (!empty($m['archivo_url'])): ?>
-                                                    <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                    <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank"
+                                                       class="btn btn-sm"
+                                                       style="border:1px solid #A45A6A;color:#A45A6A;">
                                                         <i class="fa-solid fa-paperclip"></i>
                                                     </a>
                                                 <?php else: ?>
@@ -455,7 +505,8 @@ include __DIR__ . "/../includes/header.php";
                                                       onsubmit="return confirm('¿Eliminar este mensaje?');">
                                                     <input type="hidden" name="accion" value="eliminar_mensaje">
                                                     <input type="hidden" name="mensaje_id" value="<?= $m['id'] ?>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <button type="submit" class="btn btn-sm"
+                                                            style="border:1px solid #d9534f;color:#d9534f;">
                                                         <i class="fa-solid fa-trash"></i>
                                                     </button>
                                                 </form>
@@ -466,13 +517,16 @@ include __DIR__ . "/../includes/header.php";
                                 </table>
                             </div>
                         <?php endif; ?>
+
                     <?php endif; ?>
 
                 </div>
             </div>
         </div>
     </div>
+
 </div>
+
 
 <?php
 include __DIR__ . "/../includes/footer.php";

@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . "/../config/db.php";
-require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../../config/db.php";
+require_once __DIR__ . "/../../includes/auth.php";
 
 require_role([1]); // admin
 
@@ -108,13 +108,11 @@ $stmt->execute();
 $tareas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-include __DIR__ . "/../includes/header.php";
+include __DIR__ . "/../../includes/header.php";
 ?>
 
 <div class="container mt-4">
-    <a href="reportes_cursos.php" class="btn btn-sm btn-outline-secondary mb-3">
-        <i class="fa-solid fa-arrow-left"></i> Volver a reportes por curso
-    </a>
+
 
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
@@ -256,4 +254,4 @@ include __DIR__ . "/../includes/header.php";
 </div>
 
 <?php
-include __DIR__ . "/../includes/footer.php";
+include __DIR__ . "/../../includes/footer.php";

@@ -38,7 +38,9 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-    <h1 class="mb-3">
+
+    <!-- Título -->
+    <h1 class="mb-3 fw-bold" style="color:black">
         <i class="fa-solid fa-inbox me-2"></i>
         Mensajes de interés de la plataforma
     </h1>
@@ -51,16 +53,17 @@ include __DIR__ . "/../includes/header.php";
         <div class="alert alert-danger small"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <div class="card shadow-sm">
+    <div class="card shadow-sm border-0" style="border-radius:12px;border-left:4px solid #A45A6A;">
         <div class="card-body">
-            <p class="text-muted small">
+
+            <p class="text-muted small mb-3">
                 Aquí se muestran los mensajes enviados desde el formulario de contacto del sitio público, 
                 junto con archivos adjuntos si los enviaron.
             </p>
 
             <div class="table-responsive">
-                <table class="table table-sm align-middle">
-                    <thead>
+                <table class="table table-sm align-middle mb-0">
+                    <thead style="background:#FBE9F0;color:#A45A6A;">
                         <tr>
                             <th>Fecha</th>
                             <th>Nombre</th>
@@ -85,15 +88,15 @@ include __DIR__ . "/../includes/header.php";
 
                                     <td class="small">
                                         <div>
-                                            <i class="fa-solid fa-envelope me-1 text-primary"></i>
-                                            <a href="mailto:<?= htmlspecialchars($row['email']) ?>">
+                                            <i class="fa-solid fa-envelope me-1" style="color:#A45A6A;"></i>
+                                            <a href="mailto:<?= htmlspecialchars($row['email']) ?>" style="color:#A45A6A;">
                                                 <?= htmlspecialchars($row['email']) ?>
                                             </a>
                                         </div>
 
                                         <?php if (!empty($row['telefono'])): ?>
-                                            <div>
-                                                <i class="fa-solid fa-phone me-1 text-success"></i>
+                                            <div class="mt-1">
+                                                <i class="fa-solid fa-phone me-1" style="color:#A45A6A;"></i>
                                                 <?= htmlspecialchars($row['telefono']) ?>
                                             </div>
                                         <?php endif; ?>
@@ -112,7 +115,8 @@ include __DIR__ . "/../includes/header.php";
                                         <?php if (!empty($row['archivo'])): ?>
                                             <a href="<?= htmlspecialchars($row['archivo']) ?>" 
                                                target="_blank" 
-                                               class="btn btn-sm btn-outline-primary">
+                                               class="btn btn-sm"
+                                               style="border:1px solid #A45A6A;color:#A45A6A;border-radius:999px;">
                                                <i class="fa-solid fa-file-arrow-down me-1"></i> Ver archivo
                                             </a>
                                         <?php else: ?>
@@ -122,9 +126,13 @@ include __DIR__ . "/../includes/header.php";
 
                                     <td class="small">
                                         <?php if ((int)$row['leido'] === 1): ?>
-                                            <span class="badge bg-success">Leído</span>
+                                            <span class="badge" style="background:#E3FCEC;color:#2E7D32;">
+                                                Leído
+                                            </span>
                                         <?php else: ?>
-                                            <span class="badge bg-warning text-dark">Nuevo</span>
+                                            <span class="badge" style="background:#FFF3CD;color:#856404;">
+                                                Nuevo
+                                            </span>
                                         <?php endif; ?>
                                     </td>
 
@@ -133,7 +141,9 @@ include __DIR__ . "/../includes/header.php";
                                             <form method="post" class="d-inline">
                                                 <input type="hidden" name="accion" value="marcar_leido">
                                                 <input type="hidden" name="mensaje_id" value="<?= (int)$row['id'] ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                <button type="submit"
+                                                        class="btn btn-sm"
+                                                        style="border:1px solid #A45A6A;color:#A45A6A;border-radius:999px;">
                                                     Marcar leído
                                                 </button>
                                             </form>
@@ -145,7 +155,7 @@ include __DIR__ . "/../includes/header.php";
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="7" class="text-center text-muted small">
+                                <td colspan="7" class="text-center text-muted small py-4">
                                     No hay mensajes registrados.
                                 </td>
                             </tr>
@@ -157,5 +167,6 @@ include __DIR__ . "/../includes/header.php";
         </div>
     </div>
 </div>
+
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

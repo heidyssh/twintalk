@@ -186,7 +186,7 @@ include __DIR__ . '/../includes/header.php';
         </div>
                 <!-- NUEVA TARJETA: REPORTES -->
         <div class="col-md-4">
-            <a href="/twintalk/docente/reportes.php" class="text-decoration-none">
+            <a href="/twintalk/docente/reportes/reportes.php" class="text-decoration-none">
                 <div class="border rounded-4 p-3 h-100 bg-white">
                     <div class="d-flex align-items-center mb-1">
                         <i class="fa-solid fa-chart-line me-2 text-info"></i>

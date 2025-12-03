@@ -248,7 +248,7 @@ include __DIR__ . "/../includes/header.php";
                 </div>
                 <!-- NUEVA TARJETA: REPORTE MENSUAL -->
                 <div class="col-6">
-                    <a href="reportes_mensuales.php" class="text-decoration-none">
+                    <a href="reportes/reportes_mensuales.php" class="text-decoration-none">
                         <div class="border rounded-4 p-3 h-100 bg-white">
                             <div class="d-flex align-items-center mb-1">
                                 <i class="fa-solid fa-chart-column me-2 text-success"></i>
@@ -411,7 +411,7 @@ include __DIR__ . "/../includes/header.php";
                     </a>
                 </div>
                 <div class="col-6">
-                    <a href="cursos.php" class="text-decoration-none text-reset">
+                    <a href="" class="text-decoration-none text-reset">
                         <div class="border rounded-4 p-3 bg-white h-100">
                             <div class="small text-muted mb-1">Materiales subidos</div>
                             <div class="fw-bold fs-5 mb-1"><?= $total_materiales ?></div>
@@ -422,7 +422,7 @@ include __DIR__ . "/../includes/header.php";
                     </a>
                 </div>
                 <div class="col-6">
-                    <a href="cursos.php" class="text-decoration-none text-reset">
+                    <a href="" class="text-decoration-none text-reset">
                         <div class="border rounded-4 p-3 bg-white h-100">
                             <div class="small text-muted mb-1">Anuncios publicados</div>
                             <div class="fw-bold fs-5 mb-1"><?= $total_anuncios ?></div>

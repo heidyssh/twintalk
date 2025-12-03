@@ -208,10 +208,14 @@ include __DIR__ . "/../includes/header.php";
             </h1>
             <p class="text-muted mb-0">Bienvenido a tu dashboard de estudiante.</p>
         </div>
-        <a href="calendario.php" class="btn btn-outline-primary btn-sm">
-            <i class="fa-solid fa-calendar-days me-1"></i>
+        <a href="calendario.php" class="btn btn-outline-primary btn-sm" style="border-color:#A45A6A; color:#A45A6A;"
+            onmouseover="this.style.backgroundColor='#A45A6A'; this.style.color='white'; this.querySelector('i').style.color='white';"
+            onmouseout="this.style.backgroundColor='transparent'; this.style.color='#A45A6A'; this.querySelector('i').style.color='#A45A6A';">
+            <i class="fa-solid fa-calendar-days me-1" style="color:#A45A6A;"></i>
             Calendario de asignaciones
         </a>
+
+
     </div>
 </div>
 <div class="row g-3 mb-3">
@@ -267,9 +271,15 @@ include __DIR__ . "/../includes/header.php";
     <div class="col-lg-7">
         <div class="card card-soft p-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h6 fw-bold mb-0">Mis clases actuales</h2>
-                <a href="mis_matriculas.php" class="small">Ver historial ›</a>
+                <h2 class="h6 fw-bold mb-0" style="color:#A45A6A;">
+                    Mis clases actuales
+                </h2>
+
+                <a href="mis_matriculas.php" class="small fw-semibold" style="color:#A45A6A; text-decoration:none;">
+                    Ver historial ›
+                </a>
             </div>
+
             <?php if ($res_mis_cursos->num_rows > 0): ?>
                 <div class="table-responsive table-rounded">
                     <table class="table align-middle mb-0">
@@ -343,9 +353,15 @@ include __DIR__ . "/../includes/header.php";
 
         <div class="card card-soft p-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h6 fw-bold mb-0">Anuncios recientes</h2>
-                <a href="anuncios.php" class="small">Ver todos ›</a>
+                <h2 class="h6 fw-bold mb-0" style="color:#A45A6A;">
+                    Anuncios recientes
+                </h2>
+
+                <a href="anuncios.php" class="small fw-semibold" style="color:#A45A6A; text-decoration:none;">
+                    Ver todos ›
+                </a>
             </div>
+
 
             <?php if ($res_anuncios->num_rows > 0): ?>
                 <ul class="list-unstyled mb-0">
@@ -423,21 +439,35 @@ include __DIR__ . "/../includes/header.php";
         </div>
 
 
-        <div class="card card-soft p-3">
-            <h2 class="h6 fw-bold mb-2">Configuración rápida</h2>
-            <p class="small text-muted mb-2">
-                Actualiza tus datos personales y cambia tu contraseña.
+        <div class="card shadow-sm border-0 p-3" style="border-left: 4px solid #A45A6A;">
+
+            <h2 class="h6 fw-bold mb-2" style="color:#A45A6A;">
+                <i class="fa-solid fa-gear me-1"></i> Configuración rápida
+            </h2>
+
+            <p class="small text-muted mb-3">
+                Gestiona tu información personal y revisa tus actividades académicas.
             </p>
-            <a href="perfil.php" class="btn btn-outline-secondary rounded-pill btn-sm">
-                Ir a mi perfil
-            </a>
-            <a href="/twintalk/student/calendario.php" class="btn btn-outline-primary btn-sm">
-                Ver calendario de tareas
-            </a>
-            <a href="/twintalk/student/calificaciones.php" class="btn btn-outline-success btn-sm">
-                Ver mis calificaciones
-            </a>
+
+            <div class="d-flex flex-column gap-2">
+
+                <a href="perfil.php" class="btn btn-light border rounded-pill text-start"
+                    style="color:#A45A6A; border-color:#A45A6A;">
+                    <i class="fa-solid fa-user-pen me-2"></i> Ir a mi perfil
+                </a>
+
+                <a href="/twintalk/student/calendario.php" class="btn text-white rounded-pill"
+                    style="background-color:#A45A6A;">
+                    <i class="fa-solid fa-calendar-days me-2"></i> Ver calendario de tareas
+                </a>
+
+                <a href="/twintalk/student/calificaciones.php" class="btn btn-outline-dark rounded-pill">
+                    <i class="fa-solid fa-graduation-cap me-2"></i> Ver mis calificaciones
+                </a>
+
+            </div>
         </div>
+
     </div>
 </div>
 

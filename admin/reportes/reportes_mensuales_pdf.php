@@ -1,10 +1,10 @@
 <?php
-require_once __DIR__ . "/../config/db.php";
-require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../../config/db.php";
+require_once __DIR__ . "/../../includes/auth.php";
 require_role([1]); // admin
 
 // Dompdf
-require_once __DIR__ . "/../vendor/autoload.php";
+require_once __DIR__ . "/../../vendor/autoload.php";
 use Dompdf\Dompdf;
 
 // Mes y año actuales
@@ -79,7 +79,7 @@ $stmt->close();
 $mesNombre = date('F', mktime(0,0,0,$mes,1,$anio)); // en inglés, pero sirve
 $fechaGeneracion = date('d/m/Y H:i');
 // Convertir logo a base64
-$logoPath = __DIR__ . '/../assets/img/logo.png';
+$logoPath = __DIR__ . '/../../assets/img/logo.png';
 $logoData = base64_encode(file_get_contents($logoPath));
 $logoBase64 = 'data:image/png;base64,' . $logoData;
 
