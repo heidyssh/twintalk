@@ -112,7 +112,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mensaje_id = isset($_POST['mensaje_id']) ? (int)$_POST['mensaje_id'] : 0;
 
         if ($mensaje_id > 0) {
-            // ADMIN puede borrar cualquier mensaje
             $stmt = $mysqli->prepare("
                 SELECT archivo_url
                 FROM mensajes
@@ -136,8 +135,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Borrar archivo físico si existe
                     if ($archivo_url && strpos($archivo_url, "/twintalk/uploads/mensajes/") === 0) {
-                        $root       = dirname(__DIR__); // C:\xampp\htdocs\twintalk
-                        $rel_path   = str_replace("/twintalk", "", $archivo_url);
+                        $root        = dirname(__DIR__); // C:\xampp\htdocs\twintalk
+                        $rel_path    = str_replace("/twintalk", "", $archivo_url);
                         $ruta_fisica = $root . $rel_path;
                         if (file_exists($ruta_fisica)) {
                             @unlink($ruta_fisica);
@@ -236,233 +235,267 @@ $resSent = $stmt2->get_result();
 include __DIR__ . "/../includes/header.php";
 ?>
 
-<h1 class="h4 mb-3">
-    <i class="fa-regular fa-envelope me-2"></i>
-    Mensajes internos (Docente)
+<h1 class="h4 mb-3 d-flex align-items-center" style="color:#A45A6A;">
+    <span class="me-2 d-inline-flex align-items-center justify-content-center rounded-circle"
+          style="width:34px; height:34px; background-color:#f5f0f2;">
+        <i class="fa-regular fa-envelope" style="color:#A45A6A;"></i>
+    </span>
+    <span>Mensajes internos (Docente)</span>
 </h1>
 
-    <?php if ($mensaje): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>
-    <?php endif; ?>
+<?php if ($mensaje): ?>
+    <div class="alert alert-success shadow-sm border-0">
+        <?= htmlspecialchars($mensaje) ?>
+    </div>
+<?php endif; ?>
 
-    <?php if ($error): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
+<?php if ($error): ?>
+    <div class="alert alert-danger shadow-sm border-0">
+        <?= htmlspecialchars($error) ?>
+    </div>
+<?php endif; ?>
 
-    <!-- Tabs bandeja -->
-    <ul class="nav nav-pills mb-3">
-        <li class="nav-item">
-            <a class="nav-link <?= $view === 'inbox' ? 'active' : '' ?>"
-               href="<?= $baseUrl ?>?view=inbox">
-                Bandeja de entrada
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $view === 'sent' ? 'active' : '' ?>"
-               href="<?= $baseUrl ?>?view=sent">
-                Enviados
-            </a>
-        </li>
-    </ul>
+<!-- Tabs bandeja (MISMO ESTILO QUE STUDENT) -->
+<ul class="nav nav-pills mb-3">
+    <li class="nav-item">
+        <a class="nav-link <?= $view === 'inbox' ? 'active' : '' ?>"
+           href="<?= $baseUrl ?>?view=inbox"
+           style="<?= $view === 'inbox'
+               ? 'background-color:#A45A6A;border-color:#A45A6A;color:#fff;'
+               : 'color:#A45A6A;border:1px solid #A45A6A;background-color:#fff;' ?>">
+            <i class="fa-solid fa-inbox me-1"></i> Bandeja de entrada
+        </a>
+    </li>
+    <li class="nav-item ms-2">
+        <a class="nav-link <?= $view === 'sent' ? 'active' : '' ?>"
+           href="<?= $baseUrl ?>?view=sent"
+           style="<?= $view === 'sent'
+               ? 'background-color:#A45A6A;border-color:#A45A6A;color:#fff;'
+               : 'color:#A45A6A;border:1px solid #A45A6A;background-color:#fff;' ?>">
+            <i class="fa-solid fa-paper-plane me-1"></i> Enviados
+        </a>
+    </li>
+</ul>
 
-    <div class="row">
-        <!-- Formulario nuevo mensaje / reply -->
-        <div class="col-lg-4 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">
-                        <?= $reply_destinatario ? 'Responder mensaje' : 'Nuevo mensaje' ?>
-                    </h5>
-                    <form method="post" enctype="multipart/form-data">
-                        <input type="hidden" name="accion" value="enviar_mensaje">
-                        <input type="hidden" name="reply_de" value="<?= $reply_id ?>">
+<div class="row">
+    <!-- Formulario nuevo mensaje / reply -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm border-0" style="border-top:4px solid #A45A6A;">
+            <div class="card-body">
+                <h5 class="card-title mb-2" style="color:#A45A6A;">
+                    <i class="fa-solid fa-pen-to-square me-1"></i>
+                    <?= $reply_destinatario ? 'Responder mensaje' : 'Nuevo mensaje' ?>
+                </h5>
+                <p class="small text-muted mb-3">
+                    Redacta un mensaje interno a tus estudiantes o administración.
+                </p>
 
-                        <!-- Destinatario -->
-                        <div class="mb-3">
-                            <label class="form-label">Para</label>
-                            <select name="destinatario_id" class="form-select" required>
-                                <option value="">-- Selecciona destinatario --</option>
-                                <?php foreach ($usuarios_opciones as $u): ?>
-                                    <?php
-                                    $selected = "";
-                                    if ($reply_destinatario && $reply_destinatario == $u['id']) {
-                                        $selected = "selected";
-                                    }
-                                    ?>
-                                    <option value="<?= $u['id'] ?>" <?= $selected ?>>
-                                        <?= htmlspecialchars($u['nombre'] . " " . $u['apellido'] . " - " . $u['email']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="accion" value="enviar_mensaje">
+                    <input type="hidden" name="reply_de" value="<?= $reply_id ?>">
+
+                    <!-- Destinatario -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Para</label>
+                        <select name="destinatario_id" class="form-select form-select-sm" required>
+                            <option value="">-- Selecciona destinatario --</option>
+                            <?php foreach ($usuarios_opciones as $u): ?>
+                                <?php
+                                $selected = "";
+                                if ($reply_destinatario && $reply_destinatario == $u['id']) {
+                                    $selected = "selected";
+                                }
+                                ?>
+                                <option value="<?= $u['id'] ?>" <?= $selected ?>>
+                                    <?= htmlspecialchars($u['nombre'] . " " . $u['apellido'] . " - " . $u['email']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Asunto -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Asunto</label>
+                        <input type="text" name="asunto" class="form-control form-control-sm"
+                               value="<?= htmlspecialchars($reply_asunto) ?>">
+                    </div>
+
+                    <!-- Contenido -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mensaje</label>
+                        <textarea name="contenido" rows="5" class="form-control form-control-sm" required><?=
+                            htmlspecialchars($reply_contenido_cita)
+                        ?></textarea>
+                    </div>
+
+                    <!-- Archivo -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Adjuntar archivo (opcional)</label>
+                        <input type="file" name="archivo" class="form-control form-control-sm">
+                        <div class="form-text small">
+                            Extensiones típicas: pdf, doc, docx, ppt, jpg, png, zip, rar.
                         </div>
+                    </div>
 
-                        <!-- Asunto -->
-                        <div class="mb-3">
-                            <label class="form-label">Asunto</label>
-                            <input type="text" name="asunto" class="form-control"
-                                   value="<?= htmlspecialchars($reply_asunto) ?>">
-                        </div>
-
-                        <!-- Contenido -->
-                        <div class="mb-3">
-                            <label class="form-label">Mensaje</label>
-                            <textarea name="contenido" rows="5" class="form-control" required><?=
-                                htmlspecialchars($reply_contenido_cita)
-                            ?></textarea>
-                        </div>
-
-                        <!-- Archivo -->
-                        <div class="mb-3">
-                            <label class="form-label">Adjuntar archivo (opcional)</label>
-                            <input type="file" name="archivo" class="form-control">
-                            <div class="form-text">
-                                Extensiones típicas: pdf, doc, docx, ppt, jpg, png, zip, rar.
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fa-regular fa-paper-plane me-1"></i>
-                            Enviar
-                        </button>
-                    </form>
-                </div>
+                    <button type="submit"
+                            class="btn w-100"
+                            style="background-color:#A45A6A;color:#fff;">
+                        <i class="fa-regular fa-paper-plane me-1"></i>
+                        Enviar
+                    </button>
+                </form>
             </div>
         </div>
+    </div>
 
-        <!-- Listado de mensajes -->
-        <div class="col-lg-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <?php if ($view === 'inbox'): ?>
-                        <h5 class="card-title mb-3">Bandeja de entrada</h5>
-                        <?php if ($resInbox->num_rows === 0): ?>
-                            <p class="text-muted">No tienes mensajes recibidos.</p>
-                        <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-sm align-middle">
-                                    <thead>
-                                    <tr>
-                                        <th>De</th>
-                                        <th>Asunto</th>
-                                        <th>Adjunto</th>
-                                        <th>Fecha</th>
-                                        <th class="text-end">Acciones</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    <?php while ($m = $resInbox->fetch_assoc()): ?>
-                                        <tr>
-                                            <td>
-                                                <strong><?= htmlspecialchars($m['remitente_nombre'] . " " . $m['remitente_apellido']) ?></strong><br>
-                                                <small class="text-muted"><?= htmlspecialchars($m['remitente_email']) ?></small>
-                                            </td>
-                                            <td>
-                                                <div class="fw-semibold">
-                                                    <?= $m['asunto'] ? htmlspecialchars($m['asunto']) : '(Sin asunto)' ?>
-                                                </div>
-                                                <div class="small text-muted">
-                                                    <?= nl2br(htmlspecialchars(mb_strimwidth($m['contenido'], 0, 80, '...'))) ?>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <?php if (!empty($m['archivo_url'])): ?>
-                                                    <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                                        <i class="fa-solid fa-paperclip"></i>
-                                                    </a>
-                                                <?php else: ?>
-                                                    <span class="text-muted small">--</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    <?= htmlspecialchars($m['fecha_envio']) ?>
-                                                </small>
-                                            </td>
-                                            <td class="text-end">
-                                                <a href="<?= $baseUrl ?>?view=inbox&reply_id=<?= $m['id'] ?>"
-                                                   class="btn btn-sm btn-outline-primary mb-1">
-                                                    <i class="fa-solid fa-reply"></i>
-                                                </a>
-                                                <form method="post" class="d-inline"
-                                                      onsubmit="return confirm('¿Eliminar este mensaje?');">
-                                                    <input type="hidden" name="accion" value="eliminar_mensaje">
-                                                    <input type="hidden" name="mensaje_id" value="<?= $m['id'] ?>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                        <i class="fa-solid fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php endif; ?>
+    <!-- Listado de mensajes -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <?php if ($view === 'inbox'): ?>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0" style="color:#A45A6A;">
+                            <i class="fa-solid fa-inbox me-1"></i> Bandeja de entrada
+                        </h5>
+                        <small class="text-muted">Mensajes recibidos</small>
+                    </div>
 
+                    <?php if ($resInbox->num_rows === 0): ?>
+                        <p class="text-muted">No tienes mensajes recibidos.</p>
                     <?php else: ?>
-                        <h5 class="card-title mb-3">Mensajes enviados</h5>
-                        <?php if ($resSent->num_rows === 0): ?>
-                            <p class="text-muted">No has enviado mensajes.</p>
-                        <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-sm align-middle">
-                                    <thead>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle table-hover mb-0">
+                                <thead style="background-color:#f5f0f2;">
+                                <tr class="text-muted small">
+                                    <th>De</th>
+                                    <th>Asunto</th>
+                                    <th>Adjunto</th>
+                                    <th>Fecha</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <?php while ($m = $resInbox->fetch_assoc()): ?>
                                     <tr>
-                                        <th>Para</th>
-                                        <th>Asunto</th>
-                                        <th>Adjunto</th>
-                                        <th>Fecha</th>
-                                        <th class="text-end">Acciones</th>
+                                        <td>
+                                            <strong><?= htmlspecialchars($m['remitente_nombre'] . " " . $m['remitente_apellido']) ?></strong><br>
+                                            <small class="text-muted"><?= htmlspecialchars($m['remitente_email']) ?></small>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">
+                                                <?= $m['asunto'] ? htmlspecialchars($m['asunto']) : '(Sin asunto)' ?>
+                                            </div>
+                                            <div class="small text-muted">
+                                                <?= nl2br(htmlspecialchars(mb_strimwidth($m['contenido'], 0, 80, '...'))) ?>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <?php if (!empty($m['archivo_url'])): ?>
+                                                <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank"
+                                                   class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fa-solid fa-paperclip"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="text-muted small">--</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                <?= htmlspecialchars($m['fecha_envio']) ?>
+                                            </small>
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="<?= $baseUrl ?>?view=inbox&reply_id=<?= $m['id'] ?>"
+                                               class="btn btn-sm btn-outline-primary mb-1"
+                                               style="border-color:#A45A6A;color:#A45A6A;">
+                                                <i class="fa-solid fa-reply"></i>
+                                            </a>
+                                            <form method="post" class="d-inline"
+                                                  onsubmit="return confirm('¿Eliminar este mensaje?');">
+                                                <input type="hidden" name="accion" value="eliminar_mensaje">
+                                                <input type="hidden" name="mensaje_id" value="<?= $m['id'] ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
-                                    </thead>
-                                    <tbody>
-                                    <?php while ($m = $resSent->fetch_assoc()): ?>
-                                        <tr>
-                                            <td>
-                                                <strong><?= htmlspecialchars($m['destinatario_nombre'] . " " . $m['destinatario_apellido']) ?></strong><br>
-                                                <small class="text-muted"><?= htmlspecialchars($m['destinatario_email']) ?></small>
-                                            </td>
-                                            <td>
-                                                <div class="fw-semibold">
-                                                    <?= $m['asunto'] ? htmlspecialchars($m['asunto']) : '(Sin asunto)' ?>
-                                                </div>
-                                                <div class="small text-muted">
-                                                    <?= nl2br(htmlspecialchars(mb_strimwidth($m['contenido'], 0, 80, '...'))) ?>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <?php if (!empty($m['archivo_url'])): ?>
-                                                    <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                                        <i class="fa-solid fa-paperclip"></i>
-                                                    </a>
-                                                <?php else: ?>
-                                                    <span class="text-muted small">--</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    <?= htmlspecialchars($m['fecha_envio']) ?>
-                                                </small>
-                                            </td>
-                                            <td class="text-end">
-                                                <form method="post" class="d-inline"
-                                                      onsubmit="return confirm('¿Eliminar este mensaje?');">
-                                                    <input type="hidden" name="accion" value="eliminar_mensaje">
-                                                    <input type="hidden" name="mensaje_id" value="<?= $m['id'] ?>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                        <i class="fa-solid fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php endif; ?>
+                                <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     <?php endif; ?>
 
-                </div>
+                <?php else: ?>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0" style="color:#A45A6A;">
+                            <i class="fa-solid fa-paper-plane me-1"></i> Mensajes enviados
+                        </h5>
+                        <small class="text-muted">Historial de mensajes enviados</small>
+                    </div>
+
+                    <?php if ($resSent->num_rows === 0): ?>
+                        <p class="text-muted">No has enviado mensajes.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle table-hover mb-0">
+                                <thead style="background-color:#f5f0f2;">
+                                <tr class="text-muted small">
+                                    <th>Para</th>
+                                    <th>Asunto</th>
+                                    <th>Adjunto</th>
+                                    <th>Fecha</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <?php while ($m = $resSent->fetch_assoc()): ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?= htmlspecialchars($m['destinatario_nombre'] . " " . $m['destinatario_apellido']) ?></strong><br>
+                                            <small class="text-muted"><?= htmlspecialchars($m['destinatario_email']) ?></small>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">
+                                                <?= $m['asunto'] ? htmlspecialchars($m['asunto']) : '(Sin asunto)' ?>
+                                            </div>
+                                            <div class="small text-muted">
+                                                <?= nl2br(htmlspecialchars(mb_strimwidth($m['contenido'], 0, 80, '...'))) ?>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <?php if (!empty($m['archivo_url'])): ?>
+                                                <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank"
+                                                   class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fa-solid fa-paperclip"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="text-muted small">--</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                <?= htmlspecialchars($m['fecha_envio']) ?>
+                                            </small>
+                                        </td>
+                                        <td class="text-end">
+                                            <form method="post" class="d-inline"
+                                                  onsubmit="return confirm('¿Eliminar este mensaje?');">
+                                                <input type="hidden" name="accion" value="eliminar_mensaje">
+                                                <input type="hidden" name="mensaje_id" value="<?= $m['id'] ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+
             </div>
         </div>
     </div>
@@ -470,5 +503,3 @@ include __DIR__ . "/../includes/header.php";
 
 <?php
 include __DIR__ . "/../includes/footer.php";
-
-
