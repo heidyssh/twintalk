@@ -334,364 +334,390 @@ $stmtCom->close();
 include __DIR__ . "/../includes/header.php";
 ?>
 
-<h1 class="h4 fw-bold mt-3">
-    Detalle del curso: <?= htmlspecialchars($curso['nombre_curso']) ?>
-</h1>
-
-<p class="text-muted mb-3">
-    Nivel <?= htmlspecialchars($curso['codigo_nivel']) ?> •
-    <?= htmlspecialchars($curso['nombre_nivel']) ?> •
-    <?= htmlspecialchars($curso['nombre_dia']) ?>,
-    <?= substr($curso['hora_inicio'], 0, 5) ?> - <?= substr($curso['hora_fin'], 0, 5) ?> •
-    Aula <?= htmlspecialchars($curso['aula']) ?>
-</p>
-
-<div class="row g-3 mb-4">
-    <div class="col-lg-8">
-
-        <!-- Descripción curso -->
-        <div class="card card-soft mb-3 p-3">
-            <h2 class="h6 fw-bold mb-2">Descripción del curso</h2>
-            <p class="mb-0">
-                <?= nl2br(htmlspecialchars($curso['descripcion'] ?: 'Sin descripción registrada.')) ?>
-            </p>
+<div class="container my-4">
+    <!-- HEADER con gradiente estilo TwinTalk -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body"
+             style="background: linear-gradient(90deg, #fbe9f0, #ffffff); border-radius: 0.75rem;">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                <div>
+                    <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                        Detalle del curso: <?= htmlspecialchars($curso['nombre_curso']) ?>
+                    </h1>
+                    <p class="text-muted mb-0 small">
+                        Nivel <?= htmlspecialchars($curso['codigo_nivel']) ?> •
+                        <?= htmlspecialchars($curso['nombre_nivel']) ?> •
+                        <?= htmlspecialchars($curso['nombre_dia']) ?>,
+                        <?= substr($curso['hora_inicio'], 0, 5) ?> - <?= substr($curso['hora_fin'], 0, 5) ?> •
+                        Aula <?= htmlspecialchars($curso['aula']) ?>
+                    </p>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <!-- Anuncios -->
-        <div class="card card-soft mb-3 p-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h6 fw-bold mb-0">Anuncios del curso</h2>
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+
+            <!-- Descripción curso -->
+            <div class="card card-soft mb-3 border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Descripción del curso</h2>
+                    <p class="mb-0 small">
+                        <?= nl2br(htmlspecialchars($curso['descripcion'] ?: 'Sin descripción registrada.')) ?>
+                    </p>
+                </div>
             </div>
 
-            <?php if ($anuncios->num_rows === 0): ?>
-                <p class="small text-muted">Aún no hay anuncios para este curso.</p>
-            <?php else: ?>
-                <ul class="list-group list-group-flush">
-                    <?php while ($a = $anuncios->fetch_assoc()): ?>
-                        <li class="list-group-item">
-                            <div class="d-flex justify-content-between">
+            <!-- Anuncios -->
+            <div class="card card-soft mb-3 border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h2 class="h6 fw-bold mb-0" style="color:#4b2e83;">Anuncios del curso</h2>
+                    </div>
 
-                                <div>
-                                    <span class="badge bg-light text-muted border small mb-1">
-                                        <?= htmlspecialchars($a['tipo']) ?>
-                                    </span>
-
-                                    <strong class="d-block small mb-1">
-                                        <?= htmlspecialchars($a['titulo']) ?>
-                                    </strong>
-
-                                    <p class="small mb-0">
-                                        <?= nl2br(htmlspecialchars($a['contenido'])) ?>
-                                    </p>
-                                </div>
-
-                                <small class="text-muted ms-3">
-                                    <?= date('d/m/Y H:i', strtotime($a['fecha_publicacion'])) ?>
-                                </small>
-
-                            </div>
-                        </li>
-                    <?php endwhile; ?>
-                </ul>
-            <?php endif; ?>
-        </div>
-
-        <!-- TAREAS -->
-        <div class="card card-soft mb-3 p-3">
-
-            <h2 class="h6 fw-bold mb-2">Tareas del curso</h2>
-
-            <?php if ($mensaje_tarea): ?>
-                <div class="alert alert-success py-2 small"><?= htmlspecialchars($mensaje_tarea) ?></div>
-            <?php endif; ?>
-
-            <?php if ($error_tarea): ?>
-                <div class="alert alert-danger py-2 small"><?= htmlspecialchars($error_tarea) ?></div>
-            <?php endif; ?>
-
-            <?php if ($tareas->num_rows === 0): ?>
-                <p class="small text-muted">Aún no hay tareas asignadas.</p>
-            <?php else: ?>
-                <ul class="list-group list-group-flush">
-
-                    <?php while ($t = $tareas->fetch_assoc()): ?>
-                        <?php
-                        $hoy = date('Y-m-d');
-                        $fechaPub = $t['fecha_publicacion'] ? date('d/m/Y H:i', strtotime($t['fecha_publicacion'])) : null;
-
-                        // Fecha base de la tarea (tabla tareas)
-                        $fechaBaseBD = $t['fecha_entrega']; // Y-m-d o null
-                        $fechaLimiteRealBD = $fechaBaseBD;
-
-                        // Extensión (si existe) para esta tarea
-                        $extFecha = $extensiones_por_tarea[(int) $t['id']] ?? null;
-
-                        if (!empty($extFecha)) {
-                            // Usamos la mayor fecha entre la base y la extensión
-                            if (empty($fechaLimiteRealBD) || $extFecha > $fechaLimiteRealBD) {
-                                $fechaLimiteRealBD = $extFecha;
-                            }
-                        }
-
-                        // Para mostrar en la badge
-                        $fechaLim = $fechaLimiteRealBD ? date('d/m/Y', strtotime($fechaLimiteRealBD)) : null;
-
-                        $entregada = !empty($t['mi_archivo']);
-                        $valorMax = isset($t['valor_maximo']) ? (int) $t['valor_maximo'] : 100;
-
-                        // ¿Está vencida según la FECHA FINAL real y sin entrega?
-                        $vencida = (!empty($fechaLimiteRealBD) && $fechaLimiteRealBD < $hoy && !$entregada);
-
-                        // Para saber si de verdad hubo extensión aplicada
-                        $extension_aplicada = (!empty($extFecha) && $fechaLimiteRealBD === $extFecha);
-                        ?>
-
-                        <li class="list-group-item py-3 mb-2 rounded-3">
-                            <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
-
-                                <div class="flex-grow-1">
-
-                                    <!-- Título y badges -->
-                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-
-                                        <strong class="small"><?= htmlspecialchars($t['titulo']) ?></strong>
-
-                                        <?php if ($fechaPub): ?>
-                                            <span
-                                                class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small">
-                                                Publicada: <?= $fechaPub ?>
+                    <?php if ($anuncios->num_rows === 0): ?>
+                        <p class="small text-muted mb-0">Aún no hay anuncios para este curso.</p>
+                    <?php else: ?>
+                        <ul class="list-group list-group-flush">
+                            <?php while ($a = $anuncios->fetch_assoc()): ?>
+                                <li class="list-group-item border-0 border-bottom small">
+                                    <div class="d-flex justify-content-between gap-2">
+                                        <div>
+                                            <span class="badge bg-light text-muted border small mb-1">
+                                                <?= htmlspecialchars($a['tipo']) ?>
                                             </span>
-                                        <?php endif; ?>
 
-                                        <?php if ($fechaLim): ?>
-                                            <span
-                                                hclass="badge small 
-                                                <?= $vencida && !$entregada
-                                                    ? 'bg-danger-subtle text-danger border border-danger-subtle'
-                                                    : 'bg-primary-subtle text-primary border border-primary-subtle' ?>">
-                                                Vence: <?= $fechaLim ?>
-                                            </span>
-                                        <?php endif; ?>
-                                        <?php if ($extension_aplicada): ?>
-                                            <div class="small text-info mt-1">
-                                                <i class="fa-solid fa-clock-rotate-left me-1"></i>
-                                                Fecha extendida por el docente hasta <?= $fechaLim ?>
-                                            </div>
-                                        <?php endif; ?>
-                                        <span class="badge bg-light text-secondary border border-secondary-subtle small">
-                                            Valor: <?= $valorMax ?> pts
-                                        </span>
+                                            <strong class="d-block mb-1">
+                                                <?= htmlspecialchars($a['titulo']) ?>
+                                            </strong>
+
+                                            <p class="small mb-0 text-muted">
+                                                <?= nl2br(htmlspecialchars($a['contenido'])); ?>
+                                            </p>
+                                        </div>
+
+                                        <small class="text-muted text-end">
+                                            <?= date('d/m/Y H:i', strtotime($a['fecha_publicacion'])) ?>
+                                        </small>
                                     </div>
+                                </li>
+                            <?php endwhile; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+            </div>
 
-                                    <!-- Descripción -->
-                                    <?php if (!empty($t['descripcion'])): ?>
-                                        <p class="small text-muted mb-2">
-                                            <?= nl2br(htmlspecialchars($t['descripcion'])) ?>
-                                        </p>
-                                    <?php endif; ?>
+            <!-- TAREAS -->
+            <div class="card card-soft mb-3 border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Tareas del curso</h2>
 
-                                    <!-- Archivo de instrucciones -->
-                                    <?php if (!empty($t['archivo_instrucciones'])): ?>
-                                        <p class="small mb-2">
-                                            <i class="fa-solid fa-paperclip me-1"></i>
-                                            Instrucciones:
-                                            <a href="<?= htmlspecialchars($t['archivo_instrucciones']) ?>" target="_blank">Ver
-                                                archivo</a>
-                                        </p>
-                                    <?php endif; ?>
+                    <?php if ($mensaje_tarea): ?>
+                        <div class="alert alert-success py-2 small mb-2"><?= htmlspecialchars($mensaje_tarea) ?></div>
+                    <?php endif; ?>
 
-                                    <!-- Mi entrega -->
-                                    <?php if (!empty($t['mi_archivo'])): ?>
-                                        <div class="border rounded-3 p-2 bg-light mb-2">
+                    <?php if ($error_tarea): ?>
+                        <div class="alert alert-danger py-2 small mb-2"><?= htmlspecialchars($error_tarea) ?></div>
+                    <?php endif; ?>
 
-                                            <div class="d-flex justify-content-between">
+                    <?php if ($tareas->num_rows === 0): ?>
+                        <p class="small text-muted mb-0">Aún no hay tareas asignadas.</p>
+                    <?php else: ?>
+                        <ul class="list-group list-group-flush">
+                            <?php while ($t = $tareas->fetch_assoc()): ?>
+                                <?php
+                                $hoy = date('Y-m-d');
+                                $fechaPub = $t['fecha_publicacion'] ? date('d/m/Y H:i', strtotime($t['fecha_publicacion'])) : null;
 
-                                                <div>
-                                                    <span class="small fw-semibold">Tu entrega</span><br>
-                                                    <a href="<?= htmlspecialchars($t['mi_archivo']) ?>" target="_blank"
-                                                        class="small">
-                                                        Ver archivo enviado
-                                                    </a>
-                                                </div>
+                                // Fecha base en BD
+                                $fechaBaseBD = $t['fecha_entrega']; // Y-m-d o null
+                                $fechaLimiteRealBD = $fechaBaseBD;
 
-                                                <div class="small text-end">
-                                                    <?php if (!empty($t['mi_fecha_entrega'])): ?>
-                                                        <div class="text-muted">
-                                                            Enviada el <?= date('d/m/Y H:i', strtotime($t['mi_fecha_entrega'])) ?>
-                                                        </div>
-                                                    <?php endif; ?>
+                                // Extensión (si existe) para esta tarea
+                                $extFecha = $extensiones_por_tarea[(int) $t['id']] ?? null;
 
-                                                    <?php if ($t['mi_calificacion'] !== null): ?>
-                                                        <div class="mt-1">
-                                                            Nota:
-                                                            <span class="badge bg-success-subtle text-success">
-                                                                <?= htmlspecialchars($t['mi_calificacion']) ?> / <?= $valorMax ?> pts
-                                                            </span>
-                                                        </div>
-                                                    <?php else: ?>
-                                                        <div class="mt-1">
-                                                            <span class="badge bg-secondary-subtle text-secondary">
-                                                                Valor: <?= $valorMax ?> pts
-                                                            </span>
-                                                            <div class="text-muted">En revisión</div>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                </div>
+                                if (!empty($extFecha)) {
+                                    if (empty($fechaLimiteRealBD) || $extFecha > $fechaLimiteRealBD) {
+                                        $fechaLimiteRealBD = $extFecha;
+                                    }
+                                }
+
+                                $fechaLim = $fechaLimiteRealBD ? date('d/m/Y', strtotime($fechaLimiteRealBD)) : null;
+
+                                $entregada = !empty($t['mi_archivo']);
+                                $valorMax = isset($t['valor_maximo']) ? (int)$t['valor_maximo'] : 100;
+
+                                $vencida = (!empty($fechaLimiteRealBD) && $fechaLimiteRealBD < $hoy && !$entregada);
+
+                                $extension_aplicada = (!empty($extFecha) && $fechaLimiteRealBD === $extFecha);
+                                ?>
+                                <li class="list-group-item border-0 border-bottom py-3">
+                                    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                                        <div class="flex-grow-1">
+                                            <!-- Título y badges -->
+                                            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                                <strong class="small"><?= htmlspecialchars($t['titulo']) ?></strong>
+
+                                                <?php if ($fechaPub): ?>
+                                                    <span class="badge bg-light text-secondary border small">
+                                                        Publicada: <?= $fechaPub ?>
+                                                    </span>
+                                                <?php endif; ?>
+
+                                                <?php if ($fechaLim): ?>
+                                                    <span class="badge small
+                                                        <?= $vencida && !$entregada
+                                                            ? 'bg-danger-subtle text-danger border border-danger-subtle'
+                                                            : 'bg-primary-subtle text-primary border border-primary-subtle' ?>">
+                                                        Vence: <?= $fechaLim ?>
+                                                    </span>
+                                                <?php endif; ?>
+
+                                                <?php if ($extension_aplicada): ?>
+                                                    <span class="small text-info">
+                                                        <i class="fa-solid fa-clock-rotate-left me-1"></i>
+                                                        Fecha extendida hasta <?= $fechaLim ?>
+                                                    </span>
+                                                <?php endif; ?>
+
+                                                <span class="badge bg-light text-secondary border small">
+                                                    Valor: <?= $valorMax ?> pts
+                                                </span>
                                             </div>
 
-                                            <?php if (!empty($t['mis_comentarios'])): ?>
-                                                <div class="small mt-2">
-                                                    <strong>Comentario del docente:</strong><br>
-                                                    <?= nl2br(htmlspecialchars($t['mis_comentarios'])) ?>
+                                            <!-- Descripción -->
+                                            <?php if (!empty($t['descripcion'])): ?>
+                                                <p class="small text-muted mb-2">
+                                                    <?= nl2br(htmlspecialchars($t['descripcion'])) ?>
+                                                </p>
+                                            <?php endif; ?>
+
+                                            <!-- Archivo de instrucciones -->
+                                            <?php if (!empty($t['archivo_instrucciones'])): ?>
+                                                <p class="small mb-2">
+                                                    <i class="fa-solid fa-paperclip me-1"></i>
+                                                    Instrucciones:
+                                                    <a href="<?= htmlspecialchars($t['archivo_instrucciones']) ?>"
+                                                       target="_blank"
+                                                       style="color:#ff4b7b; font-weight:500; text-decoration:none;"
+                                                       onmouseover="this.style.color='#e84372'"
+                                                       onmouseout="this.style.color='#ff4b7b'">
+                                                        Ver archivo
+                                                    </a>
+                                                </p>
+                                            <?php endif; ?>
+
+                                            <!-- Mi entrega -->
+                                            <?php if (!empty($t['mi_archivo'])): ?>
+                                                <div class="border rounded-3 p-2 bg-light mb-2">
+                                                    <div class="d-flex justify-content-between gap-2">
+                                                        <div>
+                                                            <span class="small fw-semibold">Tu entrega</span><br>
+                                                            <a href="<?= htmlspecialchars($t['mi_archivo']) ?>"
+                                                               target="_blank"
+                                                               class="small"
+                                                               style="color:#ff4b7b; text-decoration:none;"
+                                                               onmouseover="this.style.color='#e84372'"
+                                                               onmouseout="this.style.color='#ff4b7b'">
+                                                                Ver archivo enviado
+                                                            </a>
+                                                        </div>
+                                                        <div class="small text-end">
+                                                            <?php if (!empty($t['mi_fecha_entrega'])): ?>
+                                                                <div class="text-muted">
+                                                                    Enviada el <?= date('d/m/Y H:i', strtotime($t['mi_fecha_entrega'])) ?>
+                                                                </div>
+                                                            <?php endif; ?>
+
+                                                            <?php if ($t['mi_calificacion'] !== null): ?>
+                                                                <div class="mt-1">
+                                                                    Nota:
+                                                                    <span class="badge bg-success-subtle text-success border">
+                                                                        <?= htmlspecialchars($t['mi_calificacion']) ?>
+                                                                        / <?= $valorMax ?> pts
+                                                                    </span>
+                                                                </div>
+                                                            <?php else: ?>
+                                                                <div class="mt-1">
+                                                                    <span class="badge bg-secondary-subtle text-secondary border">
+                                                                        Valor: <?= $valorMax ?> pts
+                                                                    </span>
+                                                                    <div class="text-muted">En revisión</div>
+                                                                </div>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+
+                                                    <?php if (!empty($t['mis_comentarios'])): ?>
+                                                        <div class="small mt-2">
+                                                            <strong>Comentario del docente:</strong><br>
+                                                            <?= nl2br(htmlspecialchars($t['mis_comentarios'])) ?>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 </div>
+                                            <?php else: ?>
+                                                <p class="small text-muted mb-2">
+                                                    Aún no has enviado tu archivo para esta tarea.
+                                                </p>
                                             <?php endif; ?>
                                         </div>
 
-                                    <?php else: ?>
-                                        <p class="small text-muted mb-2">Aún no has enviado tu archivo para esta tarea.</p>
-                                    <?php endif; ?>
+                                        <!-- Columna derecha: subida -->
+                                        <div style="min-width: 230px;">
+                                            <?php if ($vencida): ?>
+                                                <span class="badge bg-danger-subtle text-danger d-block text-center small mb-2 border">
+                                                    Entrega vencida
+                                                </span>
+                                            <?php endif; ?>
 
-                                </div>
+                                            <form method="post" enctype="multipart/form-data">
+                                                <input type="hidden" name="accion" value="subir_tarea">
+                                                <input type="hidden" name="tarea_id" value="<?= $t['id'] ?>">
 
-                                <!-- Columna derecha: subida -->
-                                <div style="min-width: 230px;">
+                                                <input type="file"
+                                                       name="archivo_tarea"
+                                                       class="form-control form-control-sm mb-2"
+                                                       required>
 
-                                    <?php if ($vencida): ?>
-                                        <span class="badge bg-danger-subtle text-danger d-block text-center small mb-2">
-                                            Entrega vencida
-                                        </span>
-                                    <?php endif; ?>
+                                                <button type="submit"
+                                                        class="btn btn-sm w-100"
+                                                        style="
+                                                            background-color:#ff4b7b;
+                                                            border:1px solid #ff4b7b;
+                                                            color:white;
+                                                            font-weight:500;
+                                                            border-radius:6px;
+                                                            padding:4px 10px;
+                                                        "
+                                                        onmouseover="this.style.backgroundColor='#e84372'"
+                                                        onmouseout="this.style.backgroundColor='#ff4b7b'">
+                                                    <?= $t['mi_archivo'] ? 'Reemplazar archivo' : 'Subir archivo' ?>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </li>
+                            <?php endwhile; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+            </div>
 
+            <!-- Materiales -->
+            <div class="card card-soft border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Materiales del curso</h2>
 
+                    <?php if ($materiales->num_rows === 0): ?>
+                        <p class="small text-muted mb-0">Aún no hay materiales subidos.</p>
+                    <?php else: ?>
+                        <ul class="list-group list-group-flush">
+                            <?php while ($m = $materiales->fetch_assoc()): ?>
+                                <li class="list-group-item border-0 border-bottom small">
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div>
+                                            <span class="badge bg-light text-muted border small mb-1">
+                                                <?= htmlspecialchars($m['tipo_archivo']) ?>
+                                            </span>
 
-                                    <form method="post" enctype="multipart/form-data">
-                                        <input type="hidden" name="accion" value="subir_tarea">
-                                        <input type="hidden" name="tarea_id" value="<?= $t['id'] ?>">
+                                            <strong class="d-block">
+                                                <a href="<?= htmlspecialchars($m['archivo_url']) ?>"
+                                                   target="_blank"
+                                                   style="color:#ff4b7b; text-decoration:none;"
+                                                   onmouseover="this.style.color='#e84372'"
+                                                   onmouseout="this.style.color='#ff4b7b'">
+                                                    <?= htmlspecialchars($m['titulo']) ?>
+                                                </a>
+                                            </strong>
 
-                                        <input type="file" name="archivo_tarea" class="form-control form-control-sm mb-2"
-                                            required>
+                                            <?php if (!empty($m['descripcion'])): ?>
+                                                <p class="small mb-1 text-muted">
+                                                    <?= nl2br(htmlspecialchars($m['descripcion'])) ?>
+                                                </p>
+                                            <?php endif; ?>
+                                        </div>
 
-                                        <button type="submit" class="btn btn-sm btn-primary w-100">
-                                            <?= $t['mi_archivo'] ? 'Reemplazar archivo' : 'Subir archivo' ?>
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-
-                        </li>
-                    <?php endwhile; ?>
-
-                </ul>
-            <?php endif; ?>
+                                        <small class="text-muted">
+                                            <?= date('d/m/Y', strtotime($m['fecha_subida'])) ?>
+                                        </small>
+                                    </div>
+                                </li>
+                            <?php endwhile; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+            </div>
 
         </div>
 
-        <!-- Materiales -->
-        <div class="card card-soft p-3">
-            <h2 class="h6 fw-bold mb-2">Materiales del curso</h2>
+        <!-- Columna derecha -->
+        <div class="col-lg-4">
+            <!-- Docente -->
+            <div class="card card-soft mb-3 border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Docente del curso</h2>
 
-            <?php if ($materiales->num_rows === 0): ?>
-                <p class="small text-muted">Aún no hay materiales subidos.</p>
-            <?php else: ?>
-                <ul class="list-group list-group-flush">
-                    <?php while ($m = $materiales->fetch_assoc()): ?>
-                        <li class="list-group-item">
-
-                            <div class="d-flex justify-content-between align-items-start">
-
-                                <div>
-                                    <span class="badge bg-light text-muted border small mb-1">
-                                        <?= htmlspecialchars($m['tipo_archivo']) ?>
-                                    </span>
-
-                                    <strong class="d-block">
-                                        <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank">
-                                            <?= htmlspecialchars($m['titulo']) ?>
-                                        </a>
-                                    </strong>
-
-                                    <?php if (!empty($m['descripcion'])): ?>
-                                        <p class="small mb-1">
-                                            <?= nl2br(htmlspecialchars($m['descripcion'])) ?>
-                                        </p>
-                                    <?php endif; ?>
-                                </div>
-
-                                <small class="text-muted ms-3">
-                                    <?= date('d/m/Y', strtotime($m['fecha_subida'])) ?>
-                                </small>
-
+                    <div class="d-flex align-items-center">
+                        <?php if (!empty($curso['foto_perfil'])): ?>
+                            <img src="<?= htmlspecialchars($curso['foto_perfil']) ?>"
+                                 class="rounded-circle me-2"
+                                 style="width:48px;height:48px;object-fit:cover;">
+                        <?php else: ?>
+                            <div class="rounded-circle bg-light d-flex justify-content-center align-items-center me-2"
+                                 style="width:48px;height:48px;">
+                                <span class="fw-bold">
+                                    <?= strtoupper(substr($curso['docente_nombre'], 0, 1) . substr($curso['docente_apellido'], 0, 1)) ?>
+                                </span>
                             </div>
+                        <?php endif; ?>
 
-                        </li>
-                    <?php endwhile; ?>
-                </ul>
-            <?php endif; ?>
-
-        </div>
-
-    </div>
-
-    <!-- Columna derecha -->
-    <div class="col-lg-4">
-
-        <div class="card card-soft mb-3 p-3">
-            <h2 class="h6 fw-bold mb-2">Docente del curso</h2>
-
-            <div class="d-flex align-items-center">
-
-                <?php if (!empty($curso['foto_perfil'])): ?>
-                    <img src="<?= htmlspecialchars($curso['foto_perfil']) ?>" class="rounded-circle me-2"
-                        style="width:48px;height:48px;object-fit:cover;">
-                <?php else: ?>
-                    <div class="rounded-circle bg-light d-flex justify-content-center align-items-center me-2"
-                        style="width:48px;height:48px;">
-                        <span class="fw-bold">
-                            <?= strtoupper(substr($curso['docente_nombre'], 0, 1) . substr($curso['docente_apellido'], 0, 1)) ?>
-                        </span>
-                    </div>
-                <?php endif; ?>
-
-                <div>
-                    <div class="fw-semibold">
-                        <?= htmlspecialchars($curso['docente_nombre'] . " " . $curso['docente_apellido']) ?>
-                    </div>
-                    <div class="small text-muted"><?= htmlspecialchars($curso['docente_email']) ?></div>
-                    <?php if ($curso['pais'] || $curso['ciudad']): ?>
-                        <div class="small text-muted">
-                            <?= htmlspecialchars(trim($curso['ciudad'] . ", " . $curso['pais']), ", ") ?>
+                        <div>
+                            <div class="fw-semibold small">
+                                <?= htmlspecialchars($curso['docente_nombre'] . " " . $curso['docente_apellido']) ?>
+                            </div>
+                            <div class="small text-muted"><?= htmlspecialchars($curso['docente_email']) ?></div>
+                            <?php if ($curso['pais'] || $curso['ciudad']): ?>
+                                <div class="small text-muted">
+                                    <?= htmlspecialchars(trim($curso['ciudad'] . ", " . $curso['pais']), ", ") ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compañeros -->
+            <div class="card card-soft border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Compañeros de clase</h2>
+
+                    <?php if ($companeros->num_rows === 0): ?>
+                        <p class="small text-muted mb-0">Aún no hay otros estudiantes.</p>
+                    <?php else: ?>
+                        <ul class="list-unstyled small mb-0">
+                            <?php while ($c = $companeros->fetch_assoc()): ?>
+                                <li class="mb-2">
+                                    <strong><?= htmlspecialchars($c['nombre'] . " " . $c['apellido']) ?></strong><br>
+                                    <span class="text-muted"><?= htmlspecialchars($c['email']) ?></span>
+                                </li>
+                            <?php endwhile; ?>
+                        </ul>
                     <?php endif; ?>
                 </div>
             </div>
         </div>
-
-        <div class="card card-soft p-3">
-            <h2 class="h6 fw-bold mb-2">Compañeros de clase</h2>
-
-            <?php if ($companeros->num_rows === 0): ?>
-                <p class="small text-muted">Aún no hay otros estudiantes.</p>
-            <?php else: ?>
-                <ul class="list-unstyled small mb-0">
-
-                    <?php while ($c = $companeros->fetch_assoc()): ?>
-                        <li class="mb-1">
-                            <strong><?= htmlspecialchars($c['nombre'] . " " . $c['apellido']) ?></strong><br>
-                            <span class="text-muted"><?= htmlspecialchars($c['email']) ?></span>
-                        </li>
-                    <?php endwhile; ?>
-
-                </ul>
-            <?php endif; ?>
-        </div>
-
     </div>
+
+    <a href="dashboard.php"
+       class="btn btn-link px-0"
+       style="color:#ff4b7b; font-weight:500; text-decoration:none;"
+       onmouseover="this.style.color='#e84372'"
+       onmouseout="this.style.color='#ff4b7b'">
+        ‹ Volver a mis cursos
+    </a>
 </div>
 
-<a href="dashboard.php" class="btn btn-link px-0"
-   style="color:#A45A6A; font-weight:500; text-decoration:none;">
-    ‹ Volver a mis cursos
-</a>
 
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

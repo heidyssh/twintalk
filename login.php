@@ -9,7 +9,7 @@ if (isset($_SESSION['usuario_id'])) {
 $errores = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email    = trim($_POST['email'] ?? '');
+    $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
     if ($email === '' || $password === '') {
@@ -35,27 +35,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $res = $stmt->get_result();
 
         if ($row = $res->fetch_assoc()) {
-            if ((int)$row['activo'] !== 1) {
+            if ((int) $row['activo'] !== 1) {
                 $errores[] = "Tu cuenta está inactiva. Contacta a la administración.";
             } elseif (!password_verify($password, $row['password_hash'])) {
                 $errores[] = "Correo o contraseña incorrectos.";
             } else {
-               // Login correcto
-$_SESSION['usuario_id'] = (int)$row['id'];
-$_SESSION['rol_id']     = (int)$row['rol_id'];
-$_SESSION['nombre']     = $row['nombre'] ?? '';
-$_SESSION['apellido']   = $row['apellido'] ?? '';
-$_SESSION['email']      = $row['email'] ?? '';
+                // Login correcto
+                $_SESSION['usuario_id'] = (int) $row['id'];
+                $_SESSION['rol_id'] = (int) $row['rol_id'];
+                $_SESSION['nombre'] = $row['nombre'] ?? '';
+                $_SESSION['apellido'] = $row['apellido'] ?? '';
+                $_SESSION['email'] = $row['email'] ?? '';
 
-// Cargar avatar desde la BD en la sesión
-if (!empty($row['foto_perfil'])) {
-    $_SESSION['foto_perfil'] = $row['foto_perfil'];
-} else {
-    $_SESSION['foto_perfil'] = '/twintalk/assets/img/default_user.png';
-}
+                // Cargar avatar desde la BD en la sesión
+                if (!empty($row['foto_perfil'])) {
+                    $_SESSION['foto_perfil'] = $row['foto_perfil'];
+                } else {
+                    $_SESSION['foto_perfil'] = '/twintalk/assets/img/default_user.png';
+                }
 
-redirect_by_role();
-exit;
+                redirect_by_role();
+                exit;
             }
         } else {
             $errores[] = "Correo o contraseña incorrectos.";
@@ -91,23 +91,16 @@ include __DIR__ . "/includes/header.php";
                 <div class="mb-3">
                     <label class="form-label">Correo electrónico</label>
                     <input type="email" name="email" class="form-control" required
-                           value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+                        value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">Contraseña</label>
                     <div class="position-relative">
-                        <input
-                            type="password"
-                            name="password"
-                            id="login_password"
-                            class="form-control pe-5"
-                            required
-                        >
+                        <input type="password" name="password" id="login_password" class="form-control pe-5" required>
                         <button type="button"
-                                class="btn btn-link p-0 border-0 position-absolute top-50 end-0 translate-middle-y me-3"
-                                title="Mostrar/ocultar contraseña"
-                                onclick="ttTogglePassword('login_password', this)">
+                            class="btn btn-link p-0 border-0 position-absolute top-50 end-0 translate-middle-y me-3"
+                            title="Mostrar/ocultar contraseña" onclick="ttTogglePassword('login_password', this)">
                             <i class="fa-solid fa-eye small text-muted"></i>
                         </button>
                     </div>
@@ -117,33 +110,37 @@ include __DIR__ . "/includes/header.php";
 
                 <p class="small text-center text-muted mt-2 mb-0">
                     ¿Aún no tienes cuenta?
-                    <a href="/twintalk/register.php">Regístrate aquí</a>
+                    <a href="/twintalk/register.php" style="color:#ff4b7b; font-weight:500; text-decoration:none;"
+                        onmouseover="this.style.color='#e84372'" onmouseout="this.style.color='#ff4b7b'">
+                        Regístrate aquí
+                    </a>
                 </p>
+
             </form>
         </div>
     </div>
 </div>
 
 <script>
-function ttTogglePassword(inputId, btn) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    const icon = btn.querySelector('i');
+    function ttTogglePassword(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const icon = btn.querySelector('i');
 
-    if (input.type === 'password') {
-        input.type = 'text';
-        if (icon) {
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        }
-    } else {
-        input.type = 'password';
-        if (icon) {
-            icon.classList.add('fa-eye');
-            icon.classList.remove('fa-eye-slash');
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (icon) {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+        } else {
+            input.type = 'password';
+            if (icon) {
+                icon.classList.add('fa-eye');
+                icon.classList.remove('fa-eye-slash');
+            }
         }
     }
-}
 </script>
 
 <?php include __DIR__ . "/includes/footer.php"; ?>

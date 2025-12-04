@@ -48,55 +48,86 @@ include __DIR__ . "/../../includes/header.php";
 ?>
 
 <div class="container mt-4">
-    <h2 class="mb-4 text-center">
-        <i class="fa-solid fa-chart-pie me-2"></i>
-        Reporte por curso
-    </h2>
 
+    <!-- HEADER con estética similar a reportes_mensuales -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3"
+            style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+
+            <div>
+                <h2 class="mb-1 d-flex align-items-center" style="color:#b14f72;">
+                    <i class="fa-solid fa-chart-pie me-2"></i>
+                    Reporte por curso
+                </h2>
+                <small class="text-muted">
+                    Resumen global de matrículas, tareas y rendimiento por curso.
+                </small>
+            </div>
+            <div class="text-md-end">
+                <span class="badge rounded-pill px-3 py-2" style="background: rgba(255,75,123,.08); color:#b14f72;">
+                    <?= count($cursos) ?> curso<?= count($cursos) === 1 ? '' : 's' ?>
+                </span>
+            </div>
+        </div>
+    </div>
     <?php if (empty($cursos)): ?>
         <div class="alert alert-info">No hay cursos registrados.</div>
     <?php else: ?>
         <div class="row g-3">
             <?php foreach ($cursos as $c): ?>
                 <div class="col-md-6">
-                    <div class="card shadow-sm border-0 rounded-3 h-100">
-                        <div class="card-header bg-white border-0">
-                            <h5 class="mb-0 text-primary"><?= htmlspecialchars($c['nombre_curso']) ?></h5>
+                    <div class="card card-soft shadow-sm border-0 h-100">
+                        <div class="card-header bg-white border-0 pb-0">
+                            <h5 class="mb-0" style="color:#4b2e83;">
+                                <?= htmlspecialchars($c['nombre_curso']) ?>
+                            </h5>
                         </div>
+
                         <div class="card-body pt-2">
                             <?php if (!empty($c['descripcion'])): ?>
-                                <p class="small text-muted"><?= htmlspecialchars($c['descripcion']) ?></p>
+                                <p class="small text-muted mb-3">
+                                    <?= htmlspecialchars($c['descripcion']) ?>
+                                </p>
                             <?php endif; ?>
-                            <div class="row text-center">
-                                <div class="col-6 mb-2">
+
+                            <div class="row text-center g-2">
+                                <div class="col-6">
                                     <div class="fw-bold"><?= $c['total_horarios'] ?></div>
                                     <div class="small text-muted">Horarios</div>
                                 </div>
-                                <div class="col-6 mb-2">
+                                <div class="col-6">
                                     <div class="fw-bold"><?= $c['total_matriculas'] ?></div>
                                     <div class="small text-muted">Matriculados</div>
                                 </div>
-                                <div class="col-6 mb-2">
+                                <div class="col-6">
                                     <div class="fw-bold"><?= $c['total_tareas'] ?></div>
-                                    <div class="small text-muted">Tareas</div>
+                                    <div class="small text-muted">Tareas creadas</div>
                                 </div>
-                                <div class="col-6 mb-2">
+                                <div class="col-6">
                                     <div class="fw-bold"><?= $c['total_entregas'] ?></div>
-                                    <div class="small text-muted">Entregas</div>
+                                    <div class="small text-muted">Entregas recibidas</div>
                                 </div>
-                                <div class="col-12 mt-1">
+                                <div class="col-12 mt-2">
                                     <div class="fw-bold">
-                                        <?= $c['promedio_notas'] !== null ? $c['promedio_notas'] : '—' ?>
+                                        <?= $c['promedio_notas'] !== null ? $c['promedio_notas'] : '-' ?>
                                     </div>
-                                    <div class="small text-muted">Promedio de notas</div>
+                                    <div class="small text-muted">Promedio general</div>
                                 </div>
                             </div>
                         </div>
                         <div class="card-footer bg-light border-0 text-end">
-                            <a href="reporte_curso_detalle.php?curso_id=<?= $c['curso_id'] ?>" class="btn btn-sm btn-outline-secondary">
+                            <a href="reporte_curso_detalle.php?curso_id=<?= $c['curso_id'] ?>" class="btn btn-sm" style="
+                            border:1px solid #ff4b7b;
+                            color:#ff4b7b;
+                            background-color:transparent;
+                            border-radius:6px;
+                            font-weight:500;
+                        " onmouseover="this.style.backgroundColor='#ff4b7b'; this.style.color='#fff';"
+                                onmouseout="this.style.backgroundColor='transparent'; this.style.color='#ff4b7b';">
                                 Ver detalle
                             </a>
                         </div>
+
                     </div>
                 </div>
             <?php endforeach; ?>

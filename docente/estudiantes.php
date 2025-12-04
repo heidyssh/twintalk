@@ -51,7 +51,9 @@ if ($horario_id > 0) {
 
     if (!$curso) {
         include __DIR__ . "/../includes/header.php";
-        echo '<div class="alert alert-danger mt-4">Horario no encontrado o no pertenece a tu cuenta.</div>';
+        echo '<div class="container py-4">
+                <div class="alert alert-danger">Horario no encontrado o no pertenece a tu cuenta.</div>
+              </div>';
         include __DIR__ . "/../includes/footer.php";
         exit;
     }
@@ -83,67 +85,88 @@ if ($horario_id > 0) {
     include __DIR__ . "/../includes/header.php";
     ?>
 
-    <h1 class="h4 fw-bold mt-3">
-        Estudiantes del curso: <?= htmlspecialchars($curso['nombre_curso']) ?>
-    </h1>
-    <p class="small text-muted mb-3">
-        Nivel <?= htmlspecialchars($curso['codigo_nivel']) ?> ·
-        <?= htmlspecialchars($curso['nombre_dia']) ?> ·
-        <?= substr($curso['hora_inicio'],0,5) ?> - <?= substr($curso['hora_fin'],0,5) ?> ·
-        Aula <?= htmlspecialchars($curso['aula'] ?: 'N/A') ?>
-    </p>
+    <div class="container my-4">
 
-    <div class="card card-soft p-3">
-        <h2 class="h6 fw-bold mb-2">Estudiantes matriculados</h2>
-        <div class="table-responsive table-rounded">
-            <table class="table align-middle mb-0">
-                <thead class="table-light">
-                <tr>
-                    <th>Estudiante</th>
-                    <th>Correo</th>
-                    <th>Teléfono</th>
-                    <th>Estado</th>
-                    <th>Fecha matrícula</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                <?php if ($estudiantes->num_rows > 0): ?>
-                    <?php while ($e = $estudiantes->fetch_assoc()): ?>
+        <!-- Encabezado con estética TwinTalk -->
+        <div class="card card-soft border-0 shadow-sm mb-4">
+            <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+                 style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+                <div>
+                    <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                        Estudiantes del curso
+                    </h1>
+                    <small class="text-muted">
+                        <?= htmlspecialchars($curso['nombre_curso']) ?><br>
+                        Nivel <?= htmlspecialchars($curso['codigo_nivel']) ?> (<?= htmlspecialchars($curso['nombre_nivel']) ?>) ·
+                        <?= htmlspecialchars($curso['nombre_dia']) ?> ·
+                        <?= substr($curso['hora_inicio'],0,5) ?> - <?= substr($curso['hora_fin'],0,5) ?> ·
+                        Aula <?= htmlspecialchars($curso['aula'] ?: 'N/A') ?>
+                    </small>
+                </div>
+                <div class="text-md-end">
+                    <span class="badge rounded-pill text-bg-light border">
+                        Docente
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de estudiantes -->
+        <div class="card card-soft border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-3">Estudiantes matriculados</h2>
+                <div class="table-responsive table-rounded">
+                    <table class="table table-sm align-middle mb-0 table-hover">
+                        <thead class="table-light">
                         <tr>
-                            <td>
-                                <strong><?= htmlspecialchars($e['nombre'] . " " . $e['apellido']) ?></strong><br>
-                                <small class="text-muted">
-                                    Nivel actual: <?= htmlspecialchars($e['nivel_actual'] ?: 'N/D') ?>
-                                </small>
-                            </td>
-                            <td><?= htmlspecialchars($e['email']) ?></td>
-                            <td><?= htmlspecialchars($e['telefono'] ?: 'N/D') ?></td>
-                            <td><?= htmlspecialchars($e['nombre_estado']) ?></td>
-                            <td>
-                                <?= $e['fecha_matricula'] 
-                                    ? date('d/m/Y', strtotime($e['fecha_matricula'])) 
-                                    : 'N/D' ?>
-                            </td>
-                            <td class="text-end">
-                                <a href="estudiante_perfil.php?matricula_id=<?= (int)$e['matricula_id'] ?>"
-                                   class="btn btn-sm btn-outline-primary">
-                                    Ver perfil
-                                </a>
-                            </td>
+                            <th>Estudiante</th>
+                            <th>Correo</th>
+                            <th>Teléfono</th>
+                            <th>Estado</th>
+                            <th>Fecha matrícula</th>
+                            <th class="text-end"></th>
                         </tr>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <tr><td colspan="6" class="text-muted">No hay estudiantes matriculados en este horario.</td></tr>
-                <?php endif; ?>
-                </tbody>
-            </table>
+                        </thead>
+                        <tbody>
+                        <?php if ($estudiantes->num_rows > 0): ?>
+                            <?php while ($e = $estudiantes->fetch_assoc()): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= htmlspecialchars($e['nombre'] . " " . $e['apellido']) ?></strong><br>
+                                        <small class="text-muted">
+                                            Nivel actual: <?= htmlspecialchars($e['nivel_actual'] ?: 'N/D') ?>
+                                        </small>
+                                    </td>
+                                    <td><?= htmlspecialchars($e['email']) ?></td>
+                                    <td><?= htmlspecialchars($e['telefono'] ?: 'N/D') ?></td>
+                                    <td><?= htmlspecialchars($e['nombre_estado']) ?></td>
+                                    <td>
+                                        <?= $e['fecha_matricula'] 
+                                            ? date('d/m/Y', strtotime($e['fecha_matricula'])) 
+                                            : 'N/D' ?>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="estudiante_perfil.php?matricula_id=<?= (int)$e['matricula_id'] ?>"
+                                           class="btn btn-sm shadow-sm"
+                                           style="background:#b14f72; color:#fff; border-radius:8px; border:none;">
+                                            Ver perfil
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="6" class="text-muted text-center py-3">
+                                    No hay estudiantes matriculados en este horario.
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
-
-    <a href="estudiantes.php" class="btn btn-link px-0 mt-3">
-        ‹ Volver a mis cursos / horarios
-    </a>
 
     <?php
     include __DIR__ . "/../includes/footer.php";
@@ -182,49 +205,75 @@ $stmtHor->close();
 include __DIR__ . "/../includes/header.php";
 ?>
 
-<h1 class="h4 fw-bold mt-3">Estudiantes por curso</h1>
-<p class="small text-muted mb-3">
-    Selecciona un curso/horario para ver la lista de estudiantes matriculados.
-</p>
+<div class="container my-4">
 
-<?php if ($horarios->num_rows == 0): ?>
-    <div class="alert alert-warning">No tienes horarios asignados actualmente.</div>
-<?php else: ?>
-    <div class="table-responsive table-rounded">
-        <table class="table align-middle mb-0">
-            <thead class="table-light">
-            <tr>
-                <th>Curso</th>
-                <th>Horario</th>
-                <th>Aula</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php while ($h = $horarios->fetch_assoc()): ?>
-                <tr>
-                    <td>
-                        <strong><?= htmlspecialchars($h['nombre_curso']) ?></strong><br>
-                        <small class="text-muted">
-                            <?= htmlspecialchars($h['nombre_nivel']) ?> (<?= htmlspecialchars($h['codigo_nivel']) ?>)
-                        </small>
-                    </td>
-                    <td>
-                        <?= htmlspecialchars($h['nombre_dia']) ?> ·
-                        <?= substr($h['hora_inicio'],0,5) ?> - <?= substr($h['hora_fin'],0,5) ?>
-                    </td>
-                    <td><?= htmlspecialchars($h['aula'] ?: 'N/A') ?></td>
-                    <td class="text-end">
-                        <a href="estudiantes.php?horario_id=<?= (int)$h['horario_id'] ?>"
-                           class="btn btn-sm btn-tt-primary">
-                            Ver estudiantes
-                        </a>
-                    </td>
-                </tr>
-            <?php endwhile; ?>
-            </tbody>
-        </table>
+    <!-- Encabezado general -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            <div>
+                <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                    Estudiantes por curso
+                </h1>
+                <small class="text-muted">
+                    Selecciona un curso/horario para ver la lista de estudiantes matriculados.
+                </small>
+            </div>
+            <div class="text-md-end">
+                <span class="badge rounded-pill text-bg-light border">
+                    Docente
+                </span>
+            </div>
+        </div>
     </div>
-<?php endif; ?>
+
+    <?php if ($horarios->num_rows == 0): ?>
+        <div class="alert alert-warning border-0 shadow-sm">
+            No tienes horarios asignados actualmente.
+        </div>
+    <?php else: ?>
+        <div class="card card-soft border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive table-rounded">
+                    <table class="table table-sm align-middle mb-0 table-hover">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Curso</th>
+                            <th>Horario</th>
+                            <th>Aula</th>
+                            <th class="text-end"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php while ($h = $horarios->fetch_assoc()): ?>
+                            <tr>
+                                <td>
+                                    <strong><?= htmlspecialchars($h['nombre_curso']) ?></strong><br>
+                                    <small class="text-muted">
+                                        <?= htmlspecialchars($h['nombre_nivel']) ?> (<?= htmlspecialchars($h['codigo_nivel']) ?>)
+                                    </small>
+                                </td>
+                                <td>
+                                    <?= htmlspecialchars($h['nombre_dia']) ?> ·
+                                    <?= substr($h['hora_inicio'],0,5) ?> - <?= substr($h['hora_fin'],0,5) ?>
+                                </td>
+                                <td><?= htmlspecialchars($h['aula'] ?: 'N/A') ?></td>
+                                <td class="text-end">
+                                    <a href="estudiantes.php?horario_id=<?= (int)$h['horario_id'] ?>"
+                                       class="btn btn-sm shadow-sm"
+                                       style="background:#b14f72; color:#fff; border-radius:8px; border:none;">
+                                        Ver estudiantes
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+</div>
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

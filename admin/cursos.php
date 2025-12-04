@@ -31,7 +31,7 @@ if ($resNiv) {
 // Si viene a editar, cargamos el curso
 $curso_editar = null;
 if (isset($_GET['editar']) && ctype_digit($_GET['editar'])) {
-    $id_editar = (int)$_GET['editar'];
+    $id_editar = (int) $_GET['editar'];
     $stmt = $mysqli->prepare("SELECT * FROM cursos WHERE id = ?");
     $stmt->bind_param("i", $id_editar);
     $stmt->execute();
@@ -55,7 +55,7 @@ if (isset($_GET['editar']) && ctype_digit($_GET['editar'])) {
             $stmtPrecio->execute();
             $resPrecio = $stmtPrecio->get_result();
             if ($resPrecio && ($rowPrecio = $resPrecio->fetch_assoc())) {
-                $curso_editar['precio_actual'] = (float)$rowPrecio['precio'];
+                $curso_editar['precio_actual'] = (float) $rowPrecio['precio'];
             }
             $stmtPrecio->close();
         }
@@ -209,8 +209,19 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-    <h1 class="h4 fw-bold mb-3">Gestión de Cursos</h1>
-
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+            style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            <div>
+                <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                    Gestión de cursos
+                </h1>
+                <small class="text-muted">
+                    Administra los cursos, niveles, duración, capacidad y precio vigente.
+                </small>
+            </div>
+        </div>
+    </div>
     <?php if ($mensaje): ?>
         <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>
     <?php endif; ?>
@@ -220,9 +231,9 @@ include __DIR__ . "/../includes/header.php";
 
     <div class="row g-4">
         <div class="col-lg-4">
-            <div class="card shadow-sm">
+            <div class="card card-soft shadow-sm border-0">
                 <div class="card-body">
-                    <h5 class="card-title mb-3">
+                    <h5 class="card-title mb-3" style="color:#4b2e83;">
                         <?= $curso_editar ? "Editar curso" : "Nuevo curso" ?>
                     </h5>
                     <form method="post">
@@ -259,7 +270,7 @@ include __DIR__ . "/../includes/header.php";
                                 <input type="number" name="capacidad_maxima" min="1" class="form-control"
                                     value="<?= htmlspecialchars($curso_editar['capacidad_maxima'] ?? '10') ?>" required>
                             </div>
-                             <div class="col-md-4 mb-2">
+                            <div class="col-md-4 mb-2">
                                 <label class="form-label">Precio del curso (L.)</label>
                                 <input type="number" name="precio" min="0" step="0.01" class="form-control"
                                     value="<?= isset($curso_editar['precio_actual']) ? htmlspecialchars($curso_editar['precio_actual']) : '' ?>"
@@ -269,19 +280,35 @@ include __DIR__ . "/../includes/header.php";
                                 </div>
                             </div>
                         </div>
-
                         <div class="mb-2">
                             <label class="form-label">Descripción</label>
                             <textarea name="descripcion" class="form-control"
                                 rows="3"><?= htmlspecialchars($curso_editar['descripcion'] ?? '') ?></textarea>
                         </div>
-
                         <div class="mt-3 text-end">
-                            <button type="submit" class="btn btn-primary btn-sm">
+                            <button type="submit" class="btn btn-sm" style="
+                            background-color:#ff4b7b;
+                            border:1px solid #ff4b7b;
+                            color:white;
+                            font-weight:500;
+                            border-radius:6px;
+                            padding:6px 14px;
+                        " onmouseover="this.style.backgroundColor='#e84372'"
+                                onmouseout="this.style.backgroundColor='#ff4b7b'">
                                 <?= $curso_editar ? "Guardar cambios" : "Crear curso" ?>
                             </button>
                             <?php if ($curso_editar): ?>
-                                <a href="cursos.php" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+                                <a href="cursos.php" class="btn btn-sm" style="
+                            border:1px solid #ff4b7b;
+                            color:#ff4b7b;
+                            background-color:transparent;
+                            border-radius:6px;
+                            padding:6px 14px;
+                            font-weight:500;
+                    " onmouseover="this.style.backgroundColor='#ff4b7b'; this.style.color='#fff';"
+                                    onmouseout="this.style.backgroundColor='transparent'; this.style.color='#ff4b7b';">
+                                    Cancelar
+                                </a>
                             <?php endif; ?>
                         </div>
                     </form>
@@ -291,9 +318,9 @@ include __DIR__ . "/../includes/header.php";
 
         <!-- Tabla de cursos -->
         <div class="col-lg-8">
-            <div class="card shadow-sm">
+            <div class="card card-soft shadow-sm border-0">
                 <div class="card-body">
-                    <h5 class="card-title mb-3">Listado de cursos</h5>
+                    <h5 class="card-title mb-3" style="color:#4b2e83;">Listado de cursos</h5>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle">
                             <thead class="table-light">
@@ -330,10 +357,19 @@ include __DIR__ . "/../includes/header.php";
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <a href="cursos.php?editar=<?= (int) $c['id'] ?>"
-                                                    class="btn btn-outline-primary btn-sm">
+                                                <a href="cursos.php?editar=<?= (int) $c['id'] ?>" class="btn btn-sm" style="
+                                            border:1px solid #ff4b7b;
+                                            color:#ff4b7b;
+                                            background-color:transparent;
+                                            border-radius:6px;
+                                            padding:4px 10px;
+                                            font-size:0.8rem;
+                                            font-weight:500;
+                                    " onmouseover="this.style.backgroundColor='#ff4b7b'; this.style.color='#fff';"
+                                                    onmouseout="this.style.backgroundColor='transparent'; this.style.color='#ff4b7b';">
                                                     Editar
                                                 </a>
+
                                                 <?php if ($c['activo']): ?>
                                                     <a href="cursos.php?eliminar=<?= (int) $c['id'] ?>"
                                                         class="btn btn-outline-danger btn-sm"

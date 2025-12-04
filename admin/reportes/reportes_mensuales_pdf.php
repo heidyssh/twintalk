@@ -6,10 +6,17 @@ require_role([1]); // admin
 // Dompdf
 require_once __DIR__ . "/../../vendor/autoload.php";
 use Dompdf\Dompdf;
+// Mes y año a usar en el PDF (desde el filtro, o actuales por defecto)
+$mes  = isset($_GET['mes'])  ? (int)$_GET['mes']  : (int)date('m');
+$anio = isset($_GET['anio']) ? (int)$_GET['anio'] : (int)date('Y');
 
-// Mes y año actuales
-$mes  = date('m');
-$anio = date('Y');
+// Validaciones básicas
+if ($mes < 1 || $mes > 12) {
+    $mes = (int)date('m');
+}
+if ($anio < 2000 || $anio > 2100) {
+    $anio = (int)date('Y');
+}
 
 // ========== MISMOS KPIs QUE reportes_mensuales.php ==========
 $sql = "

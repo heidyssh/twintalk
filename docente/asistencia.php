@@ -269,54 +269,79 @@ $stmtResumen->close();
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="container py-4">
+<div class="container my-4">
 
-    <h3 class="mb-1">Registro de asistencia</h3>
-    <p class="text-muted">
-        Marca los estudiantes presentes en la clase.<br>
-        Este curso se imparte los <strong><?= htmlspecialchars($horario_actual['nombre_dia']) ?></strong>
-        de <?= htmlspecialchars($horario_actual['fecha_inicio']) ?> a <?= htmlspecialchars($horario_actual['fecha_fin']) ?>.
-    </p>
+    <!-- Encabezado estilo TwinTalk -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            <div>
+                <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                    Registro de asistencia
+                </h1>
+                <small class="text-muted">
+                    Marca los estudiantes presentes en la clase. <br>
+                    Este curso se imparte los 
+                    <strong><?= htmlspecialchars($horario_actual['nombre_dia']) ?></strong>
+                    del <?= htmlspecialchars($horario_actual['fecha_inicio']) ?> al <?= htmlspecialchars($horario_actual['fecha_fin']) ?>.
+                </small>
+            </div>
+            <div class="text-md-end">
+                <span class="badge rounded-pill text-bg-light border">
+                    Docente
+                </span>
+            </div>
+        </div>
+    </div>
 
     <?php if ($mensaje): ?>
-        <div class="alert alert-success"><?= $mensaje ?></div>
+        <div class="alert alert-success border-0 shadow-sm mb-3">
+            <?= $mensaje ?>
+        </div>
     <?php endif; ?>
 
     <?php if ($error): ?>
-        <div class="alert alert-danger"><?= $error ?></div>
+        <div class="alert alert-danger border-0 shadow-sm mb-3">
+            <?= $error ?>
+        </div>
     <?php endif; ?>
 
-    <!-- Filtros -->
-    <form method="get" class="row g-3 mb-4">
-        <div class="col-md-6">
-            <label class="form-label">Horario</label>
-            <select name="horario_id" class="form-select" onchange="this.form.submit()">
-                <?php foreach ($horarios_docente as $h): ?>
-                    <option value="<?= $h['id'] ?>" <?= ($h['id'] == $horario_id_seleccionado ? 'selected' : '') ?>>
-                        <?= htmlspecialchars($h['nombre_curso']) ?>
-                        (<?= htmlspecialchars($h['nombre_dia']) ?>
-                         <?= substr($h['hora_inicio'],0,5) ?> - <?= substr($h['hora_fin'],0,5) ?>)
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
+    <!-- Filtros en tarjeta -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h6 fw-semibold mb-3">Filtros de asistencia</h2>
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label small text-muted">Horario</label>
+                    <select name="horario_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <?php foreach ($horarios_docente as $h): ?>
+                            <option value="<?= $h['id'] ?>" <?= ($h['id'] == $horario_id_seleccionado ? 'selected' : '') ?>>
+                                <?= htmlspecialchars($h['nombre_curso']) ?>
+                                (<?= htmlspecialchars($h['nombre_dia']) ?>
+                                <?= substr($h['hora_inicio'],0,5) ?> - <?= substr($h['hora_fin'],0,5) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-        <div class="col-md-3">
-            <label class="form-label">Fecha de la clase</label>
-            <select name="fecha_clase" class="form-select" onchange="this.form.submit()">
-                <?php foreach ($lista_fechas as $f): 
-                    $texto = date('d/m/Y', strtotime($f));
-                    if ($f === $hoy) {
-                        $texto .= " (Hoy)";
-                    }
-                ?>
-                    <option value="<?= $f ?>" <?= ($f === $fecha_clase ? 'selected' : '') ?>>
-                        <?= $texto ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Fecha de la clase</label>
+                    <select name="fecha_clase" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <?php foreach ($lista_fechas as $f): 
+                            $texto = date('d/m/Y', strtotime($f));
+                            if ($f === $hoy) {
+                                $texto .= " (Hoy)";
+                            }
+                        ?>
+                            <option value="<?= $f ?>" <?= ($f === $fecha_clase ? 'selected' : '') ?>>
+                                <?= $texto ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
 
     <!-- Tabla de asistencia de la FECHA seleccionada -->
     <form method="post">
@@ -324,9 +349,10 @@ include __DIR__ . '/../includes/header.php';
         <input type="hidden" name="horario_id" value="<?= $horario_id_seleccionado ?>">
         <input type="hidden" name="fecha_clase" value="<?= $fecha_clase ?>">
 
-        <div class="card shadow-sm mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center"
+                 style="background:#fdf3f7;">
+                <span class="fw-semibold" style="color:#b14f72;">
                     Lista de estudiantes – 
                     <?= htmlspecialchars($horario_actual['nombre_curso']) ?> 
                     (<?= htmlspecialchars($horario_actual['nombre_dia']) ?>)
@@ -337,13 +363,13 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
             <div class="card-body p-0">
-                <table class="table mb-0 table-hover align-middle">
+                <table class="table table-sm mb-0 table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>#</th>
+                            <th style="width:50px;">#</th>
                             <th>Estudiante</th>
                             <th>Correo</th>
-                            <th class="text-center">Presente</th>
+                            <th class="text-center" style="width:120px;">Presente</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -359,34 +385,46 @@ include __DIR__ . '/../includes/header.php';
                             <td class="text-center">
                                 <input 
                                     type="checkbox" 
+                                    class="form-check-input"
                                     name="presente[<?= $mat ?>]" 
                                     <?= ($presente === 1 ? 'checked' : '') ?>
                                 >
                             </td>
                         </tr>
                         <?php endforeach; ?>
+                        <?php if (empty($estudiantes)): ?>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                No hay estudiantes matriculados en este horario.
+                            </td>
+                        </tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
 
             <div class="card-footer text-end">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-save"></i> Guardar asistencia
+                <button type="submit" 
+                        class="btn btn-sm shadow-sm"
+                        style="background:#b14f72; color:#fff; border-radius:8px; border:none;">
+                    Guardar asistencia
                 </button>
             </div>
         </div>
     </form>
 
     <!-- Resumen de faltas y derecho a exámenes -->
-    <div class="card shadow-sm">
-        <div class="card-header">
-            Resumen de asistencias / faltas – Regla de 7 faltas
+    <div class="card border-0 shadow-sm">
+        <div class="card-header" style="background:#fdf3f7;">
+            <span class="fw-semibold" style="color:#b14f72;">
+                Resumen de asistencias / faltas – Regla de 7 faltas
+            </span>
         </div>
         <div class="card-body p-0">
-            <table class="table mb-0 table-hover align-middle">
+            <table class="table table-sm mb-0 table-hover align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>#</th>
+                        <th style="width:50px;">#</th>
                         <th>Estudiante</th>
                         <th>Correo</th>
                         <th class="text-center">Asistencias</th>
@@ -404,17 +442,24 @@ include __DIR__ . '/../includes/header.php';
                             <td class="text-center"><?= (int)$r['faltas'] ?></td>
                             <td class="text-center">
                                 <?php if ($r['faltas'] >= 7): ?>
-                                    <span class="badge bg-danger">
+                                    <span class="badge rounded-pill" style="background:#f44336;">
                                         SIN derecho a exámenes
                                     </span>
                                 <?php else: ?>
-                                    <span class="badge bg-success">
+                                    <span class="badge rounded-pill" style="background:#4caf50;">
                                         Con derecho a exámenes
                                     </span>
                                 <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <?php if (empty($resumen)): ?>
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-3">
+                                No hay registros de asistencia para este horario aún.
+                            </td>
+                        </tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>

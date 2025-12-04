@@ -162,13 +162,21 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-    <h1 class="h3 mb-3">
-        <i class="fa-solid fa-money-check-dollar me-2"></i>
-        Gestión de pagos
-    </h1>
-    <p class="text-muted mb-4">
-        Registra pagos de matrícula. Si el alumno no paga el total, el sistema mostrará el saldo pendiente hasta completarse.
-    </p>
+    <!-- HEADER con gradiente al estilo TwinTalk -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            <div>
+                <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                    <i class="fa-solid fa-money-check-dollar me-2"></i>
+                    Gestión de pagos
+                </h1>
+                <small class="text-muted">
+                    Registra pagos totales o parciales y controla el saldo pendiente de las matrículas.
+                </small>
+            </div>
+        </div>
+    </div>
 
     <?php if ($mensaje): ?>
         <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>
@@ -177,13 +185,16 @@ include __DIR__ . "/../includes/header.php";
         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <div class="card card-soft">
-        <div class="card-header bg-white">
-            <h2 class="h6 fw-bold mb-0">Matrículas con saldo pendiente</h2>
+    <div class="card card-soft shadow-sm border-0">
+        <div class="card-header bg-white border-0 pb-0">
+            <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Matrículas con saldo pendiente</h2>
+            <p class="text-muted small mb-3">
+                Solo se muestran matrículas con un precio vigente y con saldo por pagar.
+            </p>
         </div>
         <div class="card-body p-0">
             <?php if (!$pendientes || $pendientes->num_rows === 0): ?>
-                <p class="text-muted small m-3">
+                <p class="text-muted small m-3 mb-4">
                     No hay matrículas pendientes de pago.
                 </p>
             <?php else: ?>
@@ -263,7 +274,19 @@ include __DIR__ . "/../includes/header.php";
                                                    placeholder="Monto a registrar">
                                         </div>
                                         <div class="col-12">
-                                            <button type="submit" class="btn btn-sm btn-primary w-100">
+                                            <button type="submit"
+                                                    class="btn btn-sm w-100"
+                                                    style="
+                                                        background-color:#ff4b7b;
+                                                        border:1px solid #ff4b7b;
+                                                        color:white;
+                                                        font-weight:500;
+                                                        border-radius:6px;
+                                                        padding:4px 10px;
+                                                    "
+                                                    onmouseover="this.style.backgroundColor='#e84372'"
+                                                    onmouseout="this.style.backgroundColor='#ff4b7b'"
+                                            >
                                                 Registrar
                                             </button>
                                         </div>

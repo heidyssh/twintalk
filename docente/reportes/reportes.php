@@ -262,18 +262,96 @@ $mesesNombre = [
 include __DIR__ . "/../../includes/header.php";
 ?>
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h2 class="mb-0">
-                <i class="fa-solid fa-file-lines me-2"></i>
-                Reportes del docente
-            </h2>
-            <small class="text-muted">
-                Seleccione año, mes y trimestre para ver el desglose por curso.
-            </small>
+<style>
+    .tt-doc-reports .tt-header-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #b14f72;
+    }
+    .tt-doc-reports .tt-header-subtitle {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    .tt-doc-reports .card {
+        border-radius: 14px;
+        border: 1px solid #f0dde6;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .tt-doc-reports .card-header.bg-dark {
+        background: linear-gradient(90deg, #fbe9f0, #ffffff) !important;
+        color: #b14f72 !important;
+        border-bottom: 1px solid #f0dde6;
+        font-weight: 600;
+    }
+    .tt-doc-reports .nav-pills .nav-link {
+        border-radius: 999px;
+        font-size: 0.9rem;
+        padding: 0.35rem 0.9rem;
+        color: #555;
+        background-color: #f7f2f5;
+        border: 1px solid transparent;
+    }
+    .tt-doc-reports .nav-pills .nav-link:hover {
+        background-color: #f1e0e8;
+    }
+    .tt-doc-reports .nav-pills .nav-link.active {
+        background-color: #b14f72;
+        border-color: #b14f72;
+        color: #fff;
+        font-weight: 600;
+    }
+    .tt-doc-reports .btn-primary {
+        background-color: #b14f72;
+        border-color: #b14f72;
+    }
+    .tt-doc-reports .btn-primary:hover {
+        background-color: #95395a;
+        border-color: #95395a;
+    }
+    .tt-doc-reports .btn-outline-danger {
+        border-color: #b14f72;
+        color: #b14f72;
+    }
+    .tt-doc-reports .btn-outline-danger:hover {
+        background-color: #b14f72;
+        color: #fff;
+    }
+    .tt-doc-reports .tab-content {
+        margin-top: 0.75rem;
+    }
+    .tt-doc-reports .metric-title {
+        font-size: 0.8rem;
+        color: #888;
+    }
+    .tt-doc-reports .metric-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+</style>
+
+<div class="container mt-4 tt-doc-reports">
+
+    <!-- Encabezado estilo TwinTalk con cuadrito -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            <div>
+                <h2 class="mb-1 tt-header-title">
+                    <i class="fa-solid fa-file-lines me-2"></i>
+                    Reportes del docente
+                </h2>
+                <small class="tt-header-subtitle">
+                    Seleccione año, mes y trimestre para ver el desglose por curso.
+                </small>
+            </div>
+            <div class="text-md-end">
+                <span class="badge rounded-pill text-bg-light border">
+                    Docente
+                </span>
+            </div>
         </div>
     </div>
+
 
     <!-- Filtros -->
     <form method="get" class="row g-2 mb-4">
@@ -346,7 +424,7 @@ include __DIR__ . "/../../includes/header.php";
             <?php else: ?>
                 <?php foreach ($reportesMensual as $r): ?>
                     <div class="card shadow-sm mb-3 border-0">
-                        <div class="card-header bg-dark text-white fw-bold">
+                        <div class="card-header bg-dark fw-bold">
                             <?= htmlspecialchars($r['nombre_curso']) ?> — Mensual
                         </div>
                         <div class="card-body">
@@ -354,27 +432,27 @@ include __DIR__ . "/../../includes/header.php";
                                 <div class="col-md-6">
                                     <strong>Estudiantes:</strong> <?= $r['total_estudiantes'] ?>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-6 text-md-end">
                                     <strong>Periodo:</strong> <?= $mesesNombre[$mes] ?> / <?= $anio ?>
                                 </div>
                             </div>
                             <div class="row text-center mb-2">
-                                <div class="col-md-4">
-                                    <h5 class="mb-0 text-primary"><?= $r['porcentaje_asistencia'] ?>%</h5>
-                                    <small class="text-muted">
+                                <div class="col-md-4 mb-2">
+                                    <div class="metric-value text-primary"><?= $r['porcentaje_asistencia'] ?>%</div>
+                                    <div class="metric-title">
                                         Asistencia (<?= $r['presentes'] ?>/<?= $r['total_asistencias'] ?>)
-                                    </small>
+                                    </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <h5 class="mb-0 text-success"><?= $r['tareas_periodo'] ?></h5>
-                                    <small class="text-muted">Tareas del mes</small>
+                                <div class="col-md-4 mb-2">
+                                    <div class="metric-value text-success"><?= $r['tareas_periodo'] ?></div>
+                                    <div class="metric-title">Tareas del mes</div>
                                 </div>
-                                <div class="col-md-4">
-                                    <h5 class="mb-0 text-warning"><?= $r['entregas_periodo'] ?? 0 ?></h5>
-                                    <small class="text-muted">Entregas del mes</small>
+                                <div class="col-md-4 mb-2">
+                                    <div class="metric-value text-warning"><?= $r['entregas_periodo'] ?? 0 ?></div>
+                                    <div class="metric-title">Entregas del mes</div>
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row align-items-center">
                                 <div class="col-md-6">
                                     <strong>Promedio de calificaciones (mes):</strong>
                                     <?= $r['promedio_periodo'] !== null ? $r['promedio_periodo'] : '—' ?>
@@ -400,7 +478,7 @@ include __DIR__ . "/../../includes/header.php";
             <?php else: ?>
                 <?php foreach ($reportesAnual as $r): ?>
                     <div class="card shadow-sm mb-3 border-0">
-                        <div class="card-header bg-dark text-white fw-bold">
+                        <div class="card-header bg-dark fw-bold">
                             <?= htmlspecialchars($r['nombre_curso']) ?> — Anual
                         </div>
                         <div class="card-body">
@@ -408,27 +486,27 @@ include __DIR__ . "/../../includes/header.php";
                                 <div class="col-md-6">
                                     <strong>Estudiantes:</strong> <?= $r['total_estudiantes'] ?>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-6 text-md-end">
                                     <strong>Año:</strong> <?= $anio ?>
                                 </div>
                             </div>
                             <div class="row text-center mb-2">
-                                <div class="col-md-4">
-                                    <h5 class="mb-0 text-primary"><?= $r['porcentaje_asistencia'] ?>%</h5>
-                                    <small class="text-muted">
+                                <div class="col-md-4 mb-2">
+                                    <div class="metric-value text-primary"><?= $r['porcentaje_asistencia'] ?>%</div>
+                                    <div class="metric-title">
                                         Asistencia (<?= $r['presentes'] ?>/<?= $r['total_asistencias'] ?>)
-                                    </small>
+                                    </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <h5 class="mb-0 text-success"><?= $r['tareas_periodo'] ?></h5>
-                                    <small class="text-muted">Tareas del año</small>
+                                <div class="col-md-4 mb-2">
+                                    <div class="metric-value text-success"><?= $r['tareas_periodo'] ?></div>
+                                    <div class="metric-title">Tareas del año</div>
                                 </div>
-                                <div class="col-md-4">
-                                    <h5 class="mb-0 text-warning"><?= $r['entregas_periodo'] ?? 0 ?></h5>
-                                    <small class="text-muted">Entregas del año</small>
+                                <div class="col-md-4 mb-2">
+                                    <div class="metric-value text-warning"><?= $r['entregas_periodo'] ?? 0 ?></div>
+                                    <div class="metric-title">Entregas del año</div>
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row align-items-center">
                                 <div class="col-md-6">
                                     <strong>Promedio de calificaciones (año):</strong>
                                     <?= $r['promedio_periodo'] !== null ? $r['promedio_periodo'] : '—' ?>
@@ -458,7 +536,7 @@ include __DIR__ . "/../../includes/header.php";
             <?php else: ?>
                 <?php foreach ($reportesTrimestral as $r): ?>
                     <div class="card shadow-sm mb-3 border-0">
-                        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between">
+                        <div class="card-header bg-dark fw-bold d-flex justify-content-between">
                             <span><?= htmlspecialchars($r['nombre_curso']) ?> — Trimestral T<?= $trimestre ?></span>
                             <small>Periodo: <?= date('d/m/Y', strtotime($fechaInicioTrimestre)) ?> al
                                 <?= date('d/m/Y', strtotime($fechaFinTrimestre)) ?></small>
@@ -468,27 +546,27 @@ include __DIR__ . "/../../includes/header.php";
                                 <div class="col-md-6">
                                     <strong>Estudiantes:</strong> <?= $r['total_estudiantes'] ?>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-6 text-md-end">
                                     <strong>Clases registradas:</strong> <?= $r['total_asistencias'] ?>
                                 </div>
                             </div>
                             <div class="row text-center mb-2">
-                                <div class="col-md-4">
-                                    <h5 class="mb-0 text-primary"><?= $r['porcentaje_asistencia'] ?>%</h5>
-                                    <small class="text-muted">
+                                <div class="col-md-4 mb-2">
+                                    <div class="metric-value text-primary"><?= $r['porcentaje_asistencia'] ?>%</div>
+                                    <div class="metric-title">
                                         Asistencia (<?= $r['presentes'] ?>/<?= $r['total_asistencias'] ?>)
-                                    </small>
+                                    </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <h5 class="mb-0 text-success"><?= $r['tareas_periodo'] ?></h5>
-                                    <small class="text-muted">Tareas del trimestre</small>
+                                <div class="col-md-4 mb-2">
+                                    <div class="metric-value text-success"><?= $r['tareas_periodo'] ?></div>
+                                    <div class="metric-title">Tareas del trimestre</div>
                                 </div>
-                                <div class="col-md-4">
-                                    <h5 class="mb-0 text-warning"><?= $r['entregas_periodo'] ?? 0 ?></h5>
-                                    <small class="text-muted">Entregas del trimestre</small>
+                                <div class="col-md-4 mb-2">
+                                    <div class="metric-value text-warning"><?= $r['entregas_periodo'] ?? 0 ?></div>
+                                    <div class="metric-title">Entregas del trimestre</div>
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row align-items-center">
                                 <div class="col-md-6">
                                     <strong>Promedio de calificaciones (trimestre):</strong>
                                     <?= $r['promedio_periodo'] !== null ? $r['promedio_periodo'] : '—' ?>

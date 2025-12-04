@@ -248,176 +248,285 @@ include __DIR__ . '/../includes/header.php';
 ?>
 
 <style>
-.avatar-preview {
-    width: 90px; height: 90px; border-radius:50%; object-fit:cover;
-}
-.avatar-option img {
-    width:45px;height:45px;border-radius:50%;object-fit:cover;border:2px solid #ddd;
-}
+    .tt-profile-page .tt-header-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #b14f72;
+    }
+    .tt-profile-page .tt-header-subtitle {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .tt-profile-page .card-soft {
+        border-radius: 14px;
+        border: 1px solid #f1e3ea;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        background-color: #fff;
+    }
+    .tt-profile-page .btn-tt-primary {
+        background-color: #b14f72;
+        border-color: #b14f72;
+        color: #fff;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        padding-inline: 1rem;
+        transition: all 0.15s ease-in-out;
+    }
+    .tt-profile-page .btn-tt-primary:hover {
+        background-color: #8f3454;
+        border-color: #8f3454;
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(177,79,114,0.35);
+    }
+    .tt-profile-page .btn-tt-outline {
+        border-radius: 999px;
+        border: 1px solid #b14f72;
+        color: #b14f72;
+        background-color: #fff;
+        font-size: 0.85rem;
+        padding-inline: 0.9rem;
+        transition: all 0.15s ease-in-out;
+    }
+    .tt-profile-page .btn-tt-outline:hover {
+        background-color: #b14f72;
+        color: #fff;
+        box-shadow: 0 3px 8px rgba(177,79,114,0.35);
+    }
+    .avatar-preview {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #f1e3ea;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .avatar-option {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .avatar-option input {
+        display: none;
+    }
+    .avatar-option img {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #ddd;
+        transition: all 0.15s ease-in-out;
+    }
+    .avatar-option input:checked + img {
+        border-color: #b14f72;
+        box-shadow: 0 0 0 3px rgba(177,79,114,0.25);
+        transform: translateY(-1px);
+    }
 </style>
 
-<div class="container my-4">
+<div class="container my-4 tt-profile-page">
 
-<h1 class="h4 fw-bold">Mi perfil docente</h1>
-
-<?php if ($mensaje): ?><div class="alert alert-success"><?= $mensaje ?></div><?php endif; ?>
-<?php if ($error): ?><div class="alert alert-danger"><?= $error ?></div><?php endif; ?>
-
-
-<div class="row g-4">
-
-    <!-- ============ COLUMNA IZQUIERDA ============ -->
-    <div class="col-lg-4">
-
-        <!-- Perfil Básico -->
-        <div class="card card-soft p-3 text-center mb-3">
-            <img src="<?= htmlspecialchars($avatar_actual) ?>" class="avatar-preview mb-2">
-            <h5 class="mb-0"><?= htmlspecialchars($usuario['nombre']." ".$usuario['apellido']) ?></h5>
-            <p class="text-muted small mb-1"><?= htmlspecialchars($usuario['email']) ?></p>
-            <p class="small">Teléfono: <?= htmlspecialchars($usuario['telefono'] ?? 'No registrado') ?></p>
+    <!-- Header bonito -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            <div>
+                <h1 class="tt-header-title mb-1">
+                    <i class="fa-solid fa-user-tie me-2"></i>
+                    Mi perfil docente
+                </h1>
+                <p class="tt-header-subtitle mb-0">
+                    Actualiza tus datos personales, contraseña, avatar y título académico.
+                </p>
+            </div>
+            <div class="text-md-end">
+                <a href="/twintalk/docente/dashboard.php" class="btn btn-sm btn-tt-outline">
+                    <i class="fa-solid fa-arrow-left me-1"></i>
+                    Volver al dashboard
+                </a>
+            </div>
         </div>
-
-        <!-- Cambio de contraseña -->
-        <div class="card card-soft p-3 mb-3">
-            <h2 class="h6 fw-bold mb-3">Cambiar contraseña</h2>
-
-            <form method="post">
-                <label>Nueva contraseña</label>
-                <input type="password" name="password" class="form-control mb-2">
-
-                <label>Repetir contraseña</label>
-                <input type="password" name="password2" class="form-control mb-3">
-
-                <button class="btn btn-outline-primary w-100" name="cambiar_password">
-                    Actualizar contraseña
-                </button>
-            </form>
-        </div>
-
     </div>
 
-    <!-- ============ COLUMNA DERECHA ============ -->
-    <div class="col-lg-8">
-
-        <!-- DATOS PERSONALES -->
-        <div class="card card-soft p-3 mb-3">
-            <h2 class="h6 fw-bold mb-3">Datos personales</h2>
-
-            <form method="post">
-
-                <div class="row">
-                    <div class="col-md-6 mb-2">
-                        <label>Nombre</label>
-                        <input class="form-control" name="nombre" value="<?= $usuario['nombre'] ?>">
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <label>Apellido</label>
-                        <input class="form-control" name="apellido" value="<?= $usuario['apellido'] ?>">
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <label>Correo</label>
-                        <input class="form-control" value="<?= $usuario['email'] ?>" disabled>
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <label>Teléfono</label>
-                        <input class="form-control" name="telefono" value="<?= $usuario['telefono'] ?>">
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <label>Ciudad</label>
-                        <input class="form-control" name="ciudad" value="<?= $info['ciudad'] ?? '' ?>">
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <label>País</label>
-                        <input class="form-control" name="pais" value="<?= $info['pais'] ?? '' ?>">
-                    </div>
-
-                    <div class="col-md-12 mb-2">
-                        <label>Dirección</label>
-                        <textarea name="direccion" class="form-control" rows="2"><?= $info['direccion'] ?? '' ?></textarea>
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <label>Fecha nacimiento</label>
-                        <input type="date" class="form-control" name="fecha_nacimiento"
-                               value="<?= $info['fecha_nacimiento'] ?? '' ?>">
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <label>Especialidad</label>
-                        <input class="form-control" name="especialidad"
-                               value="<?= $docente['especialidad'] ?? '' ?>">
-                    </div>
-
-                </div>
-
-                <button class="btn btn-tt-primary mt-2" name="actualizar_perfil">Guardar cambios</button>
-            </form>
-
+    <?php if ($mensaje): ?>
+        <div class="alert alert-success border-0 shadow-sm py-2 small mb-3">
+            <?= htmlspecialchars($mensaje) ?>
         </div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+        <div class="alert alert-danger border-0 shadow-sm py-2 small mb-3">
+            <?= htmlspecialchars($error) ?>
+        </div>
+    <?php endif; ?>
 
 
-        <!-- ============ SUBIR TÍTULO ACADÉMICO (ARCHIVO) ============ -->
-        <div class="card card-soft p-3 mb-3">
+    <div class="row g-4">
 
-            <h2 class="h6 fw-bold mb-3">Título académico (archivo)</h2>
+        <!-- ============ COLUMNA IZQUIERDA ============ -->
+        <div class="col-lg-4">
 
-            <?php if (!empty($docente['archivo_titulo'])): ?>
-                <p class="small">
-                    Archivo actual:
-                    <a href="<?= $docente['archivo_titulo'] ?>" target="_blank">Ver archivo</a>
+            <!-- Perfil Básico -->
+            <div class="card card-soft p-3 text-center mb-3">
+                <img src="<?= htmlspecialchars($avatar_actual) ?>" class="avatar-preview mb-2" alt="Avatar docente">
+                <h5 class="mb-0">
+                    <?= htmlspecialchars($usuario['nombre']." ".$usuario['apellido']) ?>
+                </h5>
+                <p class="text-muted small mb-1"><?= htmlspecialchars($usuario['email']) ?></p>
+                <p class="small mb-0">
+                    Teléfono:
+                    <?= htmlspecialchars($usuario['telefono'] ?? 'No registrado') ?>
                 </p>
-            <?php else: ?>
-                <p class="small text-muted">No has subido tu título académico.</p>
-            <?php endif; ?>
-
-            <form method="post" enctype="multipart/form-data">
-                <input type="file" name="titulo_archivo" class="form-control mb-2">
-                <button class="btn btn-sm btn-tt-primary" name="subir_titulo">Subir título</button>
-            </form>
-
-        </div>
-
-
-        <!-- ============ AVATARES ============ -->
-        <div class="card card-soft p-3">
-
-            <h2 class="h6 fw-bold mb-3">Avatar</h2>
-
-            <div class="mb-2">
-                <img src="<?= htmlspecialchars($avatar_actual) ?>" class="avatar-preview">
             </div>
 
-            <!-- AVATARES PREDETERMINADOS -->
-<form method="post" class="mb-3">
-    <div class="d-flex flex-wrap gap-2 mb-2">
-        <?php foreach($lista_avatars as $av): ?>
-            <label class="avatar-option">
-                <input type="radio" name="avatar_url" value="<?= $av ?>">
-                <img src="<?= $av ?>">
-            </label>
-        <?php endforeach; ?>
-    </div>
+            <!-- Cambio de contraseña -->
+            <div class="card card-soft p-3 mb-3">
+                <h2 class="h6 fw-bold mb-3">Cambiar contraseña</h2>
 
-    <button class="btn btn-outline-secondary btn-sm mt-3" name="elegir_avatar">
-        Usar avatar seleccionado
-    </button>
-</form>
+                <form method="post">
+                    <label class="small mb-1">Nueva contraseña</label>
+                    <input type="password" name="password" class="form-control form-control-sm mb-2">
 
-            <!-- SUBIR AVATAR PROPIO -->
-            <form method="post" enctype="multipart/form-data">
-                <input type="file" name="avatar_file" class="form-control form-control-sm mb-2">
-                <button class="btn btn-outline-secondary btn-sm w-100" name="subir_avatar">
-                    Subir y usar mi foto
-                </button>
-            </form>
+                    <label class="small mb-1">Repetir contraseña</label>
+                    <input type="password" name="password2" class="form-control form-control-sm mb-3">
+
+                    <button class="btn btn-tt-outline w-100" name="cambiar_password">
+                        Actualizar contraseña
+                    </button>
+                </form>
+            </div>
 
         </div>
 
+        <!-- ============ COLUMNA DERECHA ============ -->
+        <div class="col-lg-8">
+
+            <!-- DATOS PERSONALES -->
+            <div class="card card-soft p-3 mb-3">
+                <h2 class="h6 fw-bold mb-3">Datos personales</h2>
+
+                <form method="post">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="small mb-1">Nombre</label>
+                            <input class="form-control form-control-sm" name="nombre" value="<?= htmlspecialchars($usuario['nombre']) ?>">
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="small mb-1">Apellido</label>
+                            <input class="form-control form-control-sm" name="apellido" value="<?= htmlspecialchars($usuario['apellido']) ?>">
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="small mb-1">Correo</label>
+                            <input class="form-control form-control-sm" value="<?= htmlspecialchars($usuario['email']) ?>" disabled>
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="small mb-1">Teléfono</label>
+                            <input class="form-control form-control-sm" name="telefono" value="<?= htmlspecialchars($usuario['telefono']) ?>">
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="small mb-1">Ciudad</label>
+                            <input class="form-control form-control-sm" name="ciudad" value="<?= htmlspecialchars($info['ciudad'] ?? '') ?>">
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="small mb-1">País</label>
+                            <input class="form-control form-control-sm" name="pais" value="<?= htmlspecialchars($info['pais'] ?? '') ?>">
+                        </div>
+
+                        <div class="col-md-12 mb-2">
+                            <label class="small mb-1">Dirección</label>
+                            <textarea name="direccion" class="form-control form-control-sm" rows="2"><?= htmlspecialchars($info['direccion'] ?? '') ?></textarea>
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="small mb-1">Fecha nacimiento</label>
+                            <input type="date" class="form-control form-control-sm" name="fecha_nacimiento"
+                                   value="<?= htmlspecialchars($info['fecha_nacimiento'] ?? '') ?>">
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <label class="small mb-1">Especialidad</label>
+                            <input class="form-control form-control-sm" name="especialidad"
+                                   value="<?= htmlspecialchars($docente['especialidad'] ?? '') ?>">
+                        </div>
+
+                    </div>
+
+                    <button class="btn btn-tt-primary mt-2" name="actualizar_perfil">Guardar cambios</button>
+                </form>
+
+            </div>
+
+
+            <!-- ============ SUBIR TÍTULO ACADÉMICO (ARCHIVO) ============ -->
+            <div class="card card-soft p-3 mb-3">
+
+                <h2 class="h6 fw-bold mb-3">Título académico (archivo)</h2>
+
+                <?php if (!empty($docente['archivo_titulo'])): ?>
+                    <p class="small mb-2">
+                        Archivo actual:
+                        <a href="<?= htmlspecialchars($docente['archivo_titulo']) ?>" target="_blank">Ver archivo</a>
+                    </p>
+                <?php else: ?>
+                    <p class="small text-muted mb-2">No has subido tu título académico.</p>
+                <?php endif; ?>
+
+                <form method="post" enctype="multipart/form-data">
+                    <input type="file" name="titulo_archivo" class="form-control form-control-sm mb-2">
+                    <button class="btn btn-sm btn-tt-primary" name="subir_titulo">Subir título</button>
+                </form>
+
+            </div>
+
+
+            <!-- ============ AVATARES ============ -->
+            <div class="card card-soft p-3">
+
+                <h2 class="h6 fw-bold mb-3">Avatar</h2>
+
+                <div class="mb-3 d-flex align-items-center gap-3">
+                    <div>
+                        <img src="<?= htmlspecialchars($avatar_actual) ?>" class="avatar-preview" alt="Avatar actual">
+                    </div>
+                    <div class="small text-muted">
+                        Este es tu avatar actual. Puedes elegir uno de la galería o subir tu propia foto.
+                    </div>
+                </div>
+
+                <!-- AVATARES PREDETERMINADOS -->
+                <form method="post" class="mb-3">
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <?php foreach($lista_avatars as $av): ?>
+                            <label class="avatar-option">
+                                <input type="radio" name="avatar_url" value="<?= $av ?>">
+                                <img src="<?= $av ?>" alt="Avatar">
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <button class="btn btn-tt-outline btn-sm mt-2" name="elegir_avatar">
+                        Usar avatar seleccionado
+                    </button>
+                </form>
+
+                <!-- SUBIR AVATAR PROPIO -->
+                <form method="post" enctype="multipart/form-data">
+                    <input type="file" name="avatar_file" class="form-control form-control-sm mb-2">
+                    <button class="btn btn-outline-secondary btn-sm w-100" name="subir_avatar">
+                        Subir y usar mi foto
+                    </button>
+                </form>
+
+            </div>
+
+        </div>
     </div>
 </div>
 

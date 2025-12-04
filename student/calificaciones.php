@@ -1,4 +1,4 @@
-<?php
+<?php 
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
 require_role([3]); // solo estudiantes
@@ -166,19 +166,59 @@ if ($horario_id_seleccionado > 0) {
 include __DIR__ . "/../includes/header.php";
 ?>
 
+<style>
+.card-soft{
+    border-radius: 12px;
+}
+.btn-tt-primary{
+    background-color:#A45A6A;
+    border-color:#A45A6A;
+    color:#fff;
+}
+.btn-tt-primary:hover{
+    background-color:#8c4b59;
+    border-color:#8c4b59;
+    color:#fff;
+}
+.badge-soft-success{
+    background:#e9f7ef;
+    color:#1e7e34;
+    border:1px solid #c7e6d2;
+}
+.badge-soft-danger{
+    background:#fdecea;
+    color:#b02a37;
+    border:1px solid #f5c2c7;
+}
+</style>
+
 <div class="container my-4">
-    <h1 class="h3 mb-3">
-        <i class="fa-solid fa-chart-line me-2"></i>
-        Mis calificaciones
-    </h1>
-    <p class="text-muted mb-4">
-        Selecciona un curso para ver tus tareas, tus evaluaciones y tu <strong>nota general</strong>.
-    </p>
+
+    <!-- Cabecera con degradado -->
+    <div class="card card-soft border-0 shadow-sm mb-3">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background:linear-gradient(90deg,#fbe9f0,#ffffff);">
+            <div>
+                <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                    <i class="fa-solid fa-chart-line me-2"></i>
+                    Mis calificaciones
+                </h1>
+                <p class="small text-muted mb-0">
+                    Selecciona un curso para ver tus tareas, tus evaluaciones y tu <strong>nota general</strong>.
+                </p>
+            </div>
+            <div>
+                <a href="/twintalk/student/dashboard.php" class="btn btn-outline-secondary btn-sm">
+                    ← Volver al panel
+                </a>
+            </div>
+        </div>
+    </div>
 
     <div class="row">
         <!-- Columna izquierda: selección de curso -->
         <div class="col-md-4 mb-3">
-            <div class="card card-soft p-3">
+            <div class="card card-soft shadow-sm border-0 p-3">
                 <h2 class="h6 fw-bold mb-3">Mis cursos</h2>
                 <?php if (empty($cursos)): ?>
                     <p class="text-muted small mb-0">Aún no estás matriculado en ningún curso.</p>
@@ -195,7 +235,7 @@ include __DIR__ . "/../includes/header.php";
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                        <button type="submit" class="btn btn-tt-primary btn-sm w-100">
                             Ver calificaciones
                         </button>
                     </form>
@@ -212,25 +252,24 @@ include __DIR__ . "/../includes/header.php";
             <?php else: ?>
 
                 <!-- Resumen: nota general -->
-                <div class="card card-soft mb-3">
-                    <div class="card-body d-flex justify-content-between align-items-center">
+                <div class="card card-soft shadow-sm border-0 mb-3">
+                    <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
                         <div>
-                            <h2 class="h6 fw-bold mb-1 mb-md-0">Nota general del curso</h2>
-                            <p class="small text-muted mb-1">
+                            <h2 class="h6 fw-bold mb-1">Nota general del curso</h2>
+                            <p class="small text-muted mb-0">
                                 <strong>Nota general</strong> = suma de tus <strong>tareas</strong> +
                                 tus <strong>evaluaciones</strong> (quiz, exámenes, etc.).  
                                 El mínimo para aprobar es <strong>70 puntos</strong>.
                             </p>
-                            
                         </div>
                         <div class="text-end">
                             <?php if ($nota_general !== null): ?>
                                 <?php
                                 $aprobado   = ($nota_general >= 70);
-                                $badgeClass = $aprobado ? "bg-success" : "bg-danger";
+                                $badgeClass = $aprobado ? "badge-soft-success" : "badge-soft-danger";
                                 $textoEstado = $aprobado ? "Aprobado (≥ 70)" : "En riesgo (&lt; 70)";
                                 ?>
-                                <div class="display-6 fw-bold">
+                                <div class="display-6 fw-bold mb-0">
                                     <?= number_format($nota_general, 2) ?>
                                 </div>
                                 <span class="badge <?= $badgeClass ?> mt-1">
@@ -251,9 +290,9 @@ include __DIR__ . "/../includes/header.php";
                 </div>
 
                 <!-- Detalle de tareas -->
-                <div class="card card-soft mb-3">
-                    <div class="card-header bg-white">
-                        <h2 class="h6 fw-bold mb-0">Tareas del curso seleccionado</h2>
+                <div class="card card-soft shadow-sm border-0 mb-3">
+                    <div class="card-header bg-white border-0 pb-0">
+                        <h2 class="h6 fw-bold mb-2">Tareas del curso seleccionado</h2>
                     </div>
                     <div class="card-body p-0">
                         <?php if (empty($tareas)): ?>
@@ -358,9 +397,9 @@ include __DIR__ . "/../includes/header.php";
                 </div>
 
                 <!-- Detalle de evaluaciones (quiz, exámenes, etc.) -->
-                <div class="card card-soft">
-                    <div class="card-header bg-white">
-                        <h2 class="h6 fw-bold mb-0">Evaluaciones del curso (quiz, exámenes, etc.)</h2>
+                <div class="card card-soft shadow-sm border-0">
+                    <div class="card-header bg-white border-0 pb-0">
+                        <h2 class="h6 fw-bold mb-2">Evaluaciones del curso (quiz, exámenes, etc.)</h2>
                     </div>
                     <div class="card-body p-0">
                         <?php if (empty($evaluaciones)): ?>
@@ -394,10 +433,9 @@ include __DIR__ . "/../includes/header.php";
                                                     <?= number_format($e['puntaje'], 2) ?>
                                                 </td>
                                                 <td class="small">
-                                                    <?=
-                                                        $e['comentarios']
-                                                            ? nl2br(htmlspecialchars($e['comentarios']))
-                                                            : '<span class="text-muted">Sin comentarios</span>';
+                                                    <?= $e['comentarios']
+                                                        ? nl2br(htmlspecialchars($e['comentarios']))
+                                                        : '<span class="text-muted">Sin comentarios</span>';
                                                     ?>
                                                 </td>
                                             </tr>

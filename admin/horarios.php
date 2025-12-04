@@ -149,7 +149,20 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-    <h1 class="h4 fw-bold mb-3">Gestión de Horarios</h1>
+    <!-- HEADER bonito -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            <div>
+                <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                    Gestión de horarios
+                </h1>
+                <small class="text-muted">
+                    Administra los horarios por curso, docente, día y cupos disponibles.
+                </small>
+            </div>
+        </div>
+    </div>
 
     <?php if ($mensaje): ?>
         <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>
@@ -159,187 +172,226 @@ include __DIR__ . "/../includes/header.php";
     <?php endif; ?>
 
     <div class="row g-4">
-        <!-- Formulario de nuevo horario -->
+        <!-- Columna izquierda: formulario nuevo horario -->
         <div class="col-lg-4">
-            <div class="card card-soft p-3">
-                <h5 class="card-title mb-3">Nuevo horario</h5>
-                <form method="post">
-                    <div class="mb-2">
-                        <label class="form-label">Curso *</label>
-                        <select name="curso_id" class="form-select" required>
-                            <option value="">Selecciona un curso</option>
-                            <?php foreach ($cursos_data as $c): ?>
-                                <option value="<?= (int) $c['id'] ?>" <?= $curso_id_filtro == $c['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($c['nombre_curso']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+            <div class="card card-soft shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title mb-3" style="color:#4b2e83;">Nuevo horario</h5>
 
-                    <div class="mb-2">
-                        <label class="form-label">Docente *</label>
-                        <select name="docente_id" class="form-select" required>
-                            <option value="">Selecciona un docente</option>
-                            <?php foreach ($docentes_data as $d): ?>
-                                <option value="<?= (int) $d['id'] ?>">
-                                    <?= htmlspecialchars($d['nombre'] . " " . $d['apellido']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="form-text">
-                            Si el docente fue creado como usuario con rol Docente, aparecerá aquí.
+                    <form method="post">
+                        <div class="mb-2">
+                            <label class="form-label">Curso *</label>
+                            <select name="curso_id" class="form-select" required>
+                                <option value="">Selecciona un curso</option>
+                                <?php foreach ($cursos_data as $c): ?>
+                                    <option value="<?= (int) $c['id'] ?>" <?= $curso_id_filtro == $c['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($c['nombre_curso']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                    </div>
 
-                    <div class="mb-2">
-                        <label class="form-label">Día de la semana *</label>
-                        <select name="dia_semana_id" class="form-select" required>
-                            <option value="">Selecciona un día</option>
-                            <?php foreach ($dias_data as $d): ?>
-                                <option value="<?= (int) $d['id'] ?>">
-                                    <?= htmlspecialchars($d['nombre_dia']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2">
-                            <label class="form-label">Hora inicio *</label>
-                            <input type="time" name="hora_inicio" class="form-control" required>
-                        </div>
-                        <div class="col-md-6 mb-2">
-                            <label class="form-label">Hora fin *</label>
-                            <input type="time" name="hora_fin" class="form-control" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label">Aula</label>
-                        <input type="text" name="aula" class="form-control" placeholder="Ej: Aula 1">
-                    </div>
-
-                    <div class="row g-2">
-                        <div class="col-md-6 mb-2">
-                            <label class="form-label">Fecha inicio *</label>
-                            <input type="date" name="fecha_inicio" class="form-control" required>
-                        </div>
-                        <div class="col-md-6 mb-2">
-                            <label class="form-label">Fecha fin (automática)</label>
-                            <input type="date" name="fecha_fin" class="form-control" readonly>
+                        <div class="mb-2">
+                            <label class="form-label">Docente *</label>
+                            <select name="docente_id" class="form-select" required>
+                                <option value="">Selecciona un docente</option>
+                                <?php foreach ($docentes_data as $d): ?>
+                                    <option value="<?= (int) $d['id'] ?>">
+                                        <?= htmlspecialchars($d['nombre'] . " " . $d['apellido']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                             <div class="form-text">
-                                Se calculará automáticamente a 3 meses de la fecha de inicio.
+                                Si el docente fue creado como usuario con rol Docente, aparecerá aquí.
                             </div>
                         </div>
-                    </div>
 
+                        <div class="mb-2">
+                            <label class="form-label">Día de la semana *</label>
+                            <select name="dia_semana_id" class="form-select" required>
+                                <option value="">Selecciona un día</option>
+                                <?php foreach ($dias_data as $d): ?>
+                                    <option value="<?= (int) $d['id'] ?>">
+                                        <?= htmlspecialchars($d['nombre_dia']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
 
-                    <div class="mb-2">
-                        <label class="form-label">Cupos disponibles *</label>
-                        <input type="number" name="cupos_disponibles" min="1" class="form-control" value="10" required>
-                    </div>
+                        <div class="row g-2">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Hora inicio *</label>
+                                <input type="time" name="hora_inicio" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Hora fin *</label>
+                                <input type="time" name="hora_fin" class="form-control" required>
+                            </div>
+                        </div>
 
-                    <div class="mt-3 text-end">
-                        <button type="submit" name="crear_horario" class="btn btn-tt-primary btn-sm">
-                            Crear horario
-                        </button>
-                    </div>
-                </form>
+                        <div class="mb-2">
+                            <label class="form-label">Aula</label>
+                            <input type="text" name="aula" class="form-control" placeholder="Ej: Aula 1">
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Fecha inicio *</label>
+                                <input type="date" name="fecha_inicio" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Fecha fin (automática)</label>
+                                <input type="date" name="fecha_fin" class="form-control" readonly>
+                                <div class="form-text">
+                                    Se calculará automáticamente a 3 meses de la fecha de inicio.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label">Cupos disponibles *</label>
+                            <input type="number" name="cupos_disponibles" min="1" class="form-control" value="10" required>
+                        </div>
+
+                        <div class="mt-3 text-end">
+                            <button type="submit" name="crear_horario" class="btn btn-sm"
+                                style="
+                                    background-color:#ff4b7b;
+                                    border:1px solid #ff4b7b;
+                                    color:white;
+                                    font-weight:500;
+                                    border-radius:6px;
+                                    padding:6px 14px;
+                                "
+                                onmouseover="this.style.backgroundColor='#e84372'"
+                                onmouseout="this.style.backgroundColor='#ff4b7b'"
+                            >
+                                Crear horario
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
-        <!-- Listado de horarios -->
+        <!-- Columna derecha: listado de horarios -->
         <div class="col-lg-8">
-            <div class="card card-soft p-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="card-title mb-0">Horarios creados</h5>
-                </div>
+            <div class="card card-soft shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0" style="color:#4b2e83;">Horarios creados</h5>
+                    </div>
 
-                <form method="get" class="row g-2 mb-3">
-                    <div class="col-md-6">
-                        <select name="curso_id" class="form-select">
-                            <option value="0">Todos los cursos</option>
-                            <?php foreach ($cursos_data as $c): ?>
-                                <option value="<?= (int) $c['id'] ?>" <?= $curso_id_filtro == $c['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($c['nombre_curso']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-outline-primary w-100">
-                            Filtrar
-                        </button>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="horarios.php" class="btn btn-outline-secondary w-100">
-                            Limpiar filtro
-                        </a>
-                    </div>
-                </form>
+                    <form method="get" class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <select name="curso_id" class="form-select">
+                                <option value="0">Todos los cursos</option>
+                                <?php foreach ($cursos_data as $c): ?>
+                                    <option value="<?= (int) $c['id'] ?>" <?= $curso_id_filtro == $c['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($c['nombre_curso']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit"
+                                    class="btn btn-sm w-100"
+                                    style="
+                                        border:1px solid #ff4b7b;
+                                        color:#ff4b7b;
+                                        background-color:transparent;
+                                        border-radius:6px;
+                                        padding:6px 14px;
+                                        font-weight:500;
+                                    "
+                                    onmouseover="this.style.backgroundColor='#ff4b7b'; this.style.color='#fff';"
+                                    onmouseout="this.style.backgroundColor='transparent'; this.style.color='#ff4b7b';"
+                            >
+                                Filtrar
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="horarios.php"
+                               class="btn btn-sm w-100"
+                               style="
+                                    border:1px solid #6c757d;
+                                    color:#6c757d;
+                                    background-color:transparent;
+                                    border-radius:6px;
+                                    padding:6px 14px;
+                                    font-weight:500;
+                               "
+                               onmouseover="this.style.backgroundColor='#6c757d'; this.style.color='#fff';"
+                               onmouseout="this.style.backgroundColor='transparent'; this.style.color='#6c757d';"
+                            >
+                                Limpiar filtro
+                            </a>
+                        </div>
+                    </form>
 
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Curso</th>
-                                <th>Docente</th>
-                                <th>Día</th>
-                                <th>Hora</th>
-                                <th>Fechas</th>
-                                <th>Cupos</th>
-                                <th>Estado</th>
-                                <th>Acc.</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if ($horarios && $horarios->num_rows > 0): ?>
-                                <?php while ($h = $horarios->fetch_assoc()): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars($h['nombre_curso']) ?></td>
-                                        <td><?= htmlspecialchars($h['docente_nombre'] . " " . $h['docente_apellido']) ?></td>
-                                        <td><?= htmlspecialchars($h['nombre_dia']) ?></td>
-                                        <td><?= htmlspecialchars(substr($h['hora_inicio'], 0, 5) . " - " . substr($h['hora_fin'], 0, 5)) ?>
-                                        </td>
-                                        <td>
-                                            <?= htmlspecialchars($h['fecha_inicio']) ?><br>
-                                            <span class="small text-muted">hasta</span><br>
-                                            <?= htmlspecialchars($h['fecha_fin']) ?>
-                                        </td>
-                                        <td><?= (int) $h['cupos_disponibles'] ?></td>
-                                        <td>
-                                            <?php if ($h['activo']): ?>
-                                                <span class="badge bg-success">Activo</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-secondary">Inactivo</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <?php if ($h['activo']): ?>
-                                                <a href="horarios.php?desactivar=<?= (int) $h['id'] ?>"
-                                                    class="btn btn-outline-danger btn-sm"
-                                                    onclick="return confirm('¿Desactivar este horario?');">
-                                                    Desactivar
-                                                </a>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endwhile; ?>
-                            <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead class="table-light">
                                 <tr>
-                                    <td colspan="8" class="text-muted">No hay horarios registrados.</td>
+                                    <th>Curso</th>
+                                    <th>Docente</th>
+                                    <th>Día</th>
+                                    <th>Hora</th>
+                                    <th>Fechas</th>
+                                    <th>Cupos</th>
+                                    <th>Estado</th>
+                                    <th>Acc.</th>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                <?php if ($horarios && $horarios->num_rows > 0): ?>
+                                    <?php while ($h = $horarios->fetch_assoc()): ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($h['nombre_curso']) ?></td>
+                                            <td><?= htmlspecialchars($h['docente_nombre'] . " " . $h['docente_apellido']) ?></td>
+                                            <td><?= htmlspecialchars($h['nombre_dia']) ?></td>
+                                            <td><?= htmlspecialchars(substr($h['hora_inicio'], 0, 5) . " - " . substr($h['hora_fin'], 0, 5)) ?></td>
+                                            <td>
+                                                <?= htmlspecialchars($h['fecha_inicio']) ?><br>
+                                                <span class="small text-muted">hasta</span><br>
+                                                <?= htmlspecialchars($h['fecha_fin']) ?>
+                                            </td>
+                                            <td><?= (int) $h['cupos_disponibles'] ?></td>
+                                            <td>
+                                                <?php if ($h['activo']): ?>
+                                                    <span class="badge bg-success">Activo</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-secondary">Inactivo</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <?php if ($h['activo']): ?>
+                                                    <a href="horarios.php?desactivar=<?= (int) $h['id'] ?>"
+                                                       class="btn btn-outline-danger btn-sm"
+                                                       onclick="return confirm('¿Desactivar este horario?');">
+                                                        Desactivar
+                                                    </a>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="8" class="text-muted">No hay horarios registrados.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
 
-                <p class="small text-muted mb-0">
-                    Los horarios activos son los que verá el docente en su panel y el estudiante en la matrícula.
-                </p>
+                    <p class="small text-muted mb-0">
+                        Los horarios activos son los que verá el docente en su panel y el estudiante en la matrícula.
+                    </p>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<?php include __DIR__ . "/../includes/footer.php"; ?>
+
+    <?php include __DIR__ . "/../includes/footer.php"; ?>

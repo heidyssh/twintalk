@@ -135,7 +135,18 @@ include __DIR__ . "/../includes/header.php";
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
-                                        <button type="submit" class="btn btn-sm btn-primary">
+                                        <button type="submit" class="btn btn-sm"
+                                            style="
+                                                background-color:#ff4b7b;
+                                                border:1px solid #ff4b7b;
+                                                color:white;
+                                                font-weight:500;
+                                                border-radius:6px;
+                                                padding:6px 14px;
+                                            "
+                                            onmouseover="this.style.backgroundColor='#e84372'"
+                                            onmouseout="this.style.backgroundColor='#ff4b7b'"
+                                        >
                                             Guardar
                                         </button>
                                     </form>

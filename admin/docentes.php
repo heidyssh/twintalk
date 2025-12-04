@@ -43,10 +43,21 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-    <h1 class="mb-3">
-        <i class="fa-solid fa-chalkboard-user me-2"></i>
-        Docentes registrados
-    </h1>
+    <!-- HEADER con gradiente al estilo TwinTalk -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            <div>
+                <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                    <i class="fa-solid fa-chalkboard-user me-2"></i>
+                    Docentes registrados
+                </h1>
+                <small class="text-muted">
+                    Consulta la información general de los docentes activos en el sistema.
+                </small>
+            </div>
+        </div>
+    </div>
 
     <?php if (!empty($mensaje)): ?>
         <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>
@@ -56,17 +67,17 @@ include __DIR__ . "/../includes/header.php";
         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <div class="card shadow-sm">
+    <div class="card card-soft shadow-sm border-0">
         <div class="card-body">
             <p class="text-muted">
-                Aquí puedes ver la lista de docentes que existen en el sistema.  
+                Aquí puedes ver la lista de docentes que existen en el sistema.
                 Para ver la información completa de un docente, haz clic en
                 <strong>Ver perfil</strong>.
             </p>
 
             <div class="table-responsive">
                 <table class="table table-striped align-middle">
-                    <thead>
+                    <thead class="table-light">
                         <tr>
                             <th>Foto</th>
                             <th>Nombre</th>
@@ -121,7 +132,19 @@ include __DIR__ . "/../includes/header.php";
                                 </td>
                                 <td>
                                     <a href="docente_perfil.php?docente_id=<?= $docenteId ?>"
-                                       class="btn btn-sm btn-outline-primary">
+                                       class="btn btn-sm"
+                                       style="
+                                           border:1px solid #ff4b7b;
+                                           color:#ff4b7b;
+                                           background-color:transparent;
+                                           border-radius:6px;
+                                           padding:4px 10px;
+                                           font-size:0.8rem;
+                                           font-weight:500;
+                                       "
+                                       onmouseover="this.style.backgroundColor='#ff4b7b'; this.style.color='#fff';"
+                                       onmouseout="this.style.backgroundColor='transparent'; this.style.color='#ff4b7b';"
+                                    >
                                         <i class="fa-solid fa-eye"></i> Ver perfil
                                     </a>
                                 </td>

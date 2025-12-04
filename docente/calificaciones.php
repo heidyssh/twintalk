@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 2) (bloque duplicado que ya tenías – lo dejo igual para no tocar lógica)
+    // (bloque duplicado que ya tenías – lo dejo igual para no tocar tu lógica)
     if ($accion === 'extender_tarea_alumno') {
         $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
         $curso_id = (int) ($_POST['curso_id'] ?? 0);
@@ -239,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
         $curso_id = (int) ($_POST['curso_id'] ?? 0);
         $calificaciones = $_POST['calificacion'] ?? [];        // [matricula_id => nota]
-        $comentarios = $_POST['comentario'] ?? [];           // [matricula_id => texto]
+        $comentarios = $_POST['comentario'] ?? [];             // [matricula_id => texto]
 
         if ($tarea_id <= 0 || $curso_id <= 0) {
             $error = "Tarea o curso no válidos.";
@@ -308,7 +308,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $tipos_evaluacion = [];
 $estudiantes_curso_eval = [];
 $calif_existentes_eval = [];
-$historial_evaluaciones = [];  // 🔹 para mostrar la tabla de evaluaciones
+$historial_evaluaciones = [];
 
 if ($view === 'evaluaciones' && $curso_id > 0) {
 
@@ -337,7 +337,7 @@ if ($view === 'evaluaciones' && $curso_id > 0) {
     $estudiantes_curso_eval = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
-    // Calificaciones existentes para el tipo de evaluación seleccionado (para rellenar inputs)
+    // Calificaciones existentes para el tipo de evaluación seleccionado
     if ($tipo_evaluacion_id) {
         $sqlCal = "
             SELECT matricula_id, puntaje
@@ -397,7 +397,7 @@ $entregas_tarea = [];
 
 if ($view === 'tareas' && $curso_id > 0) {
 
-    // Tareas del curso (a través de horarios del docente)
+    // Tareas del curso
     $sqlT = "
         SELECT t.*
         FROM tareas t
@@ -431,7 +431,7 @@ if ($view === 'tareas' && $curso_id > 0) {
         $stmt->close();
 
         if ($tarea_seleccionada) {
-            // Entregas por estudiante (incluyendo los que no han entregado)
+            // Entregas por estudiante
             $sqlEnt = "
                 SELECT 
                     m.id AS matricula_id,
@@ -467,91 +467,111 @@ include __DIR__ . '/../includes/header.php';
 ?>
 
 <style>
-    .tt-calif-page .tt-header-title {
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: #A45A6A;
-    }
-    .tt-calif-page .tt-header-subtitle {
-        font-size: 0.9rem;
-        color: #666;
-    }
-    .tt-calif-page .card-soft {
-        border-radius: 12px;
-        border: 1px solid #eee;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-        background-color: #fff;
-    }
-    .tt-calif-page .nav-pills .nav-link {
-        border-radius: 999px;
-        font-size: 0.9rem;
-        padding: 0.35rem 0.9rem;
-        color: #444;
-    }
-    .tt-calif-page .nav-pills .nav-link.active {
-        background-color: #A45A6A;
-        color: #fff;
-        font-weight: 600;
-    }
-    .tt-calif-page .tt-card-title {
-        font-weight: 600;
-        color: #333;
-    }
-    .tt-calif-page table.table thead {
-        background-color: #f5f0f2;
-    }
-    .tt-calif-page table.table thead th {
-        border-bottom: 2px solid #e2d6da;
-        font-size: 0.85rem;
-    }
-    .tt-calif-page table.table tbody td {
-        font-size: 0.85rem;
-        vertical-align: middle;
-    }
-    .tt-calif-page .btn-tt-primary {
-        background-color: #A45A6A;
-        border-color: #A45A6A;
-        color: #fff;
-    }
-    .tt-calif-page .btn-tt-primary:hover {
-        background-color: #8c4158;
-        border-color: #8c4158;
-        color: #fff;
-    }
-    .tt-calif-page .btn-tt-outline {
-        border-color: #A45A6A;
-        color: #A45A6A;
-    }
-    .tt-calif-page .btn-tt-outline:hover {
-        background-color: #A45A6A;
-        color: #fff;
-    }
-    .tt-calif-page .tt-section-block {
-        margin-top: 1.5rem;
-    }
+    /* Item de curso seleccionado (que no se vea azul de Bootstrap) */
+.tt-calif-page .list-group-item-action.active,
+.tt-calif-page .list-group-item-action.active:hover,
+.tt-calif-page .list-group-item.active,
+.tt-calif-page .list-group-item.active:hover {
+    background-color: #b14f72 !important;
+    border-color: #b14f72 !important;
+    color: #fff !important;
+}
+
+.tt-calif-page .tt-header-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #b14f72;
+}
+.tt-calif-page .tt-header-subtitle {
+    font-size: 0.9rem;
+    color: #666;
+}
+.tt-calif-page .card-soft {
+    border-radius: 12px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    background-color: #fff;
+}
+.tt-calif-page .nav-pills .nav-link {
+    border-radius: 999px;
+    font-size: 0.9rem;
+    padding: 0.35rem 0.9rem;
+    color: #444;
+}
+.tt-calif-page .nav-pills .nav-link.active {
+    background-color: #b14f72;
+    color: #fff;
+    font-weight: 600;
+}
+.tt-calif-page .tt-card-title {
+    font-weight: 600;
+    color: #333;
+}
+.tt-calif-page table.table thead {
+    background-color: #f5f0f2;
+}
+.tt-calif-page table.table thead th {
+    border-bottom: 2px solid #e2d6da;
+    font-size: 0.85rem;
+}
+.tt-calif-page table.table tbody td {
+    font-size: 0.85rem;
+    vertical-align: middle;
+}
+.tt-calif-page .btn-tt-primary {
+    background-color: #b14f72;
+    border-color: #b14f72;
+    color: #fff;
+}
+.tt-calif-page .btn-tt-primary:hover {
+    background-color: #8c4158;
+    border-color: #8c4158;
+    color: #fff;
+}
+.tt-calif-page .btn-tt-outline {
+    border-color: #b14f72;
+    color: #b14f72;
+}
+.tt-calif-page .btn-tt-outline:hover {
+    background-color: #b14f72;
+    color: #fff;
+}
+.tt-calif-page .tt-section-block {
+    margin-top: 1.5rem;
+}
 </style>
 
 <div class="container mt-4 tt-calif-page">
 
-    <div class="mb-3">
-        <h1 class="tt-header-title">
-            <i class="fa-solid fa-graduation-cap me-2"></i>
-            Calificaciones de docente
-        </h1>
-        <p class="tt-header-subtitle mb-0">
-            Administra las notas de tus cursos. Usa <strong>Evaluaciones</strong> para exámenes/quiz/proyectos
-            y <strong>Tareas y entregas</strong> para calificar tareas enviadas por los estudiantes.
-        </p>
+    <div class="card border-0 shadow-sm mb-3"
+         style="background: linear-gradient(90deg, #fbe9f0, #ffffff); border-radius: 16px;">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>
+                <h1 class="tt-header-title mb-1">
+                    <i class="fa-solid fa-graduation-cap me-2"></i>
+                    Calificaciones de docente
+                </h1>
+                <p class="tt-header-subtitle mb-0">
+                    Usa <strong>Evaluaciones</strong> para exámenes, quices y proyectos; y
+                    <strong>Tareas y entregas</strong> para calificar las tareas subidas por tus estudiantes.
+                </p>
+            </div>
+            <div class="text-md-end">
+                <span class="badge rounded-pill text-bg-light border">
+                    Docente
+                </span>
+            </div>
+        </div>
     </div>
 
     <?php if ($mensaje): ?>
-        <div class="alert alert-success py-2"><?= htmlspecialchars($mensaje) ?></div>
+        <div class="alert alert-success py-2 border-0 shadow-sm mb-3"><?= htmlspecialchars($mensaje) ?></div>
     <?php endif; ?>
     <?php if ($error): ?>
-        <div class="alert alert-danger py-2"><?= htmlspecialchars($error) ?></div>
+        <div class="alert alert-danger py-2 border-0 shadow-sm mb-3"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <!-- Tabs para ordenar la sección -->
+    <!-- Tabs -->
     <ul class="nav nav-pills mb-3">
         <li class="nav-item">
             <a class="nav-link <?= $view === 'evaluaciones' ? 'active' : '' ?>"
@@ -597,22 +617,22 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
-        <!-- Columna derecha: contenido según vista -->
+        <!-- Columna derecha: contenido -->
         <div class="col-md-9 mb-3">
 
             <?php if (!$curso_id): ?>
-                <div class="alert alert-info">Selecciona un curso para comenzar.</div>
+                <div class="alert alert-info border-0 shadow-sm">Selecciona un curso para comenzar.</div>
             <?php else: ?>
 
                 <?php if ($view === 'evaluaciones'): ?>
 
-                    <!-- Vista: Evaluaciones generales -->
+                    <!-- EVALUACIONES GENERALES -->
                     <div class="card card-soft mb-3">
                         <div class="card-header bg-white">
                             <div class="d-flex flex-column">
                                 <span class="tt-card-title">Evaluaciones generales</span>
                                 <small class="text-muted">
-                                    Usa esta sección para notas de exámenes, quices, proyectos, participación, etc.
+                                    Registra las notas de evaluaciones globales (exámenes, quices, proyectos, etc.).
                                 </small>
                             </div>
                         </div>
@@ -624,7 +644,7 @@ include __DIR__ . '/../includes/header.php';
                                 </p>
                             <?php else: ?>
 
-                                <!-- Bloque de filtros arriba -->
+                                <!-- Filtros -->
                                 <div class="tt-section-block">
                                     <form method="get" class="row g-2">
                                         <input type="hidden" name="view" value="evaluaciones">
@@ -648,11 +668,11 @@ include __DIR__ . '/../includes/header.php';
                                     </form>
                                 </div>
 
-                                <!-- Tabla de captura de notas, más abajo para que respire -->
+                                <!-- Tabla para capturar notas -->
                                 <?php if ($tipo_evaluacion_id): ?>
                                     <div class="tt-section-block">
                                         <form method="post" class="table-responsive">
-                                            <table class="table table-sm align-middle mb-0">
+                                            <table class="table table-sm align-middle mb-0 table-hover">
                                                 <thead>
                                                 <tr>
                                                     <th>Estudiante</th>
@@ -703,12 +723,12 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
                                 <?php endif; ?>
 
-                                <!-- Historial, aún más abajo -->
+                                <!-- Historial -->
                                 <?php if (!empty($historial_evaluaciones)): ?>
                                     <div class="tt-section-block">
                                         <h6 class="fw-bold mb-2">Historial de evaluaciones del curso</h6>
                                         <div class="table-responsive">
-                                            <table class="table table-sm align-middle mb-0">
+                                            <table class="table table-sm align-middle mb-0 table-hover">
                                                 <thead>
                                                 <tr>
                                                     <th>Fecha</th>
@@ -755,14 +775,15 @@ include __DIR__ . '/../includes/header.php';
 
                 <?php elseif ($view === 'tareas'): ?>
 
-                    <!-- Vista: Tareas y entregas -->
+                    <!-- TAREAS Y ENTREGAS -->
                     <div class="row">
+                        <!-- Lista de tareas -->
                         <div class="col-lg-5 mb-3">
                             <div class="card card-soft h-100">
                                 <div class="card-header bg-white">
                                     <span class="tt-card-title">Tareas del curso</span><br>
                                     <small class="text-muted">
-                                        Selecciona una tarea para ver y calificar las entregas por estudiante.
+                                        Selecciona una tarea para ver y calificar las entregas.
                                     </small>
                                 </div>
                                 <div class="card-body p-0">
@@ -808,13 +829,14 @@ include __DIR__ . '/../includes/header.php';
                             </div>
                         </div>
 
+                        <!-- Entregas -->
                         <div class="col-lg-7 mb-3">
                             <div class="card card-soft h-100">
                                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                                     <div>
                                         <span class="tt-card-title">Entregas por estudiante</span><br>
                                         <small class="text-muted">
-                                            Aquí calificas esta tarea alumno por alumno.
+                                            Califica esta tarea alumno por alumno.
                                         </small>
                                     </div>
                                 </div>
@@ -829,33 +851,8 @@ include __DIR__ . '/../includes/header.php';
                                         $fecha_pub = $tarea_seleccionada['fecha_publicacion']
                                             ? date('d/m/Y H:i', strtotime($tarea_seleccionada['fecha_publicacion']))
                                             : '—';
-
-                                        // Fecha base
-                                        $fechaBase = $tarea_seleccionada['fecha_entrega']; // Y-m-d o null
-                                        $fechaFinal = $fechaBase;
-
-                                        // ¿Hay extensión GENERAL para esta tarea?
-                                        $extStmt = $mysqli->prepare("
-        SELECT MAX(nueva_fecha) AS max_fecha
-        FROM tareas_extensiones
-        WHERE tarea_id = ?
-          AND matricula_id IS NULL
-    ");
-                                        $extStmt->bind_param("i", $tarea_seleccionada['id']);
-                                        $extStmt->execute();
-                                        $extData = $extStmt->get_result()->fetch_assoc();
-                                        $extStmt->close();
-
-                                        $hay_extension_general = !empty($extData['max_fecha']);
-
-                                        if ($hay_extension_general) {
-                                            if (empty($fechaFinal) || $extData['max_fecha'] > $fechaFinal) {
-                                                $fechaFinal = $extData['max_fecha'];
-                                            }
-                                        }
-
-                                        $fecha_lim_mostrar = $fechaFinal
-                                            ? date('d/m/Y', strtotime($fechaFinal))
+                                        $fecha_lim_mostrar = $tarea_seleccionada['fecha_entrega']
+                                            ? date('d/m/Y', strtotime($tarea_seleccionada['fecha_entrega']))
                                             : 'Sin límite';
                                         ?>
                                         <div class="border-bottom small p-3">
@@ -866,18 +863,12 @@ include __DIR__ . '/../includes/header.php';
                                                     </div>
                                                     <div class="text-muted">
                                                         Publicada: <?= $fecha_pub ?> ·
-                                                        Fecha límite actual: <strong><?= $fecha_lim_mostrar ?></strong> ·
+                                                        Fecha límite: <strong><?= $fecha_lim_mostrar ?></strong> ·
                                                         Valor: <?= (int) $tarea_seleccionada['valor_maximo'] ?> pts
-
-                                                        <?php if ($hay_extension_general): ?>
-                                                            <span class="badge bg-info-subtle text-info border ms-1">
-                                                                Fecha extendida
-                                                            </span>
-                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
 
-                                                <!-- Form compacto para extender fecha a TODA la clase -->
+                                                <!-- Extensión general -->
                                                 <form method="post" class="d-flex align-items-center gap-2">
                                                     <input type="hidden" name="accion" value="extender_general_tarea">
                                                     <input type="hidden" name="curso_id" value="<?= $curso_id ?>">
@@ -903,7 +894,7 @@ include __DIR__ . '/../includes/header.php';
                                         <?php else: ?>
 
                                             <form method="post" class="table-responsive">
-                                                <table class="table table-sm align-middle mb-0">
+                                                <table class="table table-sm align-middle mb-0 table-hover">
                                                     <thead>
                                                     <tr>
                                                         <th>Estudiante</th>
@@ -915,25 +906,7 @@ include __DIR__ . '/../includes/header.php';
                                                     </thead>
 
                                                     <tbody>
-                                                    <?php foreach ($entregas_tarea as $e):
-                                                        // Buscar extensión específica para este alumno (si existe)
-                                                        $extAlumnoFecha = null;
-                                                        $stmtExtAl = $mysqli->prepare("
-                                                            SELECT MAX(nueva_fecha) AS max_fecha
-                                                            FROM tareas_extensiones
-                                                            WHERE tarea_id = ?
-                                                            AND matricula_id = ?
-                                                        ");
-                                                        $stmtExtAl->bind_param("ii", $tarea_id, $e['matricula_id']);
-                                                        $stmtExtAl->execute();
-                                                        $extAlData = $stmtExtAl->get_result()->fetch_assoc();
-                                                        $stmtExtAl->close();
-
-                                                        if (!empty($extAlData['max_fecha'])) {
-                                                            $extAlumnoFecha = $extAlData['max_fecha']; // Y-m-d
-                                                        }
-                                                        ?>
-
+                                                    <?php foreach ($entregas_tarea as $e): ?>
                                                         <tr>
                                                             <td>
                                                                 <div class="fw-semibold small mb-0">
@@ -956,10 +929,8 @@ include __DIR__ . '/../includes/header.php';
                                                                             <?= date('d/m/Y H:i', strtotime($e['fecha_entrega'])) ?>
                                                                         </span>
                                                                     </div>
-
                                                                 <?php else: ?>
                                                                     <span class="badge bg-secondary">Sin entrega</span>
-
                                                                 <?php endif; ?>
                                                             </td>
 
@@ -969,10 +940,8 @@ include __DIR__ . '/../includes/header.php';
                                                                            name="calificacion[<?= (int) $e['matricula_id'] ?>]"
                                                                            class="form-control form-control-sm text-center"
                                                                            value="<?= $e['calificacion'] !== null ? htmlspecialchars($e['calificacion']) : '' ?>">
-
                                                                 <?php else: ?>
                                                                     <span class="text-muted small">—</span>
-
                                                                 <?php endif; ?>
                                                             </td>
 
@@ -982,16 +951,14 @@ include __DIR__ . '/../includes/header.php';
                                                                               class="form-control form-control-sm"
                                                                               rows="1"
                                                                               placeholder="Comentario opcional..."><?= htmlspecialchars($e['comentarios_docente'] ?? '') ?></textarea>
-
                                                                 <?php else: ?>
                                                                     <span class="text-muted small">
                                                                         No puedes calificar si no hay entrega.
                                                                     </span>
-
                                                                 <?php endif; ?>
                                                             </td>
 
-                                                            <!-- Extender fecha solo para este alumno -->
+                                                            <!-- Extensión individual -->
                                                             <td class="text-center">
                                                                 <form method="post"
                                                                       class="d-flex flex-column align-items-center gap-1">
@@ -1005,7 +972,6 @@ include __DIR__ . '/../includes/header.php';
                                                                     <input type="date" name="nueva_fecha"
                                                                            class="form-control form-control-sm text-center"
                                                                            style="max-width: 150px;"
-                                                                           value="<?= $extAlumnoFecha ? htmlspecialchars($extAlumnoFecha) : '' ?>"
                                                                            required>
 
                                                                     <button class="btn btn-outline-secondary btn-sm" type="submit">
@@ -1038,9 +1004,9 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                     </div>
 
-                <?php endif; // view tareas ?>
+                <?php endif; ?>
 
-            <?php endif; // curso_id ?>
+            <?php endif; ?>
 
         </div>
     </div>

@@ -198,5 +198,54 @@ body {
     background: rgba(54, 79, 199, .08);
     color: #364fc7;
 }
+/* ===========================
+   OVERRIDES DE BOOTSTRAP PARA TWIN-TALK
+   ============================ */
+
+/* Botón principal: usa el rosado del proyecto */
+.btn-primary,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: var(--tt-primary) !important;
+    border-color: var(--tt-primary) !important;
+    box-shadow: 0 0 0 .15rem rgba(255, 75, 123, 0.25);
+}
+
+.btn-primary:hover {
+    background-color: #e84372 !important; /* un poquito más oscuro */
+    border-color: #e84372 !important;
+}
+
+/* Botón outline primary (bordes rosados, texto rosado) */
+.btn-outline-primary {
+    border-color: var(--tt-primary) !important;
+    color: var(--tt-primary) !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--tt-primary) !important;
+    color: #fff !important;
+    border-color: var(--tt-primary) !important;
+}
+
+/* Links "primarios" (texto que usa .text-primary o .link-primary) */
+a.text-primary,
+a.link-primary,
+.text-primary {
+    color: var(--tt-primary) !important;
+}
+
+a.text-primary:hover,
+a.link-primary:hover {
+    color: #e84372 !important;
+}
+
+/* Checkboxes / radios chequeados con el color del proyecto */
+.form-check-input:checked {
+    background-color: var(--tt-primary) !important;
+    border-color: var(--tt-primary) !important;
+}
+
 
 

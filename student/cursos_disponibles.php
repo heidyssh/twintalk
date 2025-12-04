@@ -286,18 +286,57 @@ $tiene_pagos_pend     = tienePagosPendientes($mysqli, $estudiante_id);
 include __DIR__ . '/../includes/header.php';
 ?>
 
+<style>
+.card-soft{
+    border-radius:12px;
+}
+.btn-tt-primary{
+    background-color:#A45A6A;
+    border-color:#A45A6A;
+    color:#fff;
+}
+.btn-tt-primary:hover{
+    background-color:#8c4b59;
+    border-color:#8c4b59;
+    color:#fff;
+}
+.badge-soft-primary{
+    background:#f4e5ef;
+    color:#7b2f4a;
+    border:1px solid #e3bfd7;
+}
+.bg-soft-primary{
+    background:#f4e5ef;
+}
+.badge-pill-small{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+}
+</style>
+
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="h4 fw-bold mb-1">Cursos disponibles</h1>
-            <p class="text-muted small mb-0">
-                Elige el curso y horario en el que deseas matricularte. Recuerda que debes estar al día con tus pagos para avanzar de nivel.
-            </p>
-        </div>
-        <div>
-            <a href="/twintalk/student/dashboard.php" class="btn btn-outline-secondary btn-sm">
-                <i class="fa-solid fa-arrow-left-long me-1"></i> Volver al panel
-            </a>
+
+    <!-- Cabecera con degradado -->
+    <div class="card card-soft border-0 shadow-sm mb-3">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background:linear-gradient(90deg,#fbe9f0,#ffffff);">
+            <div>
+                <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                    <i class="fa-solid fa-graduation-cap me-2"></i>
+                    Cursos disponibles
+                </h1>
+                <p class="small text-muted mb-0">
+                    Elige el curso y horario en el que deseas matricularte.  
+                    Debes estar al día con tus pagos para avanzar de nivel.
+                </p>
+            </div>
+            <div>
+                <a href="/twintalk/student/dashboard.php" class="btn btn-outline-secondary btn-sm">
+                    <i class="fa-solid fa-arrow-left-long me-1"></i>
+                    Volver al panel
+                </a>
+            </div>
         </div>
     </div>
 
@@ -308,19 +347,21 @@ include __DIR__ . '/../includes/header.php';
         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
+    <!-- Badges de estado del alumno -->
     <div class="mb-3">
         <?php if ($nivel_max_finalizado === null): ?>
-            <span class="badge bg-soft-primary text-dark">
+            <span class="badge badge-soft-primary badge-pill-small me-2">
                 Nivel actual: Principiante (sin cursos finalizados)
             </span>
         <?php else: ?>
-            <span class="badge bg-soft-primary text-dark me-2">
+            <span class="badge badge-soft-primary badge-pill-small me-2">
                 Nivel máximo finalizado: ID <?= (int)$nivel_max_finalizado ?>
             </span>
         <?php endif; ?>
 
         <?php if ($tiene_pagos_pend): ?>
-            <span class="badge bg-warning text-dark">
+            <span class="badge bg-warning text-dark badge-pill-small">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>
                 Tienes pagos pendientes. No podrás matricular nuevos cursos hasta estar al día.
             </span>
         <?php endif; ?>
@@ -354,17 +395,22 @@ include __DIR__ . '/../includes/header.php';
                         : "Por definir";
                 ?>
                 <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 border-0 shadow-sm rounded-4">
+                    <div class="card card-soft h-100 border-0 shadow-sm rounded-4">
                         <div class="card-body d-flex flex-column">
+
+                            <!-- Encabezado: nombre + nivel + día/horario -->
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
-                                    <h5 class="card-title mb-0"><?= htmlspecialchars($c['nombre_curso']) ?></h5>
-                                    <span class="badge bg-soft-primary text-dark mt-1">
-                                        Nivel <?= htmlspecialchars($c['codigo_nivel']) ?> - <?= htmlspecialchars($c['nombre_nivel']) ?>
+                                    <h5 class="card-title mb-0">
+                                        <?= htmlspecialchars($c['nombre_curso']) ?>
+                                    </h5>
+                                    <span class="badge bg-soft-primary text-dark badge-pill-small mt-1">
+                                        Nivel <?= htmlspecialchars($c['codigo_nivel']) ?> ·
+                                        <?= htmlspecialchars($c['nombre_nivel']) ?>
                                     </span>
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge bg-light text-muted">
+                                    <span class="badge bg-light text-muted small">
                                         <?= htmlspecialchars($c['nombre_dia']) ?>
                                     </span>
                                     <div class="small text-muted">
@@ -373,12 +419,14 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
                             </div>
 
+                            <!-- Descripción -->
                             <?php if (!empty($c['descripcion'])): ?>
                                 <p class="card-text small text-muted mb-2">
                                     <?= nl2br(htmlspecialchars($c['descripcion'])) ?>
                                 </p>
                             <?php endif; ?>
 
+                            <!-- Info básica -->
                             <div class="small mb-2">
                                 <strong>Precio:</strong> <?= $precio_mostrar ?><br>
                                 <strong>Aula:</strong> <?= htmlspecialchars($c['aula'] ?? 'Por asignar') ?><br>
@@ -386,11 +434,13 @@ include __DIR__ . '/../includes/header.php';
                                 <?= (int)$c['cupos_disponibles'] ?>
                             </div>
 
-                            <div class="mt-auto pt-2">
+                            <!-- Acciones / estado -->
+                            <div class="mt-auto pt-2 border-top">
                                 <?php if ($sin_cupos): ?>
                                     <button class="btn btn-sm btn-outline-secondary w-100" disabled>
                                         <i class="fa-solid fa-circle-xmark me-1"></i> Sin cupos
                                     </button>
+
                                 <?php elseif ($bloqueado_por_pago): ?>
                                     <button class="btn btn-sm btn-outline-warning w-100" disabled>
                                         <i class="fa-solid fa-lock me-1"></i> Tienes pagos pendientes
@@ -398,6 +448,7 @@ include __DIR__ . '/../includes/header.php';
                                     <p class="small text-muted mt-1 mb-0">
                                         Regulariza tus pagos para poder matricular nuevos cursos.
                                     </p>
+
                                 <?php elseif ($bloqueado_por_nivel): ?>
                                     <button class="btn btn-sm btn-outline-secondary w-100" disabled>
                                         <i class="fa-solid fa-lock me-1"></i> Nivel no disponible aún
@@ -405,16 +456,19 @@ include __DIR__ . '/../includes/header.php';
                                     <p class="small text-muted mt-1 mb-0">
                                         <?= htmlspecialchars($razon_bloqueo) ?>
                                     </p>
+
                                 <?php else: ?>
                                     <form method="post">
                                         <input type="hidden" name="accion" value="matricular">
                                         <input type="hidden" name="horario_id" value="<?= (int)$c['horario_id'] ?>">
                                         <button type="submit" class="btn btn-tt-primary btn-sm w-100">
-                                            <i class="fa-solid fa-check me-1"></i> Matricularme en este horario
+                                            <i class="fa-solid fa-check me-1"></i>
+                                            Matricularme en este horario
                                         </button>
                                     </form>
                                 <?php endif; ?>
                             </div>
+
                         </div>
                     </div>
                 </div>

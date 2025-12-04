@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($resHor->num_rows === 0) {
                 $error = "El horario seleccionado no pertenece a tus cursos.";
             } else {
-                $file          = $_FILES['archivo'];
+                $file           = $_FILES['archivo'];
                 $nombreOriginal = $file['name'];
                 $tmpName        = $file['tmp_name'];
                 $ext            = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
@@ -156,23 +156,104 @@ $stmtMat->close();
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="container-fluid mt-3">
-    <h1 class="h4 fw-bold mb-3">Materiales de mis cursos</h1>
+<style>
+    .tt-material-page .tt-header-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #b14f72;
+    }
+    .tt-material-page .tt-header-subtitle {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .tt-material-page .card-soft {
+        border-radius: 14px;
+        border: 1px solid #f1e3ea;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .tt-material-page .btn-tt-primary {
+        background-color: #b14f72;
+        border-color: #b14f72;
+        color: #fff;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        padding-inline: 1rem;
+        transition: all 0.15s ease-in-out;
+    }
+    .tt-material-page .btn-tt-primary:hover {
+        background-color: #8f3454;
+        border-color: #8f3454;
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(177,79,114,0.35);
+    }
+    .tt-material-page .btn-tt-outline {
+        border-radius: 999px;
+        border: 1px solid #b14f72;
+        color: #b14f72;
+        background-color: #fff;
+        font-size: 0.85rem;
+        padding-inline: 0.9rem;
+        transition: all 0.15s ease-in-out;
+    }
+    .tt-material-page .btn-tt-outline:hover {
+        background-color: #b14f72;
+        color: #fff;
+        box-shadow: 0 3px 8px rgba(177,79,114,0.35);
+    }
+    .tt-material-page .table thead {
+        background-color: #fdf3f7;
+        font-size: 0.85rem;
+    }
+    .tt-material-page .table tbody td {
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+</style>
 
-    <a href="dashboard.php" class="btn btn-sm btn-secondary mb-3">&larr; Volver al dashboard</a>
+<div class="container-fluid mt-3 tt-material-page">
+
+    <!-- Encabezado bonito -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            <div>
+                <h1 class="tt-header-title mb-1">
+                    <i class="fa-solid fa-folder-open me-2"></i>
+                    Materiales de mis cursos
+                </h1>
+                <p class="tt-header-subtitle mb-0">
+                    Sube y organiza los recursos que compartirás con tus estudiantes.
+                </p>
+            </div>
+            <div class="text-md-end">
+                <a href="dashboard.php" class="btn btn-sm btn-tt-outline">
+                    <i class="fa-solid fa-arrow-left me-1"></i>
+                    Volver al dashboard
+                </a>
+            </div>
+        </div>
+    </div>
 
     <?php if ($mensaje): ?>
-        <div class="alert alert-success py-2 small"><?= htmlspecialchars($mensaje) ?></div>
+        <div class="alert alert-success border-0 shadow-sm py-2 small mb-3">
+            <?= htmlspecialchars($mensaje) ?>
+        </div>
     <?php endif; ?>
 
     <?php if ($error): ?>
-        <div class="alert alert-danger py-2 small"><?= htmlspecialchars($error) ?></div>
+        <div class="alert alert-danger border-0 shadow-sm py-2 small mb-3">
+            <?= htmlspecialchars($error) ?>
+        </div>
     <?php endif; ?>
 
     <!-- Formulario para subir material -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <strong>Subir nuevo material</strong>
+    <div class="card card-soft mb-4">
+        <div class="card-header bg-white border-0 pb-0">
+            <strong class="d-block" style="color:#b14f72;">Subir nuevo material</strong>
+            <small class="text-muted">
+                Elige el curso, agrega un título y adjunta el archivo que compartirás.
+            </small>
         </div>
         <div class="card-body">
             <form method="post" enctype="multipart/form-data">
@@ -180,8 +261,8 @@ include __DIR__ . '/../includes/header.php';
 
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">Curso / horario</label>
-                        <select name="horario_id" class="form-select" required>
+                        <label class="form-label small">Curso / horario</label>
+                        <select name="horario_id" class="form-select form-select-sm" required>
                             <option value="">Seleccione...</option>
                             <?php foreach ($horarios as $h): ?>
                                 <option value="<?= $h['id'] ?>">
@@ -193,32 +274,40 @@ include __DIR__ . '/../includes/header.php';
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Título del material</label>
-                        <input type="text" name="titulo" class="form-control" required>
+                        <label class="form-label small">Título del material</label>
+                        <input type="text" name="titulo" class="form-control form-control-sm" required>
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Archivo</label>
-                        <input type="file" name="archivo" class="form-control" required>
+                        <label class="form-label small">Archivo</label>
+                        <input type="file" name="archivo" class="form-control form-control-sm" required>
                     </div>
                 </div>
 
                 <div class="mt-3">
-                    <label class="form-label">Descripción (opcional)</label>
-                    <textarea name="descripcion" rows="2" class="form-control"></textarea>
+                    <label class="form-label small">Descripción (opcional)</label>
+                    <textarea name="descripcion" rows="2" class="form-control form-control-sm"></textarea>
                 </div>
 
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-primary">Subir material</button>
+                <div class="mt-3 text-end">
+                    <button type="submit" class="btn btn-tt-primary btn-sm">
+                        <i class="fa-solid fa-cloud-arrow-up me-1"></i>
+                        Subir material
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Listado de materiales -->
-    <div class="card">
-        <div class="card-header">
-            <strong>Mis materiales subidos</strong>
+    <div class="card card-soft">
+        <div class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-center">
+            <div>
+                <strong class="d-block" style="color:#b14f72;">Mis materiales subidos</strong>
+                <small class="text-muted">
+                    Accede a los archivos compartidos y elimina lo que ya no necesites.
+                </small>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -229,7 +318,7 @@ include __DIR__ . '/../includes/header.php';
                             <th>Título</th>
                             <th>Archivo</th>
                             <th>Fecha subida</th>
-                            <th>Eliminar</th>
+                            <th class="text-end">Eliminar</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -243,13 +332,13 @@ include __DIR__ . '/../includes/header.php';
                             <?php while ($m = $materiales->fetch_assoc()): ?>
                                 <tr>
                                     <td>
-                                        <strong><?= htmlspecialchars($m['nombre_curso']) ?></strong><br>
+                                        <strong class="small"><?= htmlspecialchars($m['nombre_curso']) ?></strong><br>
                                         <span class="small text-muted">
                                             <?= htmlspecialchars($m['nombre_dia']) ?> <?= substr($m['hora_inicio'], 0, 5) ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <strong><?= htmlspecialchars($m['titulo']) ?></strong><br>
+                                        <strong class="small"><?= htmlspecialchars($m['titulo']) ?></strong><br>
                                         <?php if ($m['descripcion']): ?>
                                             <span class="small text-muted">
                                                 <?= nl2br(htmlspecialchars(substr($m['descripcion'], 0, 80))) ?>
@@ -259,18 +348,20 @@ include __DIR__ . '/../includes/header.php';
                                     </td>
                                     <td>
                                         <?php if ($m['archivo_url']): ?>
-                                            <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank">
+                                            <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank" class="small">
                                                 Ver archivo
                                             </a>
                                         <?php else: ?>
-                                            -
+                                            <span class="small text-muted">-</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?= htmlspecialchars($m['fecha_subida']) ?></td>
+                                    <td class="small">
+                                        <?= htmlspecialchars($m['fecha_subida']) ?>
+                                    </td>
 
-                                    <!-- AQUÍ VA EL BOTÓN DE ELIMINAR MATERIAL -->
-                                    <td>
-                                        <form method="post" onsubmit="return confirm('¿Eliminar este material?');">
+                                    <!-- Botón de eliminar material -->
+                                    <td class="text-end">
+                                        <form method="post" onsubmit="return confirm('¿Eliminar este material?');" class="d-inline">
                                             <input type="hidden" name="accion" value="eliminar_material">
                                             <input type="hidden" name="material_id" value="<?= $m['id'] ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger">

@@ -169,7 +169,20 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-    <h1 class="h4 fw-bold mb-3">Mi Perfil</h1>
+    <!-- HEADER bonito con gradiente -->
+    <div class="card card-soft border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            <div>
+                <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
+                    Mi perfil
+                </h1>
+                <small class="text-muted">
+                    Administra tus datos personales, contraseña y avatar de administrador.
+                </small>
+            </div>
+        </div>
+    </div>
 
     <?php if ($mensaje): ?>
         <div class="alert alert-success"><?= htmlspecialchars($mensaje) ?></div>
@@ -181,13 +194,15 @@ include __DIR__ . "/../includes/header.php";
     <div class="row g-4">
         <!-- Tarjeta de info + avatar -->
         <div class="col-md-4">
-            <div class="card shadow-sm">
+            <div class="card card-soft shadow-sm border-0">
                 <div class="card-body text-center">
                     <img src="<?= htmlspecialchars($avatar_actual) ?>"
                          class="rounded-circle mb-3"
                          style="width: 120px; height: 120px; object-fit: cover;"
                          alt="Avatar">
-                    <h5 class="mb-0"><?= htmlspecialchars($nombre . " " . $apellido) ?></h5>
+                    <h5 class="mb-0" style="color:#4b2e83;">
+                        <?= htmlspecialchars($nombre . " " . $apellido) ?>
+                    </h5>
                     <p class="text-muted mb-1">Administrador</p>
                     <p class="small text-muted mb-0">
                         <?= htmlspecialchars($email) ?><br>
@@ -199,9 +214,10 @@ include __DIR__ . "/../includes/header.php";
 
         <!-- Formulario de datos + password + avatar -->
         <div class="col-md-8">
-            <div class="card shadow-sm mb-3">
+            <!-- Datos personales -->
+            <div class="card card-soft shadow-sm border-0 mb-3">
                 <div class="card-body">
-                    <h5 class="card-title mb-3">Datos personales</h5>
+                    <h5 class="card-title mb-3" style="color:#4b2e83;">Datos personales</h5>
                     <form method="post">
                         <div class="row g-2">
                             <div class="col-md-6">
@@ -221,7 +237,18 @@ include __DIR__ . "/../includes/header.php";
                                    value="<?= htmlspecialchars($telefono) ?>">
                         </div>
                         <div class="mt-3 text-end">
-                            <button type="submit" name="actualizar_perfil" class="btn btn-primary">
+                            <button type="submit" name="actualizar_perfil" class="btn btn-sm"
+                                style="
+                                    background-color:#ff4b7b;
+                                    border:1px solid #ff4b7b;
+                                    color:white;
+                                    font-weight:500;
+                                    border-radius:6px;
+                                    padding:6px 14px;
+                                "
+                                onmouseover="this.style.backgroundColor='#e84372'"
+                                onmouseout="this.style.backgroundColor='#ff4b7b'"
+                            >
                                 Guardar cambios
                             </button>
                         </div>
@@ -230,51 +257,63 @@ include __DIR__ . "/../includes/header.php";
             </div>
 
             <!-- Cambio de contraseña -->
-<div class="card card-soft mb-3">
-    <div class="card-body">
-        <h2 class="h6 fw-bold mb-3">Cambio de contraseña</h2>
-        <form method="post">
-            <div class="mb-3">
-                <label class="form-label">Nueva contraseña</label>
-                <div class="position-relative">
-                    <input type="password"
-                           name="password"
-                           class="form-control pe-5"
-                           id="admin_password">
-                    <button type="button"
-                            class="btn btn-link p-0 border-0 position-absolute top-50 end-0 translate-middle-y me-3"
-                            title="Mostrar/ocultar contraseña"
-                            onclick="ttTogglePassword('admin_password', this)">
-                        <i class="fa-solid fa-eye small text-muted"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Repetir nueva contraseña</label>
-                <div class="position-relative">
-                    <input type="password"
-                           name="password2"
-                           class="form-control pe-5"
-                           id="admin_password2">
-                    <button type="button"
-                            class="btn btn-link p-0 border-0 position-absolute top-50 end-0 translate-middle-y me-3"
-                            title="Mostrar/ocultar contraseña"
-                            onclick="ttTogglePassword('admin_password2', this)">
-                        <i class="fa-solid fa-eye small text-muted"></i>
-                    </button>
-                </div>
-            </div>
-            <button class="btn btn-outline-secondary btn-sm w-100" name="cambiar_password">
-                Actualizar contraseña
-            </button>
-        </form>
-    </div>
-</div>
-
-
-            <div class="card shadow-sm mb-3">
+            <div class="card card-soft shadow-sm border-0 mb-3">
                 <div class="card-body">
-                    <h5 class="card-title mb-3">Avatar</h5>
+                    <h2 class="h6 fw-bold mb-3" style="color:#4b2e83;">Cambio de contraseña</h2>
+                    <form method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Nueva contraseña</label>
+                            <div class="position-relative">
+                                <input type="password"
+                                       name="password"
+                                       class="form-control pe-5"
+                                       id="admin_password">
+                                <button type="button"
+                                        class="btn btn-link p-0 border-0 position-absolute top-50 end-0 translate-middle-y me-3"
+                                        title="Mostrar/ocultar contraseña"
+                                        onclick="ttTogglePassword('admin_password', this)">
+                                    <i class="fa-solid fa-eye small text-muted"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Repetir nueva contraseña</label>
+                            <div class="position-relative">
+                                <input type="password"
+                                       name="password2"
+                                       class="form-control pe-5"
+                                       id="admin_password2">
+                                <button type="button"
+                                        class="btn btn-link p-0 border-0 position-absolute top-50 end-0 translate-middle-y me-3"
+                                        title="Mostrar/ocultar contraseña"
+                                        onclick="ttTogglePassword('admin_password2', this)">
+                                    <i class="fa-solid fa-eye small text-muted"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm w-100"
+                                name="cambiar_password"
+                                style="
+                                    border:1px solid #ff4b7b;
+                                    color:#ff4b7b;
+                                    background-color:transparent;
+                                    border-radius:6px;
+                                    padding:6px 10px;
+                                    font-weight:500;
+                                "
+                                onmouseover="this.style.backgroundColor='#ff4b7b'; this.style.color='#fff';"
+                                onmouseout="this.style.backgroundColor='transparent'; this.style.color='#ff4b7b';"
+                        >
+                            Actualizar contraseña
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Avatar -->
+            <div class="card card-soft shadow-sm border-0 mb-3">
+                <div class="card-body">
+                    <h5 class="card-title mb-3" style="color:#4b2e83;">Avatar</h5>
                     <form method="post">
                         <div class="row g-2">
                             <?php foreach ($lista_avatars as $avatar): ?>
@@ -292,7 +331,18 @@ include __DIR__ . "/../includes/header.php";
                             <?php endforeach; ?>
                         </div>
                         <div class="mt-3 text-end">
-                            <button type="submit" name="actualizar_avatar" class="btn btn-outline-primary btn-sm">
+                            <button type="submit" name="actualizar_avatar" class="btn btn-sm"
+                                style="
+                                    border:1px solid #ff4b7b;
+                                    color:#ff4b7b;
+                                    background-color:transparent;
+                                    border-radius:6px;
+                                    padding:6px 14px;
+                                    font-weight:500;
+                                "
+                                onmouseover="this.style.backgroundColor='#ff4b7b'; this.style.color='#fff';"
+                                onmouseout="this.style.backgroundColor='transparent'; this.style.color='#ff4b7b';"
+                            >
                                 Usar avatar seleccionado
                             </button>
                         </div>
@@ -306,7 +356,18 @@ include __DIR__ . "/../includes/header.php";
                                accept="image/png, image/jpeg">
                         <small class="text-muted">Máx. 2MB. Formatos: PNG, JPG.</small>
                         <div class="mt-2 text-end">
-                            <button type="submit" name="subir_avatar" class="btn btn-outline-secondary btn-sm">
+                            <button type="submit" name="subir_avatar" class="btn btn-sm"
+                                style="
+                                    border:1px solid #6c757d;
+                                    color:#6c757d;
+                                    background-color:transparent;
+                                    border-radius:6px;
+                                    padding:6px 14px;
+                                    font-weight:500;
+                                "
+                                onmouseover="this.style.backgroundColor='#6c757d'; this.style.color='#fff';"
+                                onmouseout="this.style.backgroundColor='transparent'; this.style.color='#6c757d';"
+                            >
                                 Subir y usar esta imagen
                             </button>
                         </div>
@@ -317,6 +378,7 @@ include __DIR__ . "/../includes/header.php";
         </div>
     </div>
 </div>
+
 <script>
 function ttTogglePassword(inputId, btn) {
     const input = document.getElementById(inputId);
@@ -338,6 +400,5 @@ function ttTogglePassword(inputId, btn) {
     }
 }
 </script>
-
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>
