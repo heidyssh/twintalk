@@ -12,10 +12,10 @@ if (!$usuario_id) {
 // ----------------------------------------------------------
 // Redirigir a PERFIL solo si es estudiante NUEVO:
 // - sin información personal
-// - y sin ninguna matrícula
+// - sin matrículas
 // ----------------------------------------------------------
 
-// 1) ¿Tiene información personal?
+// (1) ¿Tiene información personal registrada?
 $stmt = $mysqli->prepare("
     SELECT id 
     FROM informacion_personal 
@@ -27,7 +27,7 @@ $stmt->execute();
 $tiene_info = (bool) $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// 2) ¿Tiene alguna matrícula?
+// (2) ¿Tiene alguna matrícula activa?
 $stmt = $mysqli->prepare("
     SELECT COUNT(*) AS total
     FROM matriculas
@@ -40,25 +40,23 @@ $stmt->close();
 
 $tiene_matriculas = $rowMat && $rowMat['total'] > 0;
 
-// 3) Si NO tiene info y NO tiene matrículas => usuario NUEVO
+//(3) Si no tiene info personal y tampoco matrículas → nuevo estudiante
 if (!$tiene_info && !$tiene_matriculas) {
     header("Location: /twintalk/student/perfil.php?completar=1");
     exit;
 }
 
-
-
-// Cursos donde YA está matriculado
+// ================= CURSOS MATRICULADOS ================= //
 $mis_cursos = $mysqli->prepare("
     SELECT 
         m.id AS matricula_id, 
-        h.id AS horario_id,            -- 👈 aquí agregamos el horario
-        c.nombre_curso, 
+        h.id AS horario_id,
+        c.nombre_curso,
         n.codigo_nivel,
         h.hora_inicio, 
-        h.hora_fin, 
+        h.hora_fin,
         d.nombre_dia,
-        u.nombre AS docente_nombre, 
+        u.nombre AS docente_nombre,
         u.apellido AS docente_apellido
     FROM matriculas m
     JOIN horarios h ON m.horario_id = h.id
@@ -74,10 +72,16 @@ $mis_cursos->bind_param("i", $usuario_id);
 $mis_cursos->execute();
 $res_mis_cursos = $mis_cursos->get_result();
 
-// Algunos horarios disponibles (no matriculado)
+// ================= CURSOS DISPONIBLES ================= //
 $disponibles = $mysqli->prepare("
-    SELECT h.id AS horario_id, c.nombre_curso, n.codigo_nivel,
-           d.nombre_dia, h.hora_inicio, h.hora_fin, h.cupos_disponibles
+    SELECT 
+        h.id AS horario_id, 
+        c.nombre_curso, 
+        n.codigo_nivel,
+        d.nombre_dia,
+        h.hora_inicio,
+        h.hora_fin,
+        h.cupos_disponibles
     FROM horarios h
     JOIN cursos c ON h.curso_id = c.id
     JOIN niveles_academicos n ON c.nivel_id = n.id
@@ -95,7 +99,7 @@ $disponibles->bind_param("i", $usuario_id);
 $disponibles->execute();
 $res_disponibles = $disponibles->get_result();
 
-// Anuncios recientes para este estudiante (máx 3)
+// ================= ANUNCIOS RECIENTES ================= //
 $sqlAnuncios = "
     SELECT 
         a.titulo,
@@ -107,13 +111,11 @@ $sqlAnuncios = "
     LEFT JOIN horarios h ON a.horario_id = h.id
     LEFT JOIN cursos c ON h.curso_id = c.id
     WHERE
-        (
-            a.horario_id IS NULL
+        ( a.horario_id IS NULL
             OR a.horario_id IN (
-                SELECT m.horario_id
-                FROM matriculas m
+                SELECT m.horario_id FROM matriculas m
                 INNER JOIN estados_matricula em ON m.estado_id = em.id
-                WHERE m.estudiante_id = ? AND em.nombre_estado = 'Activa'
+                WHERE m.estudiante_id = ? AND em.nombre_estado='Activa'
             )
         )
         AND (a.fecha_expiracion IS NULL OR a.fecha_expiracion >= CURDATE())
@@ -124,8 +126,7 @@ $anuncios_stmt = $mysqli->prepare($sqlAnuncios);
 $anuncios_stmt->bind_param("i", $usuario_id);
 $anuncios_stmt->execute();
 $res_anuncios = $anuncios_stmt->get_result();
-
-// Últimas calificaciones de tareas (máx 5)
+// ================= ÚLTIMAS CALIFICACIONES ================= //
 $sqlUltimasTareas = "
     SELECT 
         te.id,
@@ -147,7 +148,8 @@ $stmtUlt->bind_param("i", $usuario_id);
 $stmtUlt->execute();
 $res_ultimas_tareas = $stmtUlt->get_result();
 $stmtUlt->close();
-// Resumen rápido de tareas: entregadas, pendientes y promedio
+
+// ================= RESUMEN DE TAREAS ================= //
 $sqlResumenTareas = "
     SELECT 
         COUNT(*) AS total_entregadas,
@@ -170,7 +172,7 @@ $promedio_tareas = $resResumen['promedio_calificacion'] !== null
     ? (float) $resResumen['promedio_calificacion']
     : null;
 
-// Tareas pendientes (tareas activas sin entrega en cursos donde la matrícula está activa)
+// ================= TAREAS PENDIENTES ================= //
 $sqlPendientes = "
     SELECT COUNT(*) AS total_pendientes
     FROM tareas t
@@ -196,10 +198,11 @@ $stmtPend->close();
 
 $total_tareas_pendientes = (int) ($rowPend['total_pendientes'] ?? 0);
 
-
+// ================= HEADER ================= //
 include __DIR__ . "/../includes/header.php";
 ?>
 
+<!-- =========== ESTADÍSTICAS SUPERIORES =========== -->
 <div class="row mt-3">
     <div class="col-12 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
@@ -208,27 +211,28 @@ include __DIR__ . "/../includes/header.php";
             </h1>
             <p class="text-muted mb-0">Bienvenido a tu dashboard de estudiante.</p>
         </div>
-        <a href="calendario.php" class="btn btn-outline-primary btn-sm" style="border-color:#A45A6A; color:#A45A6A;"
-            onmouseover="this.style.backgroundColor='#A45A6A'; this.style.color='white'; this.querySelector('i').style.color='white';"
-            onmouseout="this.style.backgroundColor='transparent'; this.style.color='#A45A6A'; this.querySelector('i').style.color='#A45A6A';">
+
+        <a href="calendario.php"
+           class="btn btn-outline-primary btn-sm"
+           style="border-color:#A45A6A; color:#A45A6A;"
+           onmouseover="this.style.backgroundColor='#A45A6A'; this.style.color='white'; this.querySelector('i').style.color='white';"
+           onmouseout="this.style.backgroundColor='transparent'; this.style.color='#A45A6A'; this.querySelector('i').style.color='#A45A6A';">
+
             <i class="fa-solid fa-calendar-days me-1" style="color:#A45A6A;"></i>
             Calendario de asignaciones
         </a>
-
-
     </div>
 </div>
+
+<!-- TARJETAS SUPERIORES -->
 <div class="row g-3 mb-3">
+
     <div class="col-md-4">
         <div class="card card-soft p-3 h-100">
             <p class="small text-muted mb-1">Tareas entregadas</p>
             <div class="d-flex justify-content-between align-items-end">
-                <span class="display-6 fw-bold">
-                    <?= (int) $total_tareas_entregadas ?>
-                </span>
-                <span class="small text-muted">
-                    Calificadas: <?= (int) $total_tareas_calificadas ?>
-                </span>
+                <span class="display-6 fw-bold"><?= (int) $total_tareas_entregadas ?></span>
+                <span class="small text-muted">Calificadas: <?= (int) $total_tareas_calificadas ?></span>
             </div>
         </div>
     </div>
@@ -237,12 +241,8 @@ include __DIR__ . "/../includes/header.php";
         <div class="card card-soft p-3 h-100">
             <p class="small text-muted mb-1">Tareas pendientes</p>
             <div class="d-flex justify-content-between align-items-end">
-                <span class="display-6 fw-bold">
-                    <?= (int) $total_tareas_pendientes ?>
-                </span>
-                <span class="small text-muted">
-                    En tus cursos activos
-                </span>
+                <span class="display-6 fw-bold"><?= (int) $total_tareas_pendientes ?></span>
+                <span class="small text-muted">En tus cursos activos</span>
             </div>
         </div>
     </div>
@@ -252,29 +252,24 @@ include __DIR__ . "/../includes/header.php";
             <p class="small text-muted mb-1">Promedio de calificaciones</p>
             <div class="d-flex justify-content-between align-items-end">
                 <span class="display-6 fw-bold">
-                    <?php if ($promedio_tareas !== null): ?>
-                        <?= number_format($promedio_tareas, 2) ?>
-                    <?php else: ?>
-                        --
-                    <?php endif; ?>
+                    <?= $promedio_tareas !== null ? number_format($promedio_tareas, 2) : '--' ?>
                 </span>
-                <span class="small text-muted">
-                    Sobre tus tareas calificadas
-                </span>
+                <span class="small text-muted">Sobre tareas evaluadas</span>
             </div>
         </div>
     </div>
+
 </div>
-
-
+<!-- ======================= CONTENIDO PRINCIPAL ======================= -->
 <div class="row g-3">
-    <div class="col-lg-7">
-        <div class="card card-soft p-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h6 fw-bold mb-0" style="color:#A45A6A;">
-                    Mis clases actuales
-                </h2>
 
+    <!-- ======================= COLUMNA IZQUIERDA ======================= -->
+    <div class="col-lg-7">
+
+        <!-- 🔥 MIS CLASES ACTUALES (SIN CAMBIOS) -->
+        <div class="card card-soft p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="h6 fw-bold mb-0" style="color:#A45A6A;">Mis clases actuales</h2>
                 <a href="mis_matriculas.php" class="small fw-semibold" style="color:#A45A6A; text-decoration:none;">
                     Ver historial ›
                 </a>
@@ -289,7 +284,7 @@ include __DIR__ . "/../includes/header.php";
                                 <th>Docente</th>
                                 <th>Día</th>
                                 <th>Hora</th>
-                                <th>Acciones</th> <!-- 👈 nueva columna -->
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -299,29 +294,29 @@ include __DIR__ . "/../includes/header.php";
                                         <strong><?= htmlspecialchars($row['nombre_curso']) ?></strong><br>
                                         <span class="badge-level">Nivel <?= htmlspecialchars($row['codigo_nivel']) ?></span>
                                     </td>
-                                    <td><?= htmlspecialchars($row['docente_nombre'] . " " . $row['docente_apellido']) ?></td>
+                                    <td><?= htmlspecialchars($row['docente_nombre']." ".$row['docente_apellido']) ?></td>
                                     <td><?= htmlspecialchars($row['nombre_dia']) ?></td>
-                                    <td><?= substr($row['hora_inicio'], 0, 5) ?> - <?= substr($row['hora_fin'], 0, 5) ?></td>
+                                    <td><?= substr($row['hora_inicio'],0,5) ?> - <?= substr($row['hora_fin'],0,5) ?></td>
                                     <td>
-                                        <a href="curso_detalle.php?horario_id=<?= (int) $row['horario_id'] ?>"
-                                            class="btn btn-sm btn-outline-secondary">
-                                            Ver detalles
-                                        </a>
+                                        <a href="curso_detalle.php?horario_id=<?= (int)$row['horario_id'] ?>"
+                                           class="btn btn-sm btn-outline-secondary">Ver detalles</a>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
+
             <?php else: ?>
                 <p class="text-muted mb-0">Aún no estás matriculado en ningún curso.</p>
             <?php endif; ?>
         </div>
-    </div>
 
-    <div class="col-lg-5">
+
+        <!-- 🔥🔥 CURSOS DISPONIBLES PARA MATRICULAR — MOVIDO AQUÍ 🔥🔥 -->
         <div class="card card-soft p-3 mb-3">
             <h2 class="h6 fw-bold mb-2">Cursos disponibles para matricular</h2>
+
             <?php if ($res_disponibles->num_rows > 0): ?>
                 <?php while ($row = $res_disponibles->fetch_assoc()): ?>
                     <div class="border rounded-3 p-2 mb-2 bg-white">
@@ -331,134 +326,111 @@ include __DIR__ . "/../includes/header.php";
                                 <span class="badge-level">Nivel <?= htmlspecialchars($row['codigo_nivel']) ?></span>
                                 <span class="small d-block text-muted">
                                     <?= htmlspecialchars($row['nombre_dia']) ?> ·
-                                    <?= substr($row['hora_inicio'], 0, 5) ?> - <?= substr($row['hora_fin'], 0, 5) ?>
+                                    <?= substr($row['hora_inicio'],0,5) ?> - <?= substr($row['hora_fin'],0,5) ?>
                                 </span>
                             </div>
                             <div class="text-end">
-                                <span class="small text-muted d-block mb-1">
-                                    Cupos: <?= (int) $row['cupos_disponibles'] ?>
-                                </span>
-                                <a href="cursos_disponibles.php?matricular=<?= (int) $row['horario_id'] ?>"
-                                    class="btn btn-sm btn-tt-primary">
-                                    Matricular
-                                </a>
+                                <span class="small text-muted d-block mb-1">Cupos: <?= (int)$row['cupos_disponibles'] ?></span>
+                                <a href="cursos_disponibles.php?matricular=<?= (int)$row['horario_id'] ?>"
+                                   class="btn btn-sm btn-tt-primary">Matricular</a>
                             </div>
                         </div>
                     </div>
                 <?php endwhile; ?>
+
             <?php else: ?>
-                <p class="text-muted mb-0">No hay cursos disponibles para ti en este momento.</p>
+                <p class="text-muted mb-0">No hay cursos disponibles actualmente.</p>
             <?php endif; ?>
         </div>
 
-        <div class="card card-soft p-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h6 fw-bold mb-0" style="color:#A45A6A;">
-                    Anuncios recientes
-                </h2>
+    </div> <!-- /col-lg-7 -->
 
-                <a href="anuncios.php" class="small fw-semibold" style="color:#A45A6A; text-decoration:none;">
-                    Ver todos ›
-                </a>
+
+    <!-- ======================= COLUMNA DERECHA (TODO IGUAL) ======================= -->
+    <div class="col-lg-5">
+
+        <!-- ANUNCIOS -->
+        <div class="card card-soft p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="h6 fw-bold mb-0" style="color:#A45A6A;">Anuncios recientes</h2>
+                <a href="anuncios.php" class="small fw-semibold" style="color:#A45A6A;text-decoration:none;">Ver todos ›</a>
             </div>
 
-
-            <?php if ($res_anuncios->num_rows > 0): ?>
+            <?php if ($res_anuncios->num_rows>0): ?>
                 <ul class="list-unstyled mb-0">
-                    <?php while ($a = $res_anuncios->fetch_assoc()): ?>
-                        <li class="mb-2">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <?php if ($a['importante']): ?>
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle me-1">
-                                            ¡Importante!
-                                        </span>
-                                    <?php endif; ?>
-                                    <strong class="small d-block">
-                                        <?= htmlspecialchars($a['titulo']) ?>
-                                    </strong>
-                                    <?php if (!empty($a['nombre_curso'])): ?>
-                                        <span class="badge bg-light text-muted border small">
-                                            <?= htmlspecialchars($a['nombre_curso']) ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="badge bg-light text-muted border small">
-                                            General
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
-                                <small class="text-muted ms-2">
-                                    <?= date('d/m', strtotime($a['fecha_publicacion'])) ?>
-                                </small>
+                <?php while($a=$res_anuncios->fetch_assoc()): ?>
+                    <li class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <?php if($a['importante']): ?>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle me-1">¡Importante!</span>
+                                <?php endif; ?>
+
+                                <strong class="small d-block"><?= htmlspecialchars($a['titulo']) ?></strong>
+
+                                <span class="badge bg-light text-muted border small">
+                                    <?= $a['nombre_curso'] ?? "General" ?>
+                                </span>
                             </div>
-                        </li>
-                    <?php endwhile; ?>
+                            <small class="text-muted"><?= date('d/m',strtotime($a['fecha_publicacion'])) ?></small>
+                        </div>
+                    </li>
+                <?php endwhile; ?>
                 </ul>
             <?php else: ?>
-                <p class="small text-muted mb-0">Aún no hay anuncios para tus cursos.</p>
-            <?php endif; ?>
-        </div>
-
-        <div class="card card-soft p-3">
-            <h2 class="h6 fw-bold mb-2">Mis últimas calificaciones de tareas</h2>
-            <p class="small text-muted mb-2">
-                Revisa las notas más recientes de las tareas que has entregado.
-            </p>
-            <?php if ($res_ultimas_tareas->num_rows > 0): ?>
-                <ul class="list-unstyled mb-0">
-                    <?php while ($t = $res_ultimas_tareas->fetch_assoc()): ?>
-                        <li class="mb-2">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <div class="small fw-semibold">
-                                        <?= htmlspecialchars($t['titulo_tarea']) ?>
-                                    </div>
-                                    <div class="small text-muted">
-                                        <?= htmlspecialchars($t['nombre_curso']) ?>
-                                    </div>
-                                </div>
-                                <div class="text-end">
-                                    <div class="badge bg-primary-subtle text-primary">
-                                        <?= htmlspecialchars($t['calificacion']) ?>
-                                    </div>
-                                    <?php if ($t['fecha_calificacion']): ?>
-                                        <div class="small text-muted">
-                                            <?= date('d/m', strtotime($t['fecha_calificacion'])) ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </li>
-                    <?php endwhile; ?>
-                </ul>
-            <?php else: ?>
-                <p class="small text-muted mb-0">
-                    Aún no tienes calificaciones de tareas registradas.
-                </p>
+                <p class="small text-muted mb-0">No hay anuncios por el momento.</p>
             <?php endif; ?>
         </div>
 
 
-        <div class="card shadow-sm border-0 p-3" style="border-left: 4px solid #A45A6A;">
+        <!-- ÚLTIMAS CALIFICACIONES -->
+        <div class="card card-soft p-3 mb-3">
+            <h2 class="h6 fw-bold mb-2">Mis últimas calificaciones</h2>
+            <p class="small text-muted mb-2">Notas recientes de tus tareas entregadas.</p>
 
+            <?php if($res_ultimas_tareas->num_rows>0): ?>
+                <ul class="list-unstyled mb-0">
+                <?php while($t=$res_ultimas_tareas->fetch_assoc()): ?>
+                    <li class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="small fw-semibold"><?= htmlspecialchars($t['titulo_tarea']) ?></div>
+                                <div class="small text-muted"><?= htmlspecialchars($t['nombre_curso']) ?></div>
+                            </div>
+                            <div class="text-end">
+                                <div class="badge bg-primary-subtle text-primary"><?= htmlspecialchars($t['calificacion']) ?></div>
+                                <?php if($t['fecha_calificacion']): ?>
+                                    <div class="small text-muted"><?= date('d/m',strtotime($t['fecha_calificacion'])) ?></div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </li>
+                <?php endwhile; ?>
+                </ul>
+
+            <?php else: ?>
+                <p class="small text-muted mb-0">Aún no tienes tareas calificadas.</p>
+            <?php endif; ?>
+        </div>
+
+
+        <!-- CONFIGURACIÓN RÁPIDA -->
+        <div class="card shadow-sm border-0 p-3" style="border-left:4px solid #A45A6A;">
             <h2 class="h6 fw-bold mb-2" style="color:#A45A6A;">
                 <i class="fa-solid fa-gear me-1"></i> Configuración rápida
             </h2>
-
-            <p class="small text-muted mb-3">
-                Gestiona tu información personal y revisa tus actividades académicas.
-            </p>
+            <p class="small text-muted mb-3">Gestiona tu información personal y actividades.</p>
 
             <div class="d-flex flex-column gap-2">
 
                 <a href="perfil.php" class="btn btn-light border rounded-pill text-start"
-                    style="color:#A45A6A; border-color:#A45A6A;">
+                   style="color:#A45A6A;border-color:#A45A6A;">
                     <i class="fa-solid fa-user-pen me-2"></i> Ir a mi perfil
                 </a>
 
                 <a href="/twintalk/student/calendario.php" class="btn text-white rounded-pill"
-                    style="background-color:#A45A6A;">
-                    <i class="fa-solid fa-calendar-days me-2"></i> Ver calendario de tareas
+                   style="background-color:#A45A6A;">
+                    <i class="fa-solid fa-calendar-days me-2"></i> Ver calendario
                 </a>
 
                 <a href="/twintalk/student/calificaciones.php" class="btn btn-outline-dark rounded-pill">
@@ -468,7 +440,8 @@ include __DIR__ . "/../includes/header.php";
             </div>
         </div>
 
-    </div>
-</div>
+    </div><!-- /col-lg-5 -->
+
+</div><!-- /row -->
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

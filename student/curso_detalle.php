@@ -207,7 +207,7 @@ $stmtInfo->close();
 if (!$curso) {
     include __DIR__ . "/../includes/header.php";
     echo '<div class="alert alert-danger mt-4">No se encontró la información del curso.</div>';
-    include __DIR__ . "/../includes/footer.php";
+    include __DIR__ . "/../includes/footer.php>";
     exit;
 }
 
@@ -276,6 +276,7 @@ $stmtTar->bind_param(
 $stmtTar->execute();
 $tareas = $stmtTar->get_result();
 $stmtTar->close();
+
 // 4.b Extensiones de tareas para este estudiante (y generales)
 $extensiones_por_tarea = [];
 
@@ -294,7 +295,6 @@ if ($stmtExtAll = $mysqli->prepare($extSql)) {
     }
     $stmtExtAll->close();
 }
-
 
 // 5) Anuncios específicos del curso
 $anSql = "
@@ -717,7 +717,5 @@ include __DIR__ . "/../includes/header.php";
         ‹ Volver a mis cursos
     </a>
 </div>
-
-
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

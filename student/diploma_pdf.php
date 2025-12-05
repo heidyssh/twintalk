@@ -25,9 +25,9 @@ $sql = "
         h.fecha_inicio,
         h.fecha_fin,
         em.nombre_estado,
-        ud.nombre      AS doc_nombre,
-        ud.apellido    AS doc_apellido,
-        d.firma_path   AS doc_firma_path,
+ud.nombre      AS doc_nombre,
+ud.apellido    AS doc_apellido,
+d.id           AS docente_id,
 
         IFNULL(t_sum.suma_tareas, 0) AS suma_tareas,
         IFNULL(e_sum.suma_eval, 0)   AS suma_eval,
@@ -108,12 +108,13 @@ if (file_exists($logoPath)) {
 $firmaPath = __DIR__ . '/../assets/img/firmadueña.png';
 // Firma del docente (dinámica)
 $docenteFirmaBase64 = '';
-if (!empty($datos['doc_firma_path'])) {
-    $firmaDocentePath = __DIR__ . '/..' . $datos['doc_firma_path']; // convierte ruta web a física
-    if (file_exists($firmaDocentePath)) {
-        $firmaDocenteData = base64_encode(file_get_contents($firmaDocentePath));
-        $docenteFirmaBase64 = 'data:image/png;base64,' . $firmaDocenteData;
-    }
+$docenteId = (int) $datos['docente_id'];
+
+$firmaDocentePath = __DIR__ . "/../assets/img/firmas_docentes/firma_{$docenteId}.png";
+
+if (file_exists($firmaDocentePath)) {
+    $firmaDocenteData = base64_encode(file_get_contents($firmaDocentePath));
+    $docenteFirmaBase64 = "data:image/png;base64,{$firmaDocenteData}";
 }
 
 $firmaBase64 = '';
