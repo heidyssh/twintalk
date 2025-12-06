@@ -46,14 +46,20 @@ if (!is_dir($uploadDirTareas)) {
 }
 
 // Manejar subida de tarea del estudiante
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir_tarea') {
+// Manejar subida de tarea del estudiante
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subir_tarea')) {
     $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
 
     if ($tarea_id <= 0 || !isset($_FILES['archivo_tarea'])) {
         $error_tarea = "Datos de tarea inválidos.";
     } else {
-        // Validar que la tarea sea de este horario
-        $sqlValT = "SELECT id, fecha_entrega, permitir_atraso FROM tareas WHERE id = ? AND horario_id = ? AND activo = 1 LIMIT 1";
+        // Validar que la tarea sea de este horario y obtener modalidad
+        $sqlValT = "
+            SELECT id, fecha_entrega, permitir_atraso, modalidad
+            FROM tareas
+            WHERE id = ? AND horario_id = ? AND activo = 1
+            LIMIT 1
+        ";
         $stmtValT = $mysqli->prepare($sqlValT);
         $stmtValT->bind_param("ii", $tarea_id, $horario_id);
         $stmtValT->execute();
@@ -66,8 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir
             $tareaRow = $resValT->fetch_assoc();
 
             // ===============================
-            //  NUEVA LÓGICA: FECHA LÍMITE REAL
-            //  (tarea + extensiones del docente)
+            //  FECHA LÍMITE REAL (tarea + extensiones)
             // ===============================
             $fecha_limite = $tareaRow['fecha_entrega']; // fecha original (puede ser null)
 
@@ -83,25 +88,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir
             $stmtExt->bind_param("ii", $tarea_id, $matricula_id);
             $stmtExt->execute();
             $resExt = $stmtExt->get_result();
-            $extRow = $resExt->fetch_assoc();
+            $rowExt = $resExt->fetch_assoc();
             $stmtExt->close();
 
-            if (!empty($extRow['max_fecha'])) {
-                // Si la tarea no tenía fecha o la extensión es mayor, usamos la extensión
-                if (empty($fecha_limite) || $extRow['max_fecha'] > $fecha_limite) {
-                    $fecha_limite = $extRow['max_fecha'];
+            if (!empty($rowExt['max_fecha'])) {
+                $fecha_ext = $rowExt['max_fecha']; // Y-m-d
+                if (empty($fecha_limite) || $fecha_ext > $fecha_limite) {
+                    $fecha_limite = $fecha_ext;
                 }
             }
 
             $hoy = date('Y-m-d');
 
-            // Validar contra la fecha límite final
+            // Si ya pasó la fecha y no se permite atraso -> bloquear
             if (
                 !empty($fecha_limite)
                 && $hoy > $fecha_limite
                 && (int) $tareaRow['permitir_atraso'] === 0
             ) {
-
                 $error_tarea = "⛔ Ya pasó la fecha de entrega y el docente no habilitó entregas tardías para ti.";
             } else {
                 $file = $_FILES['archivo_tarea'];
@@ -111,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir
                     $nombreOriginal = $file['name'];
                     $tmpName = $file['tmp_name'];
                     $ext = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
+
                     $nuevoNombre = uniqid('entrega_') . ($ext ? '.' . $ext : '');
                     $rutaDestino = $uploadDirTareas . $nuevoNombre;
 
@@ -118,40 +123,135 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir
                         $archivo_url = '/twintalk/uploads/tareas/' . $nuevoNombre;
                         $tamano_archivo = $file['size'];
 
-                        // Ver si ya existe entrega
-                        $sqlCheckEnt = "
-                            SELECT id FROM tareas_entregas
-                            WHERE tarea_id = ? AND matricula_id = ?
-                            LIMIT 1
-                        ";
-                        $stmtCE = $mysqli->prepare($sqlCheckEnt);
-                        $stmtCE->bind_param("ii", $tarea_id, $matricula_id);
-                        $stmtCE->execute();
-                        $resCE = $stmtCE->get_result();
-                        $existente = $resCE->fetch_assoc();
-                        $stmtCE->close();
+                        $ok = false;
 
-                        if ($existente) {
-                            $sqlUpd = "
-                                UPDATE tareas_entregas
-                                SET archivo_url = ?, tamano_archivo = ?, fecha_entrega = NOW(),
-                                    calificacion = NULL, comentarios_docente = NULL, fecha_calificacion = NULL
-                                WHERE id = ?
-                            ";
-                            $stmtUpd = $mysqli->prepare($sqlUpd);
-                            $stmtUpd->bind_param("sii", $archivo_url, $tamano_archivo, $existente['id']);
-                            $ok = $stmtUpd->execute();
-                            $stmtUpd->close();
+                        // ===============================
+                        //   ENTREGA GRUPAL
+                        //   (UNA SOLA ENTREGA POR GRUPO)
+                        // ===============================
+                        if (!empty($tareaRow['modalidad']) && $tareaRow['modalidad'] === 'grupo') {
+
+                            // 1) Obtener el nombre de grupo de este estudiante
+                            $nombreGrupo = null;
+                            $stmtGrupo = $mysqli->prepare("
+                                SELECT nombre_grupo
+                                FROM tareas_destinatarios
+                                WHERE tarea_id = ? AND matricula_id = ?
+                                LIMIT 1
+                            ");
+                            $stmtGrupo->bind_param("ii", $tarea_id, $matricula_id);
+                            $stmtGrupo->execute();
+                            $resGrupo = $stmtGrupo->get_result();
+                            if ($rowGrupo = $resGrupo->fetch_assoc()) {
+                                $nombreGrupo = trim((string) $rowGrupo['nombre_grupo']);
+                            }
+                            $stmtGrupo->close();
+
+                            // 2) Obtener todas las matrículas de ese mismo grupo
+                            $matriculasGrupo = [];
+
+                            if (!empty($nombreGrupo)) {
+                                $stmtMG = $mysqli->prepare("
+                                    SELECT matricula_id
+                                    FROM tareas_destinatarios
+                                    WHERE tarea_id = ? AND nombre_grupo = ?
+                                ");
+                                $stmtMG->bind_param("is", $tarea_id, $nombreGrupo);
+                                $stmtMG->execute();
+                                $resMG = $stmtMG->get_result();
+                                while ($rowMG = $resMG->fetch_assoc()) {
+                                    $matriculasGrupo[] = (int) $rowMG['matricula_id'];
+                                }
+                                $stmtMG->close();
+                            }
+
+                            // Por seguridad, si no encuentra nada, al menos él mismo
+                            if (empty($matriculasGrupo)) {
+                                $matriculasGrupo[] = $matricula_id;
+                            }
+
+                            // 3) Insertar/actualizar la entrega para CADA integrante del grupo
+                            foreach ($matriculasGrupo as $matIdGrupo) {
+                                $sqlCheckEnt = "
+                                    SELECT id
+                                    FROM tareas_entregas
+                                    WHERE tarea_id = ? AND matricula_id = ?
+                                    LIMIT 1
+                                ";
+                                $stmtCE = $mysqli->prepare($sqlCheckEnt);
+                                $stmtCE->bind_param("ii", $tarea_id, $matIdGrupo);
+                                $stmtCE->execute();
+                                $resCE = $stmtCE->get_result();
+                                $existente = $resCE->fetch_assoc();
+                                $stmtCE->close();
+
+                                if ($existente) {
+                                    $sqlUpd = "
+                                        UPDATE tareas_entregas
+                                        SET archivo_url = ?, tamano_archivo = ?, fecha_entrega = NOW(),
+                                            calificacion = NULL, comentarios_docente = NULL, fecha_calificacion = NULL
+                                        WHERE id = ?
+                                    ";
+                                    $stmtUpd = $mysqli->prepare($sqlUpd);
+                                    $stmtUpd->bind_param("sii", $archivo_url, $tamano_archivo, $existente['id']);
+                                    if ($stmtUpd->execute()) {
+                                        $ok = true;
+                                    }
+                                    $stmtUpd->close();
+                                } else {
+                                    $sqlIns = "
+                                        INSERT INTO tareas_entregas
+                                            (tarea_id, matricula_id, archivo_url, tamano_archivo)
+                                        VALUES (?, ?, ?, ?)
+                                    ";
+                                    $stmtIns = $mysqli->prepare($sqlIns);
+                                    $stmtIns->bind_param("iisi", $tarea_id, $matIdGrupo, $archivo_url, $tamano_archivo);
+                                    if ($stmtIns->execute()) {
+                                        $ok = true;
+                                    }
+                                    $stmtIns->close();
+                                }
+                            }
+
                         } else {
-                            $sqlIns = "
-                                INSERT INTO tareas_entregas
-                                (tarea_id, matricula_id, archivo_url, tamano_archivo)
-                                VALUES (?, ?, ?, ?)
+                            // ===============================
+                            //   ENTREGA INDIVIDUAL (LO DE ANTES)
+                            // ===============================
+                            $sqlCheckEnt = "
+                                SELECT id
+                                FROM tareas_entregas
+                                WHERE tarea_id = ? AND matricula_id = ?
+                                LIMIT 1
                             ";
-                            $stmtIns = $mysqli->prepare($sqlIns);
-                            $stmtIns->bind_param("iisi", $tarea_id, $matricula_id, $archivo_url, $tamano_archivo);
-                            $ok = $stmtIns->execute();
-                            $stmtIns->close();
+                            $stmtCE = $mysqli->prepare($sqlCheckEnt);
+                            $stmtCE->bind_param("ii", $tarea_id, $matricula_id);
+                            $stmtCE->execute();
+                            $resCE = $stmtCE->get_result();
+                            $existente = $resCE->fetch_assoc();
+                            $stmtCE->close();
+
+                            if ($existente) {
+                                $sqlUpd = "
+                                    UPDATE tareas_entregas
+                                    SET archivo_url = ?, tamano_archivo = ?, fecha_entrega = NOW(),
+                                        calificacion = NULL, comentarios_docente = NULL, fecha_calificacion = NULL
+                                    WHERE id = ?
+                                ";
+                                $stmtUpd = $mysqli->prepare($sqlUpd);
+                                $stmtUpd->bind_param("sii", $archivo_url, $tamano_archivo, $existente['id']);
+                                $ok = $stmtUpd->execute();
+                                $stmtUpd->close();
+                            } else {
+                                $sqlIns = "
+                                    INSERT INTO tareas_entregas
+                                        (tarea_id, matricula_id, archivo_url, tamano_archivo)
+                                    VALUES (?, ?, ?, ?)
+                                ";
+                                $stmtIns = $mysqli->prepare($sqlIns);
+                                $stmtIns->bind_param("iisi", $tarea_id, $matricula_id, $archivo_url, $tamano_archivo);
+                                $ok = $stmtIns->execute();
+                                $stmtIns->close();
+                            }
                         }
 
                         if (!empty($ok)) {
@@ -167,6 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'subir
         }
     }
 }
+
 
 // 2) Datos del curso, horario y docente
 $infoSql = "
@@ -233,6 +334,11 @@ $materiales = $stmtMat->get_result();
 $stmtMat->close();
 
 // 4) Tareas del curso (con valor_maximo y mi entrega)
+// 4) Tareas del curso (todas las tareas del horario, individuales y grupales)
+// La modalidad 'grupo' es solo informativa (el docente ya define grupos),
+// pero la tarea se muestra a TODO el curso.
+// 4) Tareas del curso (todas las tareas del horario, individuales y grupales)
+// La modalidad 'grupo' indica que la entrega es por equipo.
 $tareasSql = "
     SELECT 
         t.id,
@@ -242,6 +348,8 @@ $tareasSql = "
         t.fecha_entrega,
         t.archivo_instrucciones,
         t.valor_maximo,
+        t.modalidad,
+        td.nombre_grupo AS mi_nombre_grupo,
 
         (SELECT te.archivo_url 
          FROM tareas_entregas te 
@@ -260,22 +368,29 @@ $tareasSql = "
          WHERE te.tarea_id = t.id AND te.matricula_id = ? LIMIT 1) AS mis_comentarios
 
     FROM tareas t
+    LEFT JOIN tareas_destinatarios td
+        ON td.tarea_id = t.id
+       AND td.matricula_id = ?   -- para saber mi grupo
     WHERE t.horario_id = ? 
       AND t.activo = 1
     ORDER BY t.fecha_publicacion DESC
 ";
+
 $stmtTar = $mysqli->prepare($tareasSql);
 $stmtTar->bind_param(
-    "iiiii",
-    $matricula_id,
-    $matricula_id,
-    $matricula_id,
-    $matricula_id,
-    $horario_id
+    "iiiiii",
+    $matricula_id, // mi_archivo
+    $matricula_id, // mi_fecha_entrega
+    $matricula_id, // mi_calificacion
+    $matricula_id, // mis_comentarios
+    $matricula_id, // td.nombre_grupo (mi grupo)
+    $horario_id    // filtro por horario
 );
 $stmtTar->execute();
 $tareas = $stmtTar->get_result();
 $stmtTar->close();
+
+
 
 // 4.b Extensiones de tareas para este estudiante (y generales)
 $extensiones_por_tarea = [];
@@ -321,7 +436,7 @@ $comSql = "
     FROM matriculas m
     INNER JOIN usuarios u ON m.estudiante_id = u.id
     WHERE m.horario_id = ? 
-      AND m.estado_id = 1   -- Activos
+      AND m.estado_id IN (1,2,4)   -- Activa, Pendiente, Finalizada (excluimos Cancelada = 3)
       AND u.id != ?
     ORDER BY u.nombre ASC
 ";
@@ -337,8 +452,7 @@ include __DIR__ . "/../includes/header.php";
 <div class="container my-4">
     <!-- HEADER con gradiente estilo TwinTalk -->
     <div class="card card-soft border-0 shadow-sm mb-4">
-        <div class="card-body"
-             style="background: linear-gradient(90deg, #fbe9f0, #ffffff); border-radius: 0.75rem;">
+        <div class="card-body" style="background: linear-gradient(90deg, #fbe9f0, #ffffff); border-radius: 0.75rem;">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
                 <div>
                     <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
@@ -446,10 +560,13 @@ include __DIR__ . "/../includes/header.php";
                                 $fechaLim = $fechaLimiteRealBD ? date('d/m/Y', strtotime($fechaLimiteRealBD)) : null;
 
                                 $entregada = !empty($t['mi_archivo']);
-                                $valorMax = isset($t['valor_maximo']) ? (int)$t['valor_maximo'] : 100;
+                                $valorMax = isset($t['valor_maximo']) ? (int) $t['valor_maximo'] : 100;
 
                                 $vencida = (!empty($fechaLimiteRealBD) && $fechaLimiteRealBD < $hoy && !$entregada);
-
+                                $esGrupo = (!empty($t['modalidad']) && $t['modalidad'] === 'grupo');
+                                $nombreGrupoLocal = $t['mi_nombre_grupo'] ?? '';
+                                $bloquearSubidaGrp = ($esGrupo && $entregada); // si el grupo ya entregó, bloquear subida
+                        
                                 $extension_aplicada = (!empty($extFecha) && $fechaLimiteRealBD === $extFecha);
                                 ?>
                                 <li class="list-group-item border-0 border-bottom py-3">
@@ -466,7 +583,8 @@ include __DIR__ . "/../includes/header.php";
                                                 <?php endif; ?>
 
                                                 <?php if ($fechaLim): ?>
-                                                    <span class="badge small
+                                                    <span
+                                                        class="badge small
                                                         <?= $vencida && !$entregada
                                                             ? 'bg-danger-subtle text-danger border border-danger-subtle'
                                                             : 'bg-primary-subtle text-primary border border-primary-subtle' ?>">
@@ -498,11 +616,10 @@ include __DIR__ . "/../includes/header.php";
                                                 <p class="small mb-2">
                                                     <i class="fa-solid fa-paperclip me-1"></i>
                                                     Instrucciones:
-                                                    <a href="<?= htmlspecialchars($t['archivo_instrucciones']) ?>"
-                                                       target="_blank"
-                                                       style="color:#ff4b7b; font-weight:500; text-decoration:none;"
-                                                       onmouseover="this.style.color='#e84372'"
-                                                       onmouseout="this.style.color='#ff4b7b'">
+                                                    <a href="<?= htmlspecialchars($t['archivo_instrucciones']) ?>" target="_blank"
+                                                        style="color:#ff4b7b; font-weight:500; text-decoration:none;"
+                                                        onmouseover="this.style.color='#e84372'"
+                                                        onmouseout="this.style.color='#ff4b7b'">
                                                         Ver archivo
                                                     </a>
                                                 </p>
@@ -513,90 +630,104 @@ include __DIR__ . "/../includes/header.php";
                                                 <div class="border rounded-3 p-2 bg-light mb-2">
                                                     <div class="d-flex justify-content-between gap-2">
                                                         <div>
-                                                            <span class="small fw-semibold">Tu entrega</span><br>
-                                                            <a href="<?= htmlspecialchars($t['mi_archivo']) ?>"
-                                                               target="_blank"
-                                                               class="small"
-                                                               style="color:#ff4b7b; text-decoration:none;"
-                                                               onmouseover="this.style.color='#e84372'"
-                                                               onmouseout="this.style.color='#ff4b7b'">
-                                                                Ver archivo enviado
-                                                            </a>
-                                                        </div>
-                                                        <div class="small text-end">
-                                                            <?php if (!empty($t['mi_fecha_entrega'])): ?>
-                                                                <div class="text-muted">
-                                                                    Enviada el <?= date('d/m/Y H:i', strtotime($t['mi_fecha_entrega'])) ?>
-                                                                </div>
-                                                            <?php endif; ?>
+                                                            <span class="small fw-semibold">
+                                                                <?php if ($esGrupo): ?>
+                                                                    Entrega de tu grupo
+                                                                    <?php if (!empty($nombreGrupoLocal)): ?>
+                                                                        (<?= htmlspecialchars($nombreGrupoLocal) ?>)
+                                                                    <?php endif; ?>
+                                                                <?php else: ?>
+                                                                    Tu entrega
+                                                                <?php endif; ?>
+                                                            </span><br>
 
-                                                            <?php if ($t['mi_calificacion'] !== null): ?>
-                                                                <div class="mt-1">
-                                                                    Nota:
-                                                                    <span class="badge bg-success-subtle text-success border">
-                                                                        <?= htmlspecialchars($t['mi_calificacion']) ?>
-                                                                        / <?= $valorMax ?> pts
-                                                                    </span>
-                                                                </div>
-                                                            <?php else: ?>
-                                                                <div class="mt-1">
-                                                                    <span class="badge bg-secondary-subtle text-secondary border">
-                                                                        Valor: <?= $valorMax ?> pts
-                                                                    </span>
-                                                                    <div class="text-muted">En revisión</div>
-                                                                </div>
-                                                            <?php endif; ?>
+                                                            <div class="small text-end">
+                                                                <?php if (!empty($t['mi_fecha_entrega'])): ?>
+                                                                    <div class="text-muted">
+                                                                        Enviada el
+                                                                        <?= date('d/m/Y H:i', strtotime($t['mi_fecha_entrega'])) ?>
+                                                                    </div>
+                                                                <?php endif; ?>
+
+                                                                <?php if ($t['mi_calificacion'] !== null): ?>
+                                                                    <div class="mt-1">
+                                                                        Nota:
+                                                                        <span class="badge bg-success-subtle text-success border">
+                                                                            <?= htmlspecialchars($t['mi_calificacion']) ?>
+                                                                            / <?= $valorMax ?> pts
+                                                                        </span>
+                                                                    </div>
+                                                                <?php else: ?>
+                                                                    <div class="mt-1">
+                                                                        <span class="badge bg-secondary-subtle text-secondary border">
+                                                                            Valor: <?= $valorMax ?> pts
+                                                                        </span>
+                                                                        <div class="text-muted">En revisión</div>
+                                                                    </div>
+                                                                <?php endif; ?>
+                                                            </div>
                                                         </div>
+
+                                                        <?php if (!empty($t['mis_comentarios'])): ?>
+                                                            <div class="small mt-2">
+                                                                <strong>Comentario del docente:</strong><br>
+                                                                <?= nl2br(htmlspecialchars($t['mis_comentarios'])) ?>
+                                                            </div>
+                                                        <?php endif; ?>
                                                     </div>
+                                                <?php else: ?>
+                                                    <p class="small text-muted mb-2">
+                                                        Aún no has enviado tu archivo para esta tarea.
+                                                    </p>
+                                                <?php endif; ?>
+                                            </div>
 
-                                                    <?php if (!empty($t['mis_comentarios'])): ?>
-                                                        <div class="small mt-2">
-                                                            <strong>Comentario del docente:</strong><br>
-                                                            <?= nl2br(htmlspecialchars($t['mis_comentarios'])) ?>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <p class="small text-muted mb-2">
-                                                    Aún no has enviado tu archivo para esta tarea.
-                                                </p>
-                                            <?php endif; ?>
+                                            <!-- Columna derecha: subida -->
+<div style="min-width: 230px;">
+    <?php if ($bloquearSubidaGrp): ?>
+        <span class="badge bg-light text-success d-block text-center small mb-2 border">
+            Tu grupo ya envió esta tarea
+        </span>
+    <?php elseif ($vencida): ?>
+        <span class="badge bg-danger-subtle text-danger d-block text-center small mb-2 border">
+            Entrega vencida
+        </span>
+    <?php endif; ?>
+
+    <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="accion" value="subir_tarea">
+        <input type="hidden" name="tarea_id" value="<?= (int)$t['id'] ?>">
+
+        <input
+            type="file"
+            name="archivo_tarea"
+            class="form-control form-control-sm mb-2"
+            <?= ($vencida || $bloquearSubidaGrp) ? 'disabled' : '' ?>
+            required
+        >
+
+        <button
+            type="submit"
+            class="btn btn-sm w-100"
+            style="background-color:#ff4b7b; border:1px solid #ff4b7b; color:white; font-weight:500; border-radius:6px; padding:4px 10px;"
+            onmouseover="this.style.backgroundColor='#e84372'"
+            onmouseout="this.style.backgroundColor='#ff4b7b'"
+            <?= ($vencida || $bloquearSubidaGrp) ? 'disabled' : '' ?>
+        >
+            <?php if ($esGrupo): ?>
+                <?php if ($entregada): ?>
+                    Entrega de grupo registrada
+                <?php else: ?>
+                    Subir archivo de tu grupo
+                <?php endif; ?>
+            <?php else: ?>
+                <?= $entregada ? 'Reemplazar archivo' : 'Subir archivo' ?>
+            <?php endif; ?>
+        </button>
+    </form>
+</div>
+
                                         </div>
-
-                                        <!-- Columna derecha: subida -->
-                                        <div style="min-width: 230px;">
-                                            <?php if ($vencida): ?>
-                                                <span class="badge bg-danger-subtle text-danger d-block text-center small mb-2 border">
-                                                    Entrega vencida
-                                                </span>
-                                            <?php endif; ?>
-
-                                            <form method="post" enctype="multipart/form-data">
-                                                <input type="hidden" name="accion" value="subir_tarea">
-                                                <input type="hidden" name="tarea_id" value="<?= $t['id'] ?>">
-
-                                                <input type="file"
-                                                       name="archivo_tarea"
-                                                       class="form-control form-control-sm mb-2"
-                                                       required>
-
-                                                <button type="submit"
-                                                        class="btn btn-sm w-100"
-                                                        style="
-                                                            background-color:#ff4b7b;
-                                                            border:1px solid #ff4b7b;
-                                                            color:white;
-                                                            font-weight:500;
-                                                            border-radius:6px;
-                                                            padding:4px 10px;
-                                                        "
-                                                        onmouseover="this.style.backgroundColor='#e84372'"
-                                                        onmouseout="this.style.backgroundColor='#ff4b7b'">
-                                                    <?= $t['mi_archivo'] ? 'Reemplazar archivo' : 'Subir archivo' ?>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
                                 </li>
                             <?php endwhile; ?>
                         </ul>
@@ -622,11 +753,10 @@ include __DIR__ . "/../includes/header.php";
                                             </span>
 
                                             <strong class="d-block">
-                                                <a href="<?= htmlspecialchars($m['archivo_url']) ?>"
-                                                   target="_blank"
-                                                   style="color:#ff4b7b; text-decoration:none;"
-                                                   onmouseover="this.style.color='#e84372'"
-                                                   onmouseout="this.style.color='#ff4b7b'">
+                                                <a href="<?= htmlspecialchars($m['archivo_url']) ?>" target="_blank"
+                                                    style="color:#ff4b7b; text-decoration:none;"
+                                                    onmouseover="this.style.color='#e84372'"
+                                                    onmouseout="this.style.color='#ff4b7b'">
                                                     <?= htmlspecialchars($m['titulo']) ?>
                                                 </a>
                                             </strong>
@@ -660,12 +790,11 @@ include __DIR__ . "/../includes/header.php";
 
                     <div class="d-flex align-items-center">
                         <?php if (!empty($curso['foto_perfil'])): ?>
-                            <img src="<?= htmlspecialchars($curso['foto_perfil']) ?>"
-                                 class="rounded-circle me-2"
-                                 style="width:48px;height:48px;object-fit:cover;">
+                            <img src="<?= htmlspecialchars($curso['foto_perfil']) ?>" class="rounded-circle me-2"
+                                style="width:48px;height:48px;object-fit:cover;">
                         <?php else: ?>
                             <div class="rounded-circle bg-light d-flex justify-content-center align-items-center me-2"
-                                 style="width:48px;height:48px;">
+                                style="width:48px;height:48px;">
                                 <span class="fw-bold">
                                     <?= strtoupper(substr($curso['docente_nombre'], 0, 1) . substr($curso['docente_apellido'], 0, 1)) ?>
                                 </span>
@@ -679,7 +808,7 @@ include __DIR__ . "/../includes/header.php";
                             <div class="small text-muted"><?= htmlspecialchars($curso['docente_email']) ?></div>
                             <?php if ($curso['pais'] || $curso['ciudad']): ?>
                                 <div class="small text-muted">
-                                    <?= htmlspecialchars(trim($curso['ciudad'] . ", " . $curso['pais']), ", ") ?>
+                                    <?= htmlspecialchars(trim($curso['ciudad'] . ", " . $curso['pais'])) ?>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -709,11 +838,8 @@ include __DIR__ . "/../includes/header.php";
         </div>
     </div>
 
-    <a href="dashboard.php"
-       class="btn btn-link px-0"
-       style="color:#ff4b7b; font-weight:500; text-decoration:none;"
-       onmouseover="this.style.color='#e84372'"
-       onmouseout="this.style.color='#ff4b7b'">
+    <a href="dashboard.php" class="btn btn-link px-0" style="color:#ff4b7b; font-weight:500; text-decoration:none;"
+        onmouseover="this.style.color='#e84372'" onmouseout="this.style.color='#ff4b7b'">
         ‹ Volver a mis cursos
     </a>
 </div>

@@ -10,10 +10,37 @@ if (!$docenteId) {
     exit;
 }
 
-$horario_id_param = isset($_GET['horario_id']) ? (int)$_GET['horario_id'] : 0;
+// Horario seleccionado por parámetro (para filtrar tareas y cargar alumnos del grupo)
+$horario_id_param = isset($_GET['horario_id']) ? (int) $_GET['horario_id'] : 0;
+
+// --------------------------------------------
+// Estudiantes de este horario (para tareas en grupo)
+// --------------------------------------------
+$estudiantes = [];
+if ($horario_id_param > 0) {
+    $sqlEst = "
+        SELECT 
+            m.id AS matricula_id,
+            u.nombre,
+            u.apellido
+        FROM matriculas m
+        INNER JOIN usuarios u ON u.id = m.estudiante_id
+        WHERE m.horario_id = ?
+          AND m.estado_id IN (1,2,4) -- activa, pendiente, finalizada
+        ORDER BY u.nombre, u.apellido
+    ";
+    $stmtEst = $mysqli->prepare($sqlEst);
+    $stmtEst->bind_param("i", $horario_id_param);
+    $stmtEst->execute();
+    $resEst = $stmtEst->get_result();
+    while ($row = $resEst->fetch_assoc()) {
+        $estudiantes[] = $row;
+    }
+    $stmtEst->close();
+}
 
 $mensaje = "";
-$error   = "";
+$error = "";
 
 // Carpeta para archivos de tareas
 $uploadDir = __DIR__ . '/../uploads/tareas/';
@@ -46,13 +73,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // CREAR TAREA
     if ($accion === 'crear_tarea') {
-        $horario_id       = (int)($_POST['horario_id'] ?? 0);
-        $titulo           = trim($_POST['titulo'] ?? '');
-        $descripcion      = trim($_POST['descripcion'] ?? '');
-        $fecha_entrega    = !empty($_POST['fecha_entrega']) ? $_POST['fecha_entrega'] : null;
-        $modalidad        = ($_POST['modalidad'] ?? 'individual') === 'grupo' ? 'grupo' : 'individual';
-        $permitir_atraso  = isset($_POST['permitir_atraso']) ? 1 : 0;
-        $valor_maximo     = isset($_POST['valor_maximo']) ? (int)$_POST['valor_maximo'] : 100;
+        $horario_id = (int) ($_POST['horario_id'] ?? 0);
+        $titulo = trim($_POST['titulo'] ?? '');
+        $descripcion = trim($_POST['descripcion'] ?? '');
+        $fecha_entrega = !empty($_POST['fecha_entrega']) ? $_POST['fecha_entrega'] : null;
+        $modalidad = ($_POST['modalidad'] ?? 'individual') === 'grupo' ? 'grupo' : 'individual';
+        $permitir_atraso = isset($_POST['permitir_atraso']) ? 1 : 0;
+        $valor_maximo = isset($_POST['valor_maximo']) ? (int) $_POST['valor_maximo'] : 100;
         $archivo_instrucciones = null;
 
         if ($valor_maximo <= 0) {
@@ -79,10 +106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $file = $_FILES['archivo_instrucciones'];
             if ($file['error'] === UPLOAD_ERR_OK) {
                 $nombreOriginal = $file['name'];
-                $tmpName        = $file['tmp_name'];
-                $ext            = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
-                $nuevoNombre    = uniqid('tarea_') . ($ext ? '.' . $ext : '');
-                $rutaDestino    = $uploadDir . $nuevoNombre;
+                $tmpName = $file['tmp_name'];
+                $ext = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
+                $nuevoNombre = uniqid('tarea_') . ($ext ? '.' . $ext : '');
+                $rutaDestino = $uploadDir . $nuevoNombre;
 
                 if (move_uploaded_file($tmpName, $rutaDestino)) {
                     $archivo_instrucciones = '/twintalk/uploads/tareas/' . $nuevoNombre;
@@ -116,6 +143,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $valor_maximo
             );
             if ($stmtIns->execute()) {
+                // Guardar grupos / destinatarios si la tarea es en grupo
+                $tarea_id = $stmtIns->insert_id;
+
+                if ($modalidad === 'grupo' && !empty($_POST['destinatarios']) && is_array($_POST['destinatarios'])) {
+                    $gruposPost = $_POST['grupo_dest'] ?? [];
+
+                    $sqlDest = "INSERT INTO tareas_destinatarios (tarea_id, matricula_id, nombre_grupo)
+                                VALUES (?, ?, ?)";
+                    if ($stmtDest = $mysqli->prepare($sqlDest)) {
+                        foreach ($_POST['destinatarios'] as $matId) {
+                            $matId = (int) $matId;
+                            if ($matId > 0) {
+                                $nombreGrupo = '';
+                                if (isset($gruposPost[$matId])) {
+                                    $nombreGrupo = trim($gruposPost[$matId]);
+                                }
+
+                                // Si el docente no escribió nada, puedes dejarlo vacío
+                                $stmtDest->bind_param("iis", $tarea_id, $matId, $nombreGrupo);
+                                $stmtDest->execute();
+                            }
+                        }
+                        $stmtDest->close();
+                    }
+                }
+
                 $mensaje = "Tarea creada correctamente.";
             } else {
                 $error = "Error al guardar la tarea: " . $stmtIns->error;
@@ -123,9 +176,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtIns->close();
         }
 
-    // ELIMINAR TAREA
+        // ELIMINAR TAREA
     } elseif ($accion === 'eliminar_tarea') {
-        $tarea_id = (int)($_POST['tarea_id'] ?? 0);
+        $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
 
         if ($tarea_id > 0) {
             // Validar que la tarea sea de este docente
@@ -164,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // 3) Listado de tareas del docente (opcionalmente filtradas por horario)
 $params = [$docenteId];
-$types  = "i";
+$types = "i";
 
 $sqlTar = "
     SELECT 
@@ -192,7 +245,7 @@ $sqlTar = "
 
 if ($horario_id_param > 0) {
     $sqlTar .= " AND t.horario_id = ?";
-    $types   .= "i";
+    $types .= "i";
     $params[] = $horario_id_param;
 }
 
@@ -215,15 +268,18 @@ include __DIR__ . '/../includes/header.php';
         font-weight: 700;
         color: #b14f72;
     }
+
     .tt-tareas-page .tt-header-subtitle {
         font-size: 0.9rem;
         color: #6c757d;
     }
+
     .tt-tareas-page .card-soft {
         border-radius: 14px;
         border: 1px solid #f1e3ea;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     }
+
     .tt-tareas-page .btn-tt-primary {
         background-color: #b14f72;
         border-color: #b14f72;
@@ -231,13 +287,15 @@ include __DIR__ . '/../includes/header.php';
         border-radius: 10px;
         transition: all 0.15s ease-in-out;
     }
+
     .tt-tareas-page .btn-tt-primary:hover {
         background-color: #8f3454;
         border-color: #8f3454;
         color: #fff;
         transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(177,79,114,0.35);
+        box-shadow: 0 3px 8px rgba(177, 79, 114, 0.35);
     }
+
     .tt-tareas-page .btn-tt-outline {
         border-radius: 999px;
         border: 1px solid #b14f72;
@@ -247,15 +305,18 @@ include __DIR__ . '/../includes/header.php';
         padding-inline: 0.9rem;
         transition: all 0.15s ease-in-out;
     }
+
     .tt-tareas-page .btn-tt-outline:hover {
         background-color: #b14f72;
         color: #fff;
-        box-shadow: 0 3px 8px rgba(177,79,114,0.35);
+        box-shadow: 0 3px 8px rgba(177, 79, 114, 0.35);
     }
+
     .tt-tareas-page .table thead {
         background-color: #fdf3f7;
         font-size: 0.85rem;
     }
+
     .tt-tareas-page .table tbody td {
         font-size: 0.85rem;
         vertical-align: middle;
@@ -267,7 +328,7 @@ include __DIR__ . '/../includes/header.php';
     <!-- Encabezado estilo TwinTalk -->
     <div class="card card-soft border-0 shadow-sm mb-4">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
-             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
             <div>
                 <h1 class="tt-header-title mb-1">
                     <i class="fa-solid fa-tasks me-2"></i>
@@ -278,8 +339,7 @@ include __DIR__ . '/../includes/header.php';
                 </p>
             </div>
             <div class="text-md-end">
-                <a href="/twintalk/docente/dashboard.php"
-                   class="btn btn-sm btn-tt-outline">
+                <a href="/twintalk/docente/dashboard.php" class="btn btn-sm btn-tt-outline">
                     <i class="fa-solid fa-arrow-left me-1"></i>
                     Volver al dashboard
                 </a>
@@ -335,7 +395,8 @@ include __DIR__ . '/../includes/header.php';
                 <div class="mb-3">
                     <label class="form-label d-block small mb-1">Modalidad</label>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="modalidad" id="mod_individual" value="individual" checked>
+                        <input class="form-check-input" type="radio" name="modalidad" id="mod_individual"
+                            value="individual" checked>
                         <label class="form-check-label small" for="mod_individual">Individual</label>
                     </div>
                     <div class="form-check form-check-inline">
@@ -344,9 +405,56 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
 
+                <!-- NUEVO: listado de estudiantes para tareas en grupo -->
+                <!-- NUEVO: listado de estudiantes para tareas en grupo -->
+                <div class="mb-3" id="grupo-estudiantes-wrapper" style="display:none;">
+                    <label class="form-label small">Estudiantes y grupos de esta tarea</label>
+
+                    <?php if ($horario_id_param <= 0): ?>
+                        <p class="text-muted small mb-0">
+                            Primero selecciona un horario (arriba) para poder elegir estudiantes del grupo.
+                        </p>
+                    <?php elseif (empty($estudiantes)): ?>
+                        <p class="text-muted small mb-0">
+                            No hay estudiantes matriculados en este horario.
+                        </p>
+                    <?php else: ?>
+                        <div class="border rounded p-2" style="max-height: 220px; overflow-y: auto;">
+                            <?php foreach ($estudiantes as $est): ?>
+                                <div class="form-check d-flex align-items-center mb-1">
+                                    <!-- Checkbox del estudiante (por defecto marcado para que sea para TODO el curso) -->
+                                    <input class="form-check-input me-2" type="checkbox" name="destinatarios[]"
+                                        value="<?= (int) $est['matricula_id'] ?>" id="dest_<?= (int) $est['matricula_id'] ?>"
+                                        checked>
+
+                                    <!-- Nombre del estudiante -->
+                                    <label class="form-check-label small mb-0" for="dest_<?= (int) $est['matricula_id'] ?>"
+                                        style="min-width: 220px;">
+                                        <?= htmlspecialchars($est['nombre'] . ' ' . $est['apellido']) ?>
+                                    </label>
+
+                                    <!-- Nombre del grupo para ESTE estudiante -->
+                                    <input type="text" class="form-control form-control-sm ms-2"
+                                        name="grupo_dest[<?= (int) $est['matricula_id'] ?>]" placeholder="Grupo 1, Grupo 2..."
+                                        style="max-width: 180px;">
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div class="form-text small">
+                            Escribe el nombre del grupo para cada estudiante
+                            <br>
+                            Todos los alumnos con el mismo nombre quedarán en el mismo grupo;
+                            la tarea es para todo el curso, pero la entrega será grupal.
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+
                 <div class="mb-3">
                     <label class="form-label small">Valor máximo de la tarea (puntos)</label>
-                    <input type="number" name="valor_maximo" class="form-control form-control-sm" min="1" value="100" required>
+                    <input type="number" name="valor_maximo" class="form-control form-control-sm" min="1" value="100"
+                        required>
                     <div class="form-text">Ejemplo: 10, 20, 25, 100, etc.</div>
                 </div>
 
@@ -361,7 +469,8 @@ include __DIR__ . '/../includes/header.php';
                 </div>
 
                 <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" name="permitir_atraso" id="permitir_atraso" value="1">
+                    <input class="form-check-input" type="checkbox" name="permitir_atraso" id="permitir_atraso"
+                        value="1">
                     <label class="form-check-label small" for="permitir_atraso">
                         Permitir entregas tardías para esta tarea
                     </label>
@@ -431,7 +540,7 @@ include __DIR__ . '/../includes/header.php';
                                         <?= htmlspecialchars($t['titulo']) ?>
                                     </td>
                                     <td class="small">
-                                        <?= (int)$t['valor_maximo'] ?> pts
+                                        <?= (int) $t['valor_maximo'] ?> pts
                                     </td>
                                     <td class="small">
                                         <?= $t['modalidad'] === 'grupo' ? 'Grupo' : 'Individual' ?>
@@ -443,14 +552,14 @@ include __DIR__ . '/../includes/header.php';
                                         <?= $t['fecha_entrega'] ? date('d/m/Y', strtotime($t['fecha_entrega'])) : '-' ?>
                                     </td>
                                     <td class="small">
-                                        <a href="/twintalk/docente/calificaciones.php?view=tareas&curso_id=<?= $t['curso_id'] ?>&tarea_id=<?= $t['id'] ?>" 
-                                           class="btn btn-sm btn-tt-outline">
+                                        <a href="/twintalk/docente/calificaciones.php?view=tareas&curso_id=<?= $t['curso_id'] ?>&tarea_id=<?= $t['id'] ?>"
+                                            class="btn btn-sm btn-tt-outline">
                                             Calificar tarea
                                         </a>
                                     </td>
                                     <td class="text-end">
                                         <form method="post" class="d-inline"
-                                              onsubmit="return confirm('¿Eliminar esta tarea? Se borrarán también las entregas.');">
+                                            onsubmit="return confirm('¿Eliminar esta tarea? Se borrarán también las entregas.');">
                                             <input type="hidden" name="accion" value="eliminar_tarea">
                                             <input type="hidden" name="tarea_id" value="<?= $t['id'] ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -468,5 +577,45 @@ include __DIR__ . '/../includes/header.php';
     </div>
 
 </div>
+
+<script>
+    // Mostrar/ocultar el bloque de estudiantes cuando se elige Grupo / Individual
+    // y recargar la página al cambiar el horario para poder cargar los alumnos.
+    document.addEventListener('DOMContentLoaded', function () {
+        var radiosModalidad = document.querySelectorAll('input[name="modalidad"]');
+        var wrapperGrupo = document.getElementById('grupo-estudiantes-wrapper');
+        var selHorario = document.querySelector('select[name="horario_id"]');
+
+        function actualizarGrupo() {
+            if (!wrapperGrupo) return;
+            var seleccionado = document.querySelector('input[name="modalidad"]:checked');
+            if (seleccionado && seleccionado.value === 'grupo') {
+                wrapperGrupo.style.display = '';
+            } else {
+                wrapperGrupo.style.display = 'none';
+            }
+        }
+
+        radiosModalidad.forEach(function (r) {
+            r.addEventListener('change', actualizarGrupo);
+        });
+
+        actualizarGrupo();
+
+        // Cuando cambie el horario, recargamos con ?horario_id=...
+        if (selHorario) {
+            selHorario.addEventListener('change', function () {
+                var v = this.value;
+                var url = new URL(window.location.href);
+                if (v) {
+                    url.searchParams.set('horario_id', v);
+                } else {
+                    url.searchParams.delete('horario_id');
+                }
+                window.location.href = url.toString();
+            });
+        }
+    });
+</script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

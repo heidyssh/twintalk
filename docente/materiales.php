@@ -11,7 +11,7 @@ if (!$docenteId) {
 }
 
 $mensaje = "";
-$error   = "";
+$error = "";
 
 // Carpeta de subida
 $uploadDir = __DIR__ . '/../uploads/materiales/';
@@ -40,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // SUBIR MATERIAL
     if ($accion === 'subir_material') {
-        $horario_id  = (int)($_POST['horario_id'] ?? 0);
-        $titulo      = trim($_POST['titulo'] ?? '');
+        $horario_id = (int) ($_POST['horario_id'] ?? 0);
+        $titulo = trim($_POST['titulo'] ?? '');
         $descripcion = trim($_POST['descripcion'] ?? '');
 
         if ($horario_id <= 0 || !$titulo) {
@@ -59,13 +59,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($resHor->num_rows === 0) {
                 $error = "El horario seleccionado no pertenece a tus cursos.";
             } else {
-                $file           = $_FILES['archivo'];
+                $file = $_FILES['archivo'];
                 $nombreOriginal = $file['name'];
-                $tmpName        = $file['tmp_name'];
-                $ext            = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
-                $nuevoNombre    = uniqid('mat_') . ($ext ? '.' . $ext : '');
-                $rutaDestino    = $uploadDir . $nuevoNombre;
+                $tmpName = $file['tmp_name'];
+                $ext = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
+                $nuevoNombre = uniqid('mat_') . ($ext ? '.' . $ext : '');
+                $rutaDestino = $uploadDir . $nuevoNombre;
 
+                // ==============================
+                // 1) Calcular tipo_archivo_id según la extensión
+                // ==============================
+                $extLower = strtolower($ext);
+                $tipo_archivo_id = null;
+
+                $resTipos = $mysqli->query("SELECT id, extensiones_permitidas FROM tipos_archivo");
+                if ($resTipos) {
+                    while ($rowTA = $resTipos->fetch_assoc()) {
+                        $exts = array_map('trim', explode(',', strtolower($rowTA['extensiones_permitidas'])));
+                        foreach ($exts as $e) {
+                            if ($e !== '' && $e === $extLower) {
+                                $tipo_archivo_id = (int) $rowTA['id'];
+                                break 2; // salir de los dos bucles
+                            }
+                        }
+                    }
+                    $resTipos->free();
+                }
+
+                // Si no encontró nada, forzar un tipo por defecto (por ejemplo PDF = 1)
+                if ($tipo_archivo_id === null) {
+                    $tipo_archivo_id = 1;
+                }
+
+                // ==============================
+                // 2) Mover archivo y guardar en BD
+                // ==============================
                 if (!move_uploaded_file($tmpName, $rutaDestino)) {
                     $error = "No se pudo guardar el archivo en el servidor.";
                 } else {
@@ -73,14 +101,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $sqlIns = "
                         INSERT INTO materiales
-                        (docente_id, horario_id, titulo, descripcion, archivo_url, fecha_subida)
-                        VALUES (?, ?, ?, ?, ?, NOW())
+                        (docente_id, horario_id, tipo_archivo_id, titulo, descripcion, archivo_url, fecha_subida)
+                        VALUES (?, ?, ?, ?, ?, ?, NOW())
                     ";
                     $stmtIns = $mysqli->prepare($sqlIns);
                     $stmtIns->bind_param(
-                        "iisss",
+                        "iiisss",
                         $docenteId,
                         $horario_id,
+                        $tipo_archivo_id,
                         $titulo,
                         $descripcion,
                         $archivo_url
@@ -93,11 +122,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmtIns->close();
                 }
             }
+
         }
 
-    // ELIMINAR MATERIAL
+        // ELIMINAR MATERIAL
     } elseif ($accion === 'eliminar_material') {
-        $material_id = (int)($_POST['material_id'] ?? 0);
+        $material_id = (int) ($_POST['material_id'] ?? 0);
         if ($material_id > 0) {
             // Primero obtener la ruta para eliminar archivo físico (opcional)
             $sqlGet = "SELECT archivo_url FROM materiales WHERE id = ? AND docente_id = ? LIMIT 1";
@@ -162,15 +192,18 @@ include __DIR__ . '/../includes/header.php';
         font-weight: 700;
         color: #b14f72;
     }
+
     .tt-material-page .tt-header-subtitle {
         font-size: 0.9rem;
         color: #6c757d;
     }
+
     .tt-material-page .card-soft {
         border-radius: 14px;
         border: 1px solid #f1e3ea;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     }
+
     .tt-material-page .btn-tt-primary {
         background-color: #b14f72;
         border-color: #b14f72;
@@ -180,13 +213,15 @@ include __DIR__ . '/../includes/header.php';
         padding-inline: 1rem;
         transition: all 0.15s ease-in-out;
     }
+
     .tt-material-page .btn-tt-primary:hover {
         background-color: #8f3454;
         border-color: #8f3454;
         color: #fff;
         transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(177,79,114,0.35);
+        box-shadow: 0 3px 8px rgba(177, 79, 114, 0.35);
     }
+
     .tt-material-page .btn-tt-outline {
         border-radius: 999px;
         border: 1px solid #b14f72;
@@ -196,15 +231,18 @@ include __DIR__ . '/../includes/header.php';
         padding-inline: 0.9rem;
         transition: all 0.15s ease-in-out;
     }
+
     .tt-material-page .btn-tt-outline:hover {
         background-color: #b14f72;
         color: #fff;
-        box-shadow: 0 3px 8px rgba(177,79,114,0.35);
+        box-shadow: 0 3px 8px rgba(177, 79, 114, 0.35);
     }
+
     .tt-material-page .table thead {
         background-color: #fdf3f7;
         font-size: 0.85rem;
     }
+
     .tt-material-page .table tbody td {
         font-size: 0.85rem;
         vertical-align: middle;
@@ -216,7 +254,7 @@ include __DIR__ . '/../includes/header.php';
     <!-- Encabezado bonito -->
     <div class="card card-soft border-0 shadow-sm mb-4">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
-             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
+            style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
             <div>
                 <h1 class="tt-header-title mb-1">
                     <i class="fa-solid fa-folder-open me-2"></i>
@@ -267,7 +305,7 @@ include __DIR__ . '/../includes/header.php';
                             <?php foreach ($horarios as $h): ?>
                                 <option value="<?= $h['id'] ?>">
                                     <?= htmlspecialchars($h['nombre_curso']) ?> -
-                                    <?= htmlspecialchars($h['nombre_dia']) ?> <?= substr($h['hora_inicio'], 0, 5) ?>
+                                    <?= htmlspecialchars($h['nombre_dia']) ?>     <?= substr($h['hora_inicio'], 0, 5) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -334,7 +372,7 @@ include __DIR__ . '/../includes/header.php';
                                     <td>
                                         <strong class="small"><?= htmlspecialchars($m['nombre_curso']) ?></strong><br>
                                         <span class="small text-muted">
-                                            <?= htmlspecialchars($m['nombre_dia']) ?> <?= substr($m['hora_inicio'], 0, 5) ?>
+                                            <?= htmlspecialchars($m['nombre_dia']) ?>         <?= substr($m['hora_inicio'], 0, 5) ?>
                                         </span>
                                     </td>
                                     <td>
@@ -361,7 +399,8 @@ include __DIR__ . '/../includes/header.php';
 
                                     <!-- Botón de eliminar material -->
                                     <td class="text-end">
-                                        <form method="post" onsubmit="return confirm('¿Eliminar este material?');" class="d-inline">
+                                        <form method="post" onsubmit="return confirm('¿Eliminar este material?');"
+                                            class="d-inline">
                                             <input type="hidden" name="accion" value="eliminar_material">
                                             <input type="hidden" name="material_id" value="<?= $m['id'] ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger">
