@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([3]); // solo estudiantes
+require_role([3]); 
 
 $usuario_id = $_SESSION['usuario_id'] ?? 0;
 if (!$usuario_id) {
@@ -9,13 +9,13 @@ if (!$usuario_id) {
     exit;
 }
 
-// ----------------------------------------------------------
-// Redirigir a PERFIL solo si es estudiante NUEVO:
-// - sin información personal
-// - sin matrículas
-// ----------------------------------------------------------
 
-// (1) ¿Tiene información personal registrada?
+
+
+
+
+
+
 $stmt = $mysqli->prepare("
     SELECT id 
     FROM informacion_personal 
@@ -27,7 +27,7 @@ $stmt->execute();
 $tiene_info = (bool) $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// (2) ¿Tiene alguna matrícula activa?
+
 $stmt = $mysqli->prepare("
     SELECT COUNT(*) AS total
     FROM matriculas
@@ -40,13 +40,13 @@ $stmt->close();
 
 $tiene_matriculas = $rowMat && $rowMat['total'] > 0;
 
-//(3) Si no tiene info personal y tampoco matrículas → nuevo estudiante
+
 if (!$tiene_info && !$tiene_matriculas) {
     header("Location: /twintalk/student/perfil.php?completar=1");
     exit;
 }
 
-// ================= CURSOS MATRICULADOS ================= //
+
 $mis_cursos = $mysqli->prepare("
     SELECT 
         m.id AS matricula_id, 
@@ -55,6 +55,8 @@ $mis_cursos = $mysqli->prepare("
         n.codigo_nivel,
         h.hora_inicio, 
         h.hora_fin,
+        h.fecha_inicio,
+        h.fecha_fin,
         d.nombre_dia,
         u.nombre AS docente_nombre,
         u.apellido AS docente_apellido
@@ -72,7 +74,7 @@ $mis_cursos->bind_param("i", $usuario_id);
 $mis_cursos->execute();
 $res_mis_cursos = $mis_cursos->get_result();
 
-// ================= CURSOS DISPONIBLES ================= //
+
 $disponibles = $mysqli->prepare("
     SELECT 
         h.id AS horario_id, 
@@ -99,7 +101,7 @@ $disponibles->bind_param("i", $usuario_id);
 $disponibles->execute();
 $res_disponibles = $disponibles->get_result();
 
-// ================= ANUNCIOS RECIENTES ================= //
+
 $sqlAnuncios = "
     SELECT 
         a.titulo,
@@ -126,7 +128,7 @@ $anuncios_stmt = $mysqli->prepare($sqlAnuncios);
 $anuncios_stmt->bind_param("i", $usuario_id);
 $anuncios_stmt->execute();
 $res_anuncios = $anuncios_stmt->get_result();
-// ================= ÚLTIMAS CALIFICACIONES ================= //
+
 $sqlUltimasTareas = "
     SELECT 
         te.id,
@@ -149,7 +151,7 @@ $stmtUlt->execute();
 $res_ultimas_tareas = $stmtUlt->get_result();
 $stmtUlt->close();
 
-// ================= RESUMEN DE TAREAS ================= //
+
 $sqlResumenTareas = "
     SELECT 
         COUNT(*) AS total_entregadas,
@@ -172,7 +174,7 @@ $promedio_tareas = $resResumen['promedio_calificacion'] !== null
     ? (float) $resResumen['promedio_calificacion']
     : null;
 
-// ================= TAREAS PENDIENTES ================= //
+
 $sqlPendientes = "
     SELECT COUNT(*) AS total_pendientes
     FROM tareas t
@@ -198,11 +200,11 @@ $stmtPend->close();
 
 $total_tareas_pendientes = (int) ($rowPend['total_pendientes'] ?? 0);
 
-// ================= HEADER ================= //
+
 include __DIR__ . "/../includes/header.php";
 ?>
 
-<!-- =========== ESTADÍSTICAS SUPERIORES =========== -->
+
 <div class="row mt-3">
     <div class="col-12 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
@@ -224,7 +226,7 @@ include __DIR__ . "/../includes/header.php";
     </div>
 </div>
 
-<!-- TARJETAS SUPERIORES -->
+
 <div class="row g-3 mb-3">
 
     <div class="col-md-4">
@@ -260,13 +262,13 @@ include __DIR__ . "/../includes/header.php";
     </div>
 
 </div>
-<!-- ======================= CONTENIDO PRINCIPAL ======================= -->
+
 <div class="row g-3">
 
-    <!-- ======================= COLUMNA IZQUIERDA ======================= -->
+    
     <div class="col-lg-7">
 
-        <!-- 🔥 MIS CLASES ACTUALES (SIN CAMBIOS) -->
+        
         <div class="card card-soft p-3 mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h2 class="h6 fw-bold mb-0" style="color:#A45A6A;">Mis clases actuales</h2>
@@ -290,10 +292,14 @@ include __DIR__ . "/../includes/header.php";
                         <tbody>
                             <?php while ($row = $res_mis_cursos->fetch_assoc()): ?>
                                 <tr>
-                                    <td>
-                                        <strong><?= htmlspecialchars($row['nombre_curso']) ?></strong><br>
-                                        <span class="badge-level">Nivel <?= htmlspecialchars($row['codigo_nivel']) ?></span>
-                                    </td>
+<td>
+    <strong><?= htmlspecialchars($row['nombre_curso']) ?></strong><br>
+    <span class="badge-level">Nivel <?= htmlspecialchars($row['codigo_nivel']) ?></span><br>
+    <small class="text-muted">
+        Inicio: <?= date("d/m/Y", strtotime($row['fecha_inicio'])) ?> · 
+        Fin: <?= date("d/m/Y", strtotime($row['fecha_fin'])) ?>
+    </small>
+</td>
                                     <td><?= htmlspecialchars($row['docente_nombre']." ".$row['docente_apellido']) ?></td>
                                     <td><?= htmlspecialchars($row['nombre_dia']) ?></td>
                                     <td><?= substr($row['hora_inicio'],0,5) ?> - <?= substr($row['hora_fin'],0,5) ?></td>
@@ -313,7 +319,7 @@ include __DIR__ . "/../includes/header.php";
         </div>
 
 
-        <!-- 🔥🔥 CURSOS DISPONIBLES PARA MATRICULAR — MOVIDO AQUÍ 🔥🔥 -->
+        
         <div class="card card-soft p-3 mb-3">
             <h2 class="h6 fw-bold mb-2">Cursos disponibles para matricular</h2>
 
@@ -343,13 +349,13 @@ include __DIR__ . "/../includes/header.php";
             <?php endif; ?>
         </div>
 
-    </div> <!-- /col-lg-7 -->
+    </div> 
 
 
-    <!-- ======================= COLUMNA DERECHA (TODO IGUAL) ======================= -->
+    
     <div class="col-lg-5">
 
-        <!-- ANUNCIOS -->
+        
         <div class="card card-soft p-3 mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h2 class="h6 fw-bold mb-0" style="color:#A45A6A;">Anuncios recientes</h2>
@@ -383,7 +389,7 @@ include __DIR__ . "/../includes/header.php";
         </div>
 
 
-        <!-- ÚLTIMAS CALIFICACIONES -->
+        
         <div class="card card-soft p-3 mb-3">
             <h2 class="h6 fw-bold mb-2">Mis últimas calificaciones</h2>
             <p class="small text-muted mb-2">Notas recientes de tus tareas entregadas.</p>
@@ -414,7 +420,7 @@ include __DIR__ . "/../includes/header.php";
         </div>
 
 
-        <!-- CONFIGURACIÓN RÁPIDA -->
+        
         <div class="card shadow-sm border-0 p-3" style="border-left:4px solid #A45A6A;">
             <h2 class="h6 fw-bold mb-2" style="color:#A45A6A;">
                 <i class="fa-solid fa-gear me-1"></i> Configuración rápida
@@ -440,8 +446,8 @@ include __DIR__ . "/../includes/header.php";
             </div>
         </div>
 
-    </div><!-- /col-lg-5 -->
+    </div>
 
-</div><!-- /row -->
+</div>
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

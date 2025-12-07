@@ -351,6 +351,16 @@ $tareasSql = "
         t.modalidad,
         td.nombre_grupo AS mi_nombre_grupo,
 
+        /* Obtener compañeros del mismo grupo */
+        (SELECT GROUP_CONCAT(CONCAT(u.nombre,' ',u.apellido) SEPARATOR ', ')
+         FROM tareas_destinatarios td2
+         INNER JOIN matriculas m2 ON m2.id = td2.matricula_id
+         INNER JOIN usuarios u ON u.id = m2.estudiante_id
+         WHERE td2.tarea_id = t.id
+         AND td2.nombre_grupo = td.nombre_grupo
+        ) AS companeros_grupo,
+
+
         (SELECT te.archivo_url 
          FROM tareas_entregas te 
          WHERE te.tarea_id = t.id AND te.matricula_id = ? LIMIT 1) AS mi_archivo,
@@ -575,6 +585,21 @@ include __DIR__ . "/../includes/header.php";
                                             <!-- Título y badges -->
                                             <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                                 <strong class="small"><?= htmlspecialchars($t['titulo']) ?></strong>
+
+                                                <?php if($t['modalidad'] === 'grupo' && !empty($t['mi_nombre_grupo'])): ?>
+
+    <div class="badge bg-primary-subtle text-primary border border-primary-subtle small">
+        Grupo: <?= htmlspecialchars($t['mi_nombre_grupo']) ?>
+    </div>
+
+    <?php if(!empty($t['companeros_grupo'])): ?>
+        <p class="small text-muted mb-1">
+            Compañeros: <?= htmlspecialchars($t['companeros_grupo']) ?>
+        </p>
+    <?php endif; ?>
+
+<?php endif; ?>
+
 
                                                 <?php if ($fechaPub): ?>
                                                     <span class="badge bg-light text-secondary border small">

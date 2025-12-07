@@ -190,7 +190,7 @@ include __DIR__ . "/includes/header.php";
 <hr class="section-divider">
 
 <!-- CURSOS -->
-<section id="cursos" class="section-padding">
+<section id="programas" class="section-padding">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="section-title mb-0">Cursos disponibles 📚</h2>
         <span class="small text-muted">La oferta puede variar según el período.</span>
