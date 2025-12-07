@@ -117,7 +117,7 @@ if (
     }
 }
 
-// 3) ADMIN o DOCENTE: FINALIZAR reunión general de docentes
+// 3) SOLO ADMIN: FINALIZAR reunión general de docentes
 if (
     $rol_id == 1 &&
     $_SERVER['REQUEST_METHOD'] === 'POST' &&
@@ -274,13 +274,15 @@ include __DIR__ . "/../includes/header.php";
     <?php endif; ?>
 
 <div class="card shadow-sm mb-4" 
-     style="border:2px solid #ff4bdec2; border-radius:10px;">
+     style="border:2px solid #ff4b7b; border-radius:10px;">
     
     <div style="background:#ff4b7b; color:white; padding:12px 18px; border-radius:8px 8px 0 0;">
         <h4 class="mb-0" style="font-weight:600;">🎥 Clases Online / Zoom</h4>
     </div>
     
 </div>
+
+        
 
     <?php if ($rol_id == 1): ?>
         <!-- ADMIN: gestionar reunión general de docentes -->
@@ -332,6 +334,7 @@ include __DIR__ . "/../includes/header.php";
         </div>
 
     <?php elseif ($rol_id == 2): ?>
+        <!-- DOCENTE: ver y finalizar reunión de docentes + gestionar clases -->
 <?php if ($zoomReunionDocentes): ?>
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-light">
