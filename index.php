@@ -121,7 +121,7 @@ include __DIR__ . "/includes/header.php";
             </p>
 
             <div class="d-flex flex-wrap gap-2 mt-3">
-                <a href="#cursos" class="btn btn-tt-primary">Ver cursos y niveles</a>
+                <a href="#programas" class="btn btn-tt-primary">Ver cursos y niveles</a>
                 <a href="/twintalk/register.php" class="btn btn-outline-secondary rounded-pill">Crear mi cuenta</a>
                 <a href="/twintalk/login.php" class="btn btn-link p-0 ms-2">Ya tengo cuenta</a>
             </div>

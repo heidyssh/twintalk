@@ -247,7 +247,7 @@ if ($rol_id == 3) {
                                           AND ze.tipo = 'clase'
                                           AND ze.activo = 1
         WHERE m.estudiante_id = ?
-          AND m.estado_id = 1  -- solo matrículas ACTIVAS
+          AND m.estado_id IN (1,2)  -- Activa o Pendiente
         ORDER BY d.numero_dia, h.hora_inicio
     ";
     $stmt = $mysqli->prepare($sql);
@@ -259,6 +259,7 @@ if ($rol_id == 3) {
     }
     $stmt->close();
 }
+
 
 include __DIR__ . "/../includes/header.php";
 ?>
@@ -440,7 +441,7 @@ include __DIR__ . "/../includes/header.php";
             <div class="card-body">
                 <?php if (!$clasesEstudiante): ?>
                     <p class="text-muted mb-0">
-                        No tienes matrículas activas actualmente.
+                        No tienes matrículas activas o pendientes actualmente.
                     </p>
                 <?php else: ?>
                     <div class="table-responsive">
