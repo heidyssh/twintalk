@@ -651,61 +651,73 @@ include __DIR__ . "/../includes/header.php";
                                             <?php endif; ?>
 
                                             <!-- Mi entrega -->
-                                            <?php if (!empty($t['mi_archivo'])): ?>
-                                                <div class="border rounded-3 p-2 bg-light mb-2">
-                                                    <div class="d-flex justify-content-between gap-2">
-                                                        <div>
-                                                            <span class="small fw-semibold">
-                                                                <?php if ($esGrupo): ?>
-                                                                    Entrega de tu grupo
-                                                                    <?php if (!empty($nombreGrupoLocal)): ?>
-                                                                        (<?= htmlspecialchars($nombreGrupoLocal) ?>)
-                                                                    <?php endif; ?>
-                                                                <?php else: ?>
-                                                                    Tu entrega
-                                                                <?php endif; ?>
-                                                            </span><br>
+<?php if (!empty($t['mi_archivo'])): ?>
+    <div class="border rounded-3 p-2 bg-light mb-2">
+        <div class="d-flex justify-content-between gap-2">
+            <div>
+                <span class="small fw-semibold">
+                    <?php if ($esGrupo): ?>
+                        Entrega de tu grupo
+                        <?php if (!empty($nombreGrupoLocal)): ?>
+                            (<?= htmlspecialchars($nombreGrupoLocal) ?>)
+                        <?php endif; ?>
+                    <?php else: ?>
+                        Tu entrega
+                    <?php endif; ?>
+                </span><br>
 
-                                                            <div class="small text-end">
-                                                                <?php if (!empty($t['mi_fecha_entrega'])): ?>
-                                                                    <div class="text-muted">
-                                                                        Enviada el
-                                                                        <?= date('d/m/Y H:i', strtotime($t['mi_fecha_entrega'])) ?>
-                                                                    </div>
-                                                                <?php endif; ?>
+                <!-- 🔗 Enlace al archivo que se envió -->
+                <p class="small mb-1">
+                    <i class="fa-solid fa-file-arrow-down me-1"></i>
+                    <a href="<?= htmlspecialchars($t['mi_archivo']) ?>" target="_blank"
+                       style="color:#ff4b7b; font-weight:500; text-decoration:none;"
+                       onmouseover="this.style.color='#e84372'"
+                       onmouseout="this.style.color='#ff4b7b'">
+                        Ver archivo enviado
+                    </a>
+                </p>
 
-                                                                <?php if ($t['mi_calificacion'] !== null): ?>
-                                                                    <div class="mt-1">
-                                                                        Nota:
-                                                                        <span class="badge bg-success-subtle text-success border">
-                                                                            <?= htmlspecialchars($t['mi_calificacion']) ?>
-                                                                            / <?= $valorMax ?> pts
-                                                                        </span>
-                                                                    </div>
-                                                                <?php else: ?>
-                                                                    <div class="mt-1">
-                                                                        <span class="badge bg-secondary-subtle text-secondary border">
-                                                                            Valor: <?= $valorMax ?> pts
-                                                                        </span>
-                                                                        <div class="text-muted">En revisión</div>
-                                                                    </div>
-                                                                <?php endif; ?>
-                                                            </div>
-                                                        </div>
+                <div class="small">
+                    <?php if (!empty($t['mi_fecha_entrega'])): ?>
+                        <div class="text-muted">
+                            Enviada el
+                            <?= date('d/m/Y H:i', strtotime($t['mi_fecha_entrega'])) ?>
+                        </div>
+                    <?php endif; ?>
 
-                                                        <?php if (!empty($t['mis_comentarios'])): ?>
-                                                            <div class="small mt-2">
-                                                                <strong>Comentario del docente:</strong><br>
-                                                                <?= nl2br(htmlspecialchars($t['mis_comentarios'])) ?>
-                                                            </div>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <p class="small text-muted mb-2">
-                                                        Aún no has enviado tu archivo para esta tarea.
-                                                    </p>
-                                                <?php endif; ?>
-                                            </div>
+                    <?php if ($t['mi_calificacion'] !== null): ?>
+                        <div class="mt-1">
+                            Nota:
+                            <span class="badge bg-success-subtle text-success border">
+                                <?= htmlspecialchars($t['mi_calificacion']) ?>
+                                / <?= $valorMax ?> pts
+                            </span>
+                        </div>
+                    <?php else: ?>
+                        <div class="mt-1">
+                            <span class="badge bg-secondary-subtle text-secondary border">
+                                Valor: <?= $valorMax ?> pts
+                            </span>
+                            <div class="text-muted">En revisión</div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <?php if (!empty($t['mis_comentarios'])): ?>
+                <div class="small mt-2">
+                    <strong>Comentario del docente:</strong><br>
+                    <?= nl2br(htmlspecialchars($t['mis_comentarios'])) ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php else: ?>
+    <p class="small text-muted mb-2">
+        Aún no has enviado tu archivo para esta tarea.
+    </p>
+<?php endif; ?>
+
 
                                             <!-- Columna derecha: subida -->
 <div style="min-width: 230px;">

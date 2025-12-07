@@ -94,6 +94,12 @@ if (session_status() === PHP_SESSION_NONE) {
             <i class="fa-solid fa-inbox me-1"></i> Mensajes de interés
         </a>
     </li>
+<li class="nav-item">
+    <a class="nav-link" href="/twintalk/zoom/index.php">
+        🎥 Clases Online
+    </a>
+</li>
+
 <?php endif; ?>
 
 
@@ -114,6 +120,12 @@ if (session_status() === PHP_SESSION_NONE) {
                                         <i class="fa-solid fa-envelope me-1"></i> Mensajes
                                     </a>
                                 </li>
+<li class="nav-item">
+    <a class="nav-link" href="/twintalk/zoom/index.php">
+        🎥 Clases Online
+    </a>
+</li>
+
                             <?php endif; ?>
 
                             <!-- MENU ESTUDIANTE -->
@@ -133,6 +145,12 @@ if (session_status() === PHP_SESSION_NONE) {
                                         <i class="fa-solid fa-envelope me-1"></i> Mensajes
                                     </a>
                                 </li>
+  <li class="nav-item">
+    <a class="nav-link" href="/twintalk/zoom/index.php">
+        🎥 Clases Online
+    </a>
+</li>
+
                             <?php endif; ?>
 
                             <li><hr class="dropdown-divider"></li>
