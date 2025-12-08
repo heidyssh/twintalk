@@ -2,7 +2,7 @@
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
 
-require_role([2]); // solo docentes
+require_role([2]); 
 
 $docente_id = $_SESSION['usuario_id'] ?? 0;
 
@@ -13,17 +13,14 @@ if (!$docente_id) {
 
 $horario_id = isset($_GET['horario_id']) ? (int) $_GET['horario_id'] : 0;
 
-/*
- * MODO 1: SIN horario_id  -> listar todos los horarios del docente
- * MODO 2: CON horario_id  -> listar estudiantes de ese horario
- */
 
-// =========================
-// MODO 2: Estudiantes de un horario
-// =========================
+
+
+
+
 if ($horario_id > 0) {
 
-    // Verificar que el horario pertenece a este docente y traer info del curso
+    
     $sqlCurso = "
         SELECT
             h.id AS horario_id,
@@ -58,7 +55,7 @@ if ($horario_id > 0) {
         exit;
     }
 
-// Traer estudiantes matriculados en este horario
+
 $sqlEst = "
     SELECT
         m.id AS matricula_id,
@@ -178,11 +175,11 @@ $sqlEst = "
     exit;
 }
 
-// =========================
-// MODO 1: Lista de horarios del docente
-// =========================
 
-// Obtener todos los horarios que imparte este docente
+
+
+
+
 $sqlHor = "
     SELECT 
         h.id AS horario_id,

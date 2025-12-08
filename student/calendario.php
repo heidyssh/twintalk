@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([3]); // solo estudiantes
+require_role([3]); 
 
 $usuario_id = $_SESSION['usuario_id'] ?? 0;
 if (!$usuario_id) {
@@ -11,7 +11,7 @@ if (!$usuario_id) {
 
 $hoy = date("Y-m-d");
 
-// Traer TODAS las tareas de los horarios donde el estudiante está matriculado
+
 $stmt = $mysqli->prepare("
     SELECT 
         t.id AS tarea_id,
@@ -130,7 +130,7 @@ include __DIR__ . "/../includes/header.php";
                 $entregada = !empty($t['entrega_id']);
                 $vencida   = !$entregada && $t['fecha_entrega'] && $t['fecha_entrega'] < $hoy;
 
-                // Clases visuales de texto
+                
                 if ($entregada) {
                     $claseTexto = "text-decoration-line-through text-muted";
                 } elseif ($vencida) {
@@ -139,7 +139,7 @@ include __DIR__ . "/../includes/header.php";
                     $claseTexto = "";
                 }
 
-                // Estado + badge
+                
                 if ($entregada && $t['calificacion'] !== null) {
                     $estado = "Entregada y calificada";
                     $badgeClass = "badge-soft-success";

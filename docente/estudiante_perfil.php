@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([2]); // docente
+require_role([2]); 
 
 $docente_id   = $_SESSION['usuario_id'] ?? 0;
 $matricula_id = isset($_GET['matricula_id']) ? (int)$_GET['matricula_id'] : 0;
@@ -13,7 +13,7 @@ if ($matricula_id <= 0) {
     exit;
 }
 
-// 1) Traer info de la matrícula y verificar que el horario es del docente
+
 $sqlMat = "
     SELECT
         m.id AS matricula_id,
@@ -53,7 +53,7 @@ if (!$matricula) {
 
 $estudiante_id = (int)$matricula['estudiante_id'];
 
-// 2) Datos del estudiante (usuarios + estudiantes + informacion_personal + tipos_documento)
+
 $sqlEst = "
     SELECT
         u.nombre,
@@ -83,7 +83,7 @@ $resEst = $stmtEst->get_result();
 $est = $resEst->fetch_assoc();
 $stmtEst->close();
 
-// Contactos de emergencia del estudiante
+
 $contactos = [];
 $stmtCE = $mysqli->prepare("
     SELECT nombre_contacto, telefono_contacto, parentesco, principal

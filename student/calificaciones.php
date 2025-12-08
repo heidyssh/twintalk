@@ -1,7 +1,7 @@
 <?php 
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([3]); // solo estudiantes
+require_role([3]); 
 
 $usuario_id = $_SESSION['usuario_id'] ?? 0;
 if (!$usuario_id) {
@@ -9,9 +9,9 @@ if (!$usuario_id) {
     exit;
 }
 
-// ---------------------------------------------------------------------
-// 1) Cursos del estudiante (a través de sus matrículas)
-// ---------------------------------------------------------------------
+
+
+
 $sqlCursos = "
     SELECT 
         h.id  AS horario_id,
@@ -30,21 +30,21 @@ $stmt->execute();
 $cursos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// ---------------------------------------------------------------------
-// 2) Curso / horario seleccionado
-// ---------------------------------------------------------------------
+
+
+
 $horario_id_seleccionado = isset($_GET['horario_id']) ? (int) $_GET['horario_id'] : 0;
 $matricula_id      = null;
 $tareas            = [];
 $evaluaciones      = [];
 $nota_tareas       = 0.0;
 $nota_eval         = 0.0;
-$nota_general      = null; // suma tareas + evaluaciones
-$promedio_oficial  = null; // promedio de TODAS las notas (tareas + evals)
+$nota_general      = null; 
+$promedio_oficial  = null; 
 
 if ($horario_id_seleccionado > 0) {
 
-    // Verificar que el estudiante realmente está matriculado en ese horario
+    
     $sqlMat = "
         SELECT m.id AS matricula_id
         FROM matriculas m
@@ -62,7 +62,7 @@ if ($horario_id_seleccionado > 0) {
     if ($resMat) {
         $matricula_id = (int) $resMat['matricula_id'];
 
-        // 2.a) Detalle de tareas + entregas de ese curso
+        
         $sqlTareas = "
             SELECT 
                 t.id AS tarea_id,
@@ -92,7 +92,7 @@ if ($horario_id_seleccionado > 0) {
         $tareas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
 
-        // 2.b) NOTAS DE TAREAS (suma y cantidad)
+        
         $sqlNotasTareas = "
             SELECT 
                 SUM(te.calificacion) AS suma_tareas,
@@ -114,7 +114,7 @@ if ($horario_id_seleccionado > 0) {
         $cantidad_tareas = $rowT && $rowT['cantidad_tareas'] !== null ? (int)  $rowT['cantidad_tareas'] : 0;
         $nota_tareas     = $suma_tareas;
 
-        // 2.c) NOTAS DE EVALUACIONES GENERALES (quiz, examen, etc.)
+        
         $sqlNotasEval = "
             SELECT 
                 SUM(c.puntaje) AS suma_eval,
@@ -133,7 +133,7 @@ if ($horario_id_seleccionado > 0) {
         $cantidad_eval = $rowE && $rowE['cantidad_eval'] !== null ? (int)  $rowE['cantidad_eval'] : 0;
         $nota_eval     = $suma_eval;
 
-        // 2.d) Detalle de evaluaciones (para la tabla)
+        
         $sqlEvalDetalle = "
             SELECT 
                 c.id,
@@ -153,7 +153,7 @@ if ($horario_id_seleccionado > 0) {
         $evaluaciones = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
 
-        // 2.e) NOTA GENERAL y PROMEDIO
+        
         $nota_general = $nota_tareas + $nota_eval;
         $total_items  = $cantidad_tareas + $cantidad_eval;
 

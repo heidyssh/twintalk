@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-require_role([2]); // Docente
+require_role([2]); 
 
 $usuario_id = $_SESSION['usuario_id'] ?? null;
 if (!$usuario_id) {
@@ -13,7 +13,7 @@ if (!$usuario_id) {
 $mensaje = "";
 $error   = "";
 
-// LISTA DE AVATARES PREDETERMINADOS
+
 $lista_avatars = [
     "/twintalk/assets/img/avatars/avatar1.jpg",
     "/twintalk/assets/img/avatars/avatar2.jpg",
@@ -44,7 +44,7 @@ $lista_avatars = [
     "/twintalk/assets/img/avatars/avatar28.jpg",
 ];
 
-// CARPETAS
+
 $uploadDirAvatar     = __DIR__ . "/../uploads/avatars/";
 $uploadDirTitulo     = __DIR__ . "/../uploads/titulos/";
 
@@ -55,7 +55,7 @@ if (!is_dir($uploadDirAvatar)) mkdir($uploadDirAvatar, 0777, true);
 if (!is_dir($uploadDirTitulo)) mkdir($uploadDirTitulo, 0777, true);
 
 
-// =================  CARGAR DATOS =====================
+
 $stmt = $mysqli->prepare("SELECT * FROM usuarios WHERE id=?");
 $stmt->bind_param("i", $usuario_id);
 $stmt->execute();
@@ -76,17 +76,17 @@ $stmt->close();
 
 $titulo_actual = $docente['titulo_id'] ?? null;
 
-// TÍTULOS ACADÉMICOS
+
 $titulos_academicos = $mysqli->query("SELECT id, nombre_titulo, nivel_titulo FROM titulos_academicos ORDER BY nombre_titulo ASC");
 
 $avatar_actual = $usuario['foto_perfil'] ?: "/twintalk/assets/img/avatars/avatar1.jpg";
 
 
-// =====================  PROCESAR FORMULARIOS =====================
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // ---------- ACTUALIZAR DATOS BÁSICOS ----------
+    
     if (isset($_POST['actualizar_perfil'])) {
 
         $nombre   = trim($_POST['nombre'] ?? '');
@@ -101,13 +101,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $especialidad = trim($_POST['especialidad'] ?? '');
         $titulo_id_post = $_POST['titulo_id'] ?? null;
 
-        // Actualizar usuarios
+        
         $stmt = $mysqli->prepare("UPDATE usuarios SET nombre=?, apellido=?, telefono=? WHERE id=?");
         $stmt->bind_param("sssi", $nombre, $apellido, $telefono, $usuario_id);
         $stmt->execute();
         $stmt->close();
 
-        // Actualizar / insertar informacion_personal
+        
         $stmt = $mysqli->prepare("SELECT id FROM informacion_personal WHERE usuario_id=? LIMIT 1");
         $stmt->bind_param("i", $usuario_id);
         $stmt->execute();
@@ -131,13 +131,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
         $stmt->close();
 
-        // Actualizar docente
+        
         $stmt = $mysqli->prepare("UPDATE docentes SET especialidad=? WHERE id=?");
         $stmt->bind_param("si", $especialidad, $usuario_id);
         $stmt->execute();
         $stmt->close();
 
-        // Título académico
+        
         if (!empty($titulo_id_post)) {
             $titulo_id = (int)$titulo_id_post;
             $stmt = $mysqli->prepare("UPDATE docentes SET titulo_id=? WHERE id=?");
@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mensaje = "Datos actualizados correctamente.";
     }
 
-    // ---------- CAMBIAR CONTRASEÑA ----------
+    
     elseif (isset($_POST['cambiar_password'])) {
 
         $p1 = $_POST['password'] ?? "";
@@ -167,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ---------- AVATAR PREDETERMINADO ----------
+    
     elseif (isset($_POST['elegir_avatar'])) {
         $avatar = $_POST['avatar_url'] ?? "";
 
@@ -181,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ---------- SUBIR AVATAR PROPIO ----------
+    
     elseif (isset($_POST['subir_avatar']) && isset($_FILES['avatar_file'])) {
 
         $file = $_FILES['avatar_file'];
@@ -210,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ---------- SUBIR ARCHIVO DE TÍTULO ----------
+    
     elseif (isset($_POST['subir_titulo']) && isset($_FILES['titulo_archivo'])) {
 
         $file = $_FILES['titulo_archivo'];
@@ -243,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 
-// ===================== INTERFAZ =====================
+
 include __DIR__ . '/../includes/header.php';
 ?>
 

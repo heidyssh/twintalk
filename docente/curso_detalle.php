@@ -15,7 +15,7 @@ $horario_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $mensaje = "";
 $error = "";
 
-// Verificar que el horario pertenece a este docente
+
 $stmt = $mysqli->prepare("
     SELECT h.*, c.nombre_curso, n.codigo_nivel, d.nombre_dia
     FROM horarios h
@@ -32,7 +32,7 @@ if (!$curso) {
     die("Curso no encontrado o no tienes permisos.");
 }
 
-// Registrar calificación rápida
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_nota'])) {
     $matricula_id = (int)($_POST['matricula_id'] ?? 0);
     $puntaje      = (float)($_POST['puntaje'] ?? 0);
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_nota'])) {
     }
 }
 
-// Estudiantes matriculados
+
 $estudiantes = $mysqli->prepare("
     SELECT m.id AS matricula_id,
            u.nombre, u.apellido, u.email
@@ -67,7 +67,7 @@ $estudiantes->bind_param("i", $horario_id);
 $estudiantes->execute();
 $res_est = $estudiantes->get_result();
 
-// Tipos de evaluación
+
 $tipos_eval = $mysqli->query("SELECT id, nombre_evaluacion FROM tipos_evaluacion ORDER BY nombre_evaluacion");
 
 include __DIR__ . "/../includes/header.php";
@@ -116,7 +116,7 @@ include __DIR__ . "/../includes/header.php";
                                             </option>
                                         <?php endwhile; ?>
                                         <?php
-                                        // reset puntero para el siguiente loop
+                                        
                                         $tipos_eval->data_seek(0);
                                         ?>
                                     </select>

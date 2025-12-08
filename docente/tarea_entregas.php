@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-require_role([2]); // Docente
+require_role([2]); 
 
 $docenteId = $_SESSION['usuario_id'] ?? null;
 if (!$docenteId) {
@@ -21,15 +21,15 @@ if ($tarea_id <= 0) {
 $mensaje = "";
 $error   = "";
 
-// ------------------------------------------------------------
-// 1. GUARDAR CALIFICACIÓN
-// ------------------------------------------------------------
+
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'calificar') {
     $matricula_id   = (int)($_POST['matricula_id'] ?? 0);
     $calificacion   = $_POST['calificacion'] !== '' ? floatval($_POST['calificacion']) : null;
     $comentarios    = trim($_POST['comentarios'] ?? '');
 
-    // ¿Ya existe entrega o se debe crear registro vacío?
+    
     $sqlCheck = "SELECT id FROM tareas_entregas WHERE tarea_id = ? AND matricula_id = ? LIMIT 1";
     $stmtC = $mysqli->prepare($sqlCheck);
     $stmtC->bind_param("ii", $tarea_id, $matricula_id);
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'calif
     $stmtC->close();
 
     if ($existe) {
-        // UPDATE
+        
         $sqlU = "
             UPDATE tareas_entregas
             SET calificacion = ?, comentarios_docente = ?, fecha_calificacion = NOW()
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'calif
         $stmtU->execute();
         $stmtU->close();
     } else {
-        // INSERT (sin archivo, califica igualmente)
+        
         $sqlI = "
             INSERT INTO tareas_entregas (tarea_id, matricula_id, calificacion, comentarios_docente, fecha_calificacion)
             VALUES (?, ?, ?, ?, NOW())
@@ -64,9 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'calif
     $mensaje = "Calificación guardada correctamente.";
 }
 
-// ------------------------------------------------------------
-// 2. INFORMACIÓN DE LA TAREA
-// ------------------------------------------------------------
+
+
+
 $sqlTarea = "
     SELECT t.*, c.nombre_curso, h.hora_inicio, h.hora_fin
     FROM tareas t
@@ -87,9 +87,9 @@ if (!$tarea) {
     exit;
 }
 
-// ------------------------------------------------------------
-// 3. LISTAR TODOS LOS ALUMNOS (ENTREGARON O NO ENTREGARON)
-// ------------------------------------------------------------
+
+
+
 $sqlAlumnos = "
     SELECT 
         m.id AS matricula_id,

@@ -1,13 +1,13 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([3]); // solo estudiantes
+require_role([3]); 
 
 $usuario_id = $_SESSION['usuario_id'];
 
-// Anuncios para este estudiante:
-// - generales (horario_id IS NULL)
-// - de sus cursos con matrícula ACTIVA
+
+
+
 $sql = "
     SELECT 
         a.titulo,

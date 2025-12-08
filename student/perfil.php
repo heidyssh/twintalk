@@ -7,7 +7,7 @@ $usuario_id = $_SESSION['usuario_id'];
 $mensaje = "";
 $error = "";
 
-// ================= AVATARES =================
+
 $lista_avatars = [
     "/twintalk/assets/img/avatars/avatar1.jpg","/twintalk/assets/img/avatars/avatar2.jpg",
     "/twintalk/assets/img/avatars/avatar3.jpg","/twintalk/assets/img/avatars/avatar4.jpg",
@@ -25,7 +25,7 @@ $lista_avatars = [
     "/twintalk/assets/img/avatars/avatar28.jpg",
 ];
 
-// ================= RUTAS =================
+
 $uploadDirAvatar = __DIR__ . "/../uploads/avatars/";
 $uploadDirDocumento = __DIR__ . "/../uploads/documentos/";
 $urlAvatar = "/twintalk/uploads/avatars/";
@@ -34,11 +34,11 @@ $urlDocumento = "/twintalk/uploads/documentos/";
 if (!is_dir($uploadDirAvatar)) mkdir($uploadDirAvatar, 0777, true);
 if (!is_dir($uploadDirDocumento)) mkdir($uploadDirDocumento, 0777, true);
 
-// ================= PETICIONES =================
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // ------ DATOS PERSONALES ------
+    
     if (isset($_POST['actualizar_perfil'])) {
         $stmt = $mysqli->prepare("UPDATE usuarios SET nombre=?, apellido=?, telefono=? WHERE id=?");
         $stmt->bind_param("sssi", $_POST['nombre'], $_POST['apellido'], $_POST['telefono'], $usuario_id);
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mensaje = "Datos actualizados.";
     }
 
-    // ------ CONTRASEÑA ------
+    
     elseif (isset($_POST['cambiar_password'])) {
         if ($_POST['password'] === "" || $_POST['password2'] === "")
             $error = "Debes completar ambas contraseñas.";
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ------ AVATAR SELECCIONADO ------
+    
     elseif (isset($_POST['seleccionar_avatar'])) {
         $avatar = $_POST['avatar'];
         if (in_array($avatar, $lista_avatars)) {
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ------ AVATAR SUBIDO ------
+    
     elseif (isset($_POST['subir_avatar']) && !empty($_FILES['avatar_file']['name'])) {
         $file = $_FILES['avatar_file'];
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ------ DATOS ADICIONALES ------
+    
     elseif (isset($_POST['guardar_info'])) {
 
         $stmt = $mysqli->prepare("SELECT id FROM informacion_personal WHERE usuario_id=? LIMIT 1");
@@ -135,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mensaje = "Datos adicionales guardados.";
     }
 
-    // ------ DOCUMENTO ------
+    
     elseif (isset($_POST['subir_documento'])) {
         $file = $_FILES['documento_file'];
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ------ CONTACTOS ------
+    
     elseif (isset($_POST['guardar_contacto'])) {
         $principal = isset($_POST['principal']) ? 1 : 0;
         if ($principal)
@@ -186,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ================= CARGA DE DATOS =================
+
 
 $stmt = $mysqli->prepare("SELECT * FROM usuarios WHERE id=?");
 $stmt->bind_param("i", $usuario_id);
@@ -221,7 +221,7 @@ include __DIR__ . '/../includes/header.php';
     border:2px solid transparent;
 }
 .avatar-option img:hover { 
-    border-color:#b14f72; /* color TwinTalk, NO azul */
+    border-color:#b14f72; 
 }
 .avatar-preview { 
     width:90px;

@@ -1,10 +1,10 @@
 <?php
-// student/cursos_disponibles.php
+
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-// Solo estudiantes
+
 require_role([3]);
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -20,9 +20,7 @@ if (!$usuario_id) {
 $mensaje = "";
 $error = "";
 
-/**
- * Obtener ID de un estado de matrícula por nombre (Activa, Pendiente, Finalizada, etc.)
- */
+
 function obtenerEstadoIdPorNombre(mysqli $mysqli, string $nombre): ?int
 {
     $stmt = $mysqli->prepare("SELECT id FROM estados_matricula WHERE nombre_estado = ? LIMIT 1");
@@ -35,10 +33,7 @@ function obtenerEstadoIdPorNombre(mysqli $mysqli, string $nombre): ?int
     return $res ? (int) $res['id'] : null;
 }
 
-/**
- * Obtener el nivel máximo FINALIZADO del estudiante (según niveles_academicos.id)
- * Devuelve el id de nivel (niveles_academicos.id) o null si no tiene cursos finalizados.
- */
+
 function obtenerNivelMaximoFinalizado(mysqli $mysqli, int $estudiante_id): ?int
 {
     $sql = "
@@ -64,11 +59,7 @@ function obtenerNivelMaximoFinalizado(mysqli $mysqli, int $estudiante_id): ?int
     return null;
 }
 
-/**
- * Verifica si el estudiante tiene pagos pendientes:
- * - Matrículas en estado 'Pendiente'
- * - O matrículas 'Activa' sin monto_pagado o sin metodo_pago.
- */
+
 function tienePagosPendientes(mysqli $mysqli, int $estudiante_id): bool
 {
     $sql = "
@@ -95,9 +86,7 @@ function tienePagosPendientes(mysqli $mysqli, int $estudiante_id): bool
     return $res && (int) $res['total'] > 0;
 }
 
-/**
- * Obtener precio vigente de un curso (precios_cursos.activo = 1)
- */
+
 function obtenerPrecioCursoActual(mysqli $mysqli, int $curso_id): ?float
 {
     $stmt = $mysqli->prepare("
@@ -120,19 +109,19 @@ function obtenerPrecioCursoActual(mysqli $mysqli, int $curso_id): ?float
     return $res ? (float) $res['precio'] : null;
 }
 
-// En esta BD, estudiantes.id = usuarios.id (FK)
+
 $estudiante_id = (int) $usuario_id;
 
-// ---------------------------------------------
-// PROCESAR MATRÍCULA (POST)
-// ---------------------------------------------
+
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'matricular') {
     $horario_id = isset($_POST['horario_id']) ? (int) $_POST['horario_id'] : 0;
 
     if ($horario_id <= 0) {
         $error = "Horario inválido.";
     } else {
-        // 1) Verificar si ya está matriculado en ese horario
+        
         $stmt = $mysqli->prepare("
     SELECT m.id, em.nombre_estado
     FROM matriculas m
@@ -153,11 +142,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
             if ($existe) {
                 $error = "Ya tienes una matrícula para este curso (estado: " . htmlspecialchars($existe['nombre_estado']) . ").";
             } else {
-                // 2) Verificar si tiene pagos pendientes en otros cursos
+                
                 if (tienePagosPendientes($mysqli, $estudiante_id)) {
                     $error = "No puedes matricular un nuevo curso porque tienes pagos pendientes en un curso anterior. Por favor, ponte al día con tu pago.";
                 } else {
-                    // 3) Obtener info del horario y curso (nivel, cupos, fechas)
+                    
                     $sqlHorario = "
                         SELECT 
                             h.id AS horario_id,
@@ -187,28 +176,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
                         } elseif (!(int) $horario['activo']) {
                             $error = "Este horario no está activo actualmente.";
                         } else {
-                            // 4) Validar cupos
+                            
                             if ((int) $horario['cupos_disponibles'] <= 0) {
                                 $error = "No hay cupos disponibles en este horario.";
                             } else {
                                 $curso_nivel_id = (int) $horario['nivel_id'];
 
-                                // 5) Validar requisitos por nivel
+                                
                                 $nivel_max_finalizado = obtenerNivelMaximoFinalizado($mysqli, $estudiante_id);
                                 if ($nivel_max_finalizado === null) {
-                                    // Solo se permite matricular nivel inicial (id = 1) si nunca ha finalizado nada
+                                    
                                     if ($curso_nivel_id > 1) {
                                         $error = "Debes iniciar desde el nivel principiante antes de matricular este curso.";
                                     }
                                 } else {
-                                    // No puede saltarse niveles: solo siguiente nivel o repetir nivel actual
+                                    
                                     if ($curso_nivel_id > $nivel_max_finalizado + 1) {
                                         $error = "No puedes matricular este curso aún. Debes completar y estar al día con el nivel anterior.";
                                     }
                                 }
 
                                 if ($error === "") {
-                                    // 6) Crear matrícula en estado Pendiente, sin pago todavía
+                                    
                                     $estado_pendiente_id = obtenerEstadoIdPorNombre($mysqli, 'Pendiente');
                                     if (!$estado_pendiente_id) {
                                         $error = "No se encontró el estado de matrícula 'Pendiente'. Contacta al administrador.";
@@ -251,9 +240,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
     }
 }
 
-// ---------------------------------------------
-// LISTADO DE CURSOS / HORARIOS DISPONIBLES
-// ---------------------------------------------
+
+
+
 $sqlCursos = "
     SELECT 
         h.id          AS horario_id,
@@ -289,7 +278,7 @@ $sqlCursos = "
 ";
 $cursos_disp = $mysqli->query($sqlCursos);
 
-// Obtener nivel máximo finalizado y bandera de pagos pendientes para mostrar info
+
 $nivel_max_finalizado = obtenerNivelMaximoFinalizado($mysqli, $estudiante_id);
 $tiene_pagos_pend = tienePagosPendientes($mysqli, $estudiante_id);
 

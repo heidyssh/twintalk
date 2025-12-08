@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-require_role([2]); // Docente
+require_role([2]); 
 
 $docenteId = $_SESSION['usuario_id'] ?? null;
 
@@ -11,7 +11,7 @@ if (!$docenteId) {
     exit;
 }
 
-// Cursos que imparte
+
 $sqlCursos = "
     SELECT COUNT(DISTINCT h.curso_id) AS total_cursos
     FROM horarios h
@@ -25,7 +25,7 @@ $stmtCursos->close();
 
 $totalCursos = (int)($resCursos['total_cursos'] ?? 0);
 
-// Estudiantes únicos
+
 $sqlEst = "
     SELECT COUNT(DISTINCT m.estudiante_id) AS total_estudiantes
     FROM matriculas m
@@ -40,7 +40,7 @@ $stmtEst->close();
 
 $totalEstudiantes = (int)($resEst['total_estudiantes'] ?? 0);
 
-// Tareas creadas
+
 $sqlTar = "
     SELECT COUNT(*) AS total_tareas
     FROM tareas
@@ -54,7 +54,7 @@ $stmtTar->close();
 
 $totalTareas = (int)($resTar['total_tareas'] ?? 0);
 
-// Últimos anuncios creados por este docente
+
 $sqlAn = "
     SELECT COUNT(*) AS total_anuncios
     FROM anuncios

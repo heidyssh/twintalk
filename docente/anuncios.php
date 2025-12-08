@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-require_role([2]); // Docente
+require_role([2]); 
 
 $docenteId = $_SESSION['usuario_id'] ?? null;
 if (!$docenteId) {
@@ -13,11 +13,11 @@ if (!$docenteId) {
 $mensaje = "";
 $error   = "";
 
-// 1) Cargar tipos de anuncio
+
 $sqlTipos = "SELECT id, tipo_anuncio AS nombre_tipo FROM tipos_anuncio ORDER BY tipo_anuncio";
 $tipos = $mysqli->query($sqlTipos);
 
-// 2) Cargar horarios del docente (para seleccionar curso)
+
 $sqlHor = "
     SELECT h.id, c.nombre_curso, d.nombre_dia, h.hora_inicio
     FROM horarios h
@@ -32,11 +32,11 @@ $stmtHor->execute();
 $horarios = $stmtHor->get_result();
 $stmtHor->close();
 
-// 3) Manejar acciones POST (crear / eliminar anuncio)
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
-    // CREAR ANUNCIO
+    
     if ($accion === 'crear_anuncio') {
         $horario_id       = (int)($_POST['horario_id'] ?? 0);
         $tipo_anuncio_id  = (int)($_POST['tipo_anuncio_id'] ?? 0);
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($horario_id <= 0 || $tipo_anuncio_id <= 0 || !$titulo || !$contenido) {
             $error = "Debes completar todos los campos obligatorios.";
         } else {
-            // Verificar que el horario sea del docente
+            
             $checkHor = $mysqli->prepare("SELECT id FROM horarios WHERE id = ? AND docente_id = ? LIMIT 1");
             $checkHor->bind_param("ii", $horario_id, $docenteId);
             $checkHor->execute();
@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-    // ELIMINAR ANUNCIO
+    
     } elseif ($accion === 'eliminar_anuncio') {
         $anuncio_id = (int)($_POST['anuncio_id'] ?? 0);
         if ($anuncio_id > 0) {
@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 4) Listar anuncios del docente
+
 $sqlAn = "
     SELECT 
         a.id,

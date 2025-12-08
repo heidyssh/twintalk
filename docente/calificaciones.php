@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-require_role([2]); // Docente
+require_role([2]); 
 
 $docenteId = $_SESSION['usuario_id'] ?? null;
 if (!$docenteId) {
@@ -13,22 +13,22 @@ if (!$docenteId) {
 $mensaje = "";
 $error = "";
 
-// -----------------------------
-// 1. Parámetros de navegación
-// -----------------------------
-$view = isset($_GET['view']) ? $_GET['view'] : 'evaluaciones'; // evaluaciones | tareas
+
+
+
+$view = isset($_GET['view']) ? $_GET['view'] : 'evaluaciones'; 
 $curso_id = isset($_GET['curso_id']) ? (int) $_GET['curso_id'] : 0;
 $tipo_evaluacion_id = isset($_GET['tipo_evaluacion_id']) ? (int) $_GET['tipo_evaluacion_id'] : 0;
 $tarea_id = isset($_GET['tarea_id']) ? (int) $_GET['tarea_id'] : 0;
 
-// Normalizar vista
+
 if ($view !== 'evaluaciones' && $view !== 'tareas') {
     $view = 'evaluaciones';
 }
 
-// -----------------------------------------------------
-// 2. Cursos del docente (para ambos modos)
-// -----------------------------------------------------
+
+
+
 $sqlCursos = "
     SELECT DISTINCT c.id AS curso_id, c.nombre_curso
     FROM horarios h
@@ -42,23 +42,21 @@ $stmt->execute();
 $cursos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Si no hay curso seleccionado y el docente tiene al menos uno, usamos el primero
+
 if ($curso_id <= 0 && !empty($cursos)) {
     $curso_id = (int) $cursos[0]['curso_id'];
 }
 
-// -----------------------------------------------------
-// 3. ACCIONES POST
-//    A) Guardar calificaciones de evaluación general
-//    B) Guardar calificaciones de una tarea específica
-// -----------------------------------------------------
+
+
+
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Acción genérica (extender fechas de tareas)
+    
     $accion = $_POST['accion'] ?? '';
 
     
-
-    // 1) Extender fecha de una tarea para TODOS los alumnos del curso
     if ($accion === 'extender_general_tarea') {
         $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
         $curso_id = (int) ($_POST['curso_id'] ?? 0);
@@ -66,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($tarea_id > 0 && $curso_id > 0 && $nueva_fecha !== '') {
 
-            // Borrar extensiones generales anteriores de esta tarea
+            
             $del = $mysqli->prepare("
             DELETE FROM tareas_extensiones
             WHERE tarea_id = ? AND matricula_id IS NULL
@@ -75,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $del->execute();
             $del->close();
 
-            // Insertar la NUEVA fecha general
+            
             $stmt = $mysqli->prepare("
             INSERT INTO tareas_extensiones (tarea_id, matricula_id, nueva_fecha)
             VALUES (?, NULL, ?)
@@ -88,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $stmt->close();
 
-            // (Opcional) actualizar la fecha base de la tarea
+            
             $stmt = $mysqli->prepare("UPDATE tareas SET fecha_entrega = ? WHERE id = ?");
             $stmt->bind_param("si", $nueva_fecha, $tarea_id);
             $stmt->execute();
@@ -101,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 2) Extender fecha SOLO para un alumno (matricula específica)
+    
     if ($accion === 'extender_tarea_alumno') {
         $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
         $curso_id = (int) ($_POST['curso_id'] ?? 0);
@@ -110,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($tarea_id > 0 && $curso_id > 0 && $matricula_id > 0 && $nueva_fecha !== '') {
 
-            // Borrar extensiones previas para este alumno en esta tarea
+            
             $del = $mysqli->prepare("
             DELETE FROM tareas_extensiones
             WHERE tarea_id = ? AND matricula_id = ?
@@ -119,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $del->execute();
             $del->close();
 
-            // Insertar la nueva fecha del alumno
+            
             $stmt = $mysqli->prepare("
             INSERT INTO tareas_extensiones (tarea_id, matricula_id, nueva_fecha)
             VALUES (?, ?, ?)
@@ -139,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // (bloque duplicado que ya tenías – lo dejo igual para no tocar tu lógica)
+    
     if ($accion === 'extender_tarea_alumno') {
         $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
         $curso_id = (int) ($_POST['curso_id'] ?? 0);
@@ -167,12 +165,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // A) Guardar calificaciones generales (quiz, examen, etc.)
+    
     if (isset($_POST['guardar_calificaciones'])) {
 
         $curso_id = (int) ($_POST['curso_id'] ?? 0);
         $tipo_evaluacion_id = (int) ($_POST['tipo_evaluacion_id'] ?? 0);
-        $notas = $_POST['nota'] ?? []; // [matricula_id => puntaje]
+        $notas = $_POST['nota'] ?? []; 
 
         if ($curso_id <= 0 || $tipo_evaluacion_id <= 0) {
             $error = "Faltan datos del curso o del tipo de evaluación.";
@@ -190,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $puntaje = (float) $puntaje;
 
-                // Verificar si ya existe una calificación
+                
                 $sqlExiste = "
                     SELECT id
                     FROM calificaciones
@@ -204,7 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->close();
 
                 if ($row) {
-                    // Actualizar
+                    
                     $calif_id = (int) $row['id'];
                     $sqlUpdate = "
                         UPDATE calificaciones
@@ -216,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute();
                     $stmt->close();
                 } else {
-                    // Insertar
+                    
                     $sqlInsert = "
                         INSERT INTO calificaciones
                             (matricula_id, tipo_evaluacion_id, puntaje, fecha_evaluacion, publicado)
@@ -235,55 +233,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // B) Guardar calificaciones de una tarea
-    if (isset($_POST['guardar_notas_tarea'])) {
+ 
 
-        $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
-        $curso_id = (int) ($_POST['curso_id'] ?? 0);
-        $calificaciones = $_POST['calificacion'] ?? [];        // [matricula_id => nota]
-        $comentarios = $_POST['comentario'] ?? [];             // [matricula_id => texto]
 
-        if ($tarea_id <= 0 || $curso_id <= 0) {
-            $error = "Tarea o curso no válidos.";
-        } else {
 
-            foreach ($calificaciones as $matricula_id => $nota) {
-                $matricula_id = (int) $matricula_id;
-                $nota = trim($nota);
-                $comentario = isset($comentarios[$matricula_id]) ? trim($comentarios[$matricula_id]) : '';
+if (
+    isset($_POST['guardar_notas_tarea'])
+    || ($view === 'tareas' && isset($_POST['calificacion']) && is_array($_POST['calificacion']))
+) {
 
-                if ($nota === '' && $comentario === '') {
-                    continue; // nada que guardar
-                }
+    $tarea_id      = (int) ($_POST['tarea_id'] ?? 0);
+    $curso_id      = (int) ($_POST['curso_id'] ?? 0);
+    $calificaciones = $_POST['calificacion'] ?? [];   
+    $comentarios    = $_POST['comentario']   ?? [];   
 
-                // Sólo calificamos si existe una entrega
-                $sqlEntrega = "
-                    SELECT id
-                    FROM tareas_entregas
-                    WHERE tarea_id = ? AND matricula_id = ?
-                    LIMIT 1
+    if ($tarea_id <= 0 || $curso_id <= 0) {
+        $error = "Tarea o curso no válidos.";
+    } else {
+
+        foreach ($calificaciones as $matricula_id => $nota) {
+            $matricula_id = (int) $matricula_id;
+            $nota         = trim($nota);
+            $comentario   = isset($comentarios[$matricula_id]) ? trim($comentarios[$matricula_id]) : '';
+
+            
+            if ($nota === '' && $comentario === '') {
+                continue;
+            }
+
+            
+            $tieneNota = ($nota !== '' && is_numeric($nota));
+            $notaFloat = $tieneNota ? (float) $nota : null;
+
+            $comentario_param = $comentario;
+
+            
+            $sqlEntrega = "
+                SELECT id
+                FROM tareas_entregas
+                WHERE tarea_id = ? AND matricula_id = ?
+                LIMIT 1
+            ";
+            $stmt = $mysqli->prepare($sqlEntrega);
+            $stmt->bind_param("ii", $tarea_id, $matricula_id);
+            $stmt->execute();
+            $rowEnt = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($rowEnt) {
+                
+                $entrega_id = (int) $rowEnt['id'];
+            } else {
+                
+                $sqlInsert = "
+                    INSERT INTO tareas_entregas 
+                        (tarea_id, matricula_id, calificacion, comentarios_docente, fecha_calificacion)
+                    VALUES 
+                        (?, ?, ?, ?, NOW())
                 ";
-                $stmt = $mysqli->prepare($sqlEntrega);
-                $stmt->bind_param("ii", $tarea_id, $matricula_id);
+                $stmt = $mysqli->prepare($sqlInsert);
+                
+                $calif_param = $tieneNota ? $notaFloat : null;
+                $stmt->bind_param("iids", $tarea_id, $matricula_id, $calif_param, $comentario_param);
                 $stmt->execute();
-                $rowEnt = $stmt->get_result()->fetch_assoc();
+                $entrega_id = $stmt->insert_id;
                 $stmt->close();
 
-                if (!$rowEnt) {
+                
+                if (!$entrega_id) {
                     continue;
                 }
+            }
 
-                $entrega_id = (int) $rowEnt['id'];
-
-                $notaFloat = null;
-                if ($nota !== '' && is_numeric($nota)) {
-                    $notaFloat = (float) $nota;
-                }
-
-                // Preparamos valores seguros para bind_param
-                $calificacion_param = $notaFloat !== null ? $notaFloat : 0.0;
-                $comentario_param = $comentario;
-
+            
+            if ($tieneNota) {
+                
                 $sqlUpdate = "
                     UPDATE tareas_entregas
                     SET calificacion = ?, 
@@ -292,21 +316,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE id = ?
                 ";
                 $stmt = $mysqli->prepare($sqlUpdate);
-                $stmt->bind_param("dsi", $calificacion_param, $comentario_param, $entrega_id);
-                $stmt->execute();
-                $stmt->close();
+                $stmt->bind_param("dsi", $notaFloat, $comentario_param, $entrega_id);
+            } else {
+                
+                $sqlUpdate = "
+                    UPDATE tareas_entregas
+                    SET comentarios_docente = ?, 
+                        fecha_calificacion = NOW()
+                    WHERE id = ?
+                ";
+                $stmt = $mysqli->prepare($sqlUpdate);
+                $stmt->bind_param("si", $comentario_param, $entrega_id);
             }
 
-            $mensaje = "Notas de la tarea actualizadas correctamente.";
-            header("Location: calificaciones.php?view=tareas&curso_id={$curso_id}&tarea_id={$tarea_id}");
-            exit;
+            $stmt->execute();
+            $stmt->close();
         }
+
+        
+        $mensaje = "Notas de la tarea guardadas correctamente.";
+
+        
+        
+        
     }
 }
 
-// -----------------------------------------------------
-// 4. Datos para vista "Evaluaciones generales"
-// -----------------------------------------------------
+
+}
+
+
+
+
 $tipos_evaluacion = [];
 $estudiantes_curso_eval = [];
 $calif_existentes_eval = [];
@@ -314,11 +355,11 @@ $historial_evaluaciones = [];
 
 if ($view === 'evaluaciones' && $curso_id > 0) {
 
-    // Tipos de evaluación
+    
     $sqlTipos = "SELECT id, nombre_evaluacion FROM tipos_evaluacion ORDER BY nombre_evaluacion";
     $tipos_evaluacion = $mysqli->query($sqlTipos)->fetch_all(MYSQLI_ASSOC);
 
-    // Estudiantes matriculados en este curso con este docente
+    
 $sqlEst = "
     SELECT 
         m.id AS matricula_id,
@@ -343,7 +384,7 @@ $sqlEst = "
     $estudiantes_curso_eval = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
-    // Calificaciones existentes para el tipo de evaluación seleccionado
+    
     if ($tipo_evaluacion_id) {
         $sqlCal = "
             SELECT matricula_id, puntaje
@@ -366,7 +407,7 @@ $sqlEst = "
         $stmt->close();
     }
 
-    // Historial de TODAS las evaluaciones del curso
+    
     $sqlHist = "
         SELECT 
             c.id,
@@ -394,16 +435,16 @@ $sqlEst = "
     $stmt->close();
 }
 
-// -----------------------------------------------------
-// 5. Datos para vista "Tareas y entregas"
-// -----------------------------------------------------
+
+
+
 $tareas_curso = [];
 $tarea_seleccionada = null;
 $entregas_tarea = [];
 
 if ($view === 'tareas' && $curso_id > 0) {
 
-    // Tareas del curso
+    
     $sqlT = "
         SELECT t.*
         FROM tareas t
@@ -420,7 +461,7 @@ if ($view === 'tareas' && $curso_id > 0) {
     $stmt->close();
 
     if ($tarea_id > 0) {
-        // Información de la tarea seleccionada
+        
         $sqlInfo = "
             SELECT t.*, h.curso_id
             FROM tareas t
@@ -437,7 +478,7 @@ if ($view === 'tareas' && $curso_id > 0) {
         $stmt->close();
 
         if ($tarea_seleccionada) {
-            // Entregas por estudiante
+            
             $sqlEnt = "
     SELECT 
         m.id AS matricula_id,
@@ -476,7 +517,7 @@ include __DIR__ . '/../includes/header.php';
 ?>
 
 <style>
-    /* Item de curso seleccionado (que no se vea azul de Bootstrap) */
+    
 .tt-calif-page .list-group-item-action.active,
 .tt-calif-page .list-group-item-action.active:hover,
 .tt-calif-page .list-group-item.active,

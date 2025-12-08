@@ -7,7 +7,7 @@ $usuario_id = $_SESSION['usuario_id'];
 $mensaje = "";
 $error = "";
 
-// Helper para obtener id de estado por nombre
+
 function obtenerEstadoId($mysqli, $nombre)
 {
     $stmt = $mysqli->prepare("SELECT id FROM estados_matricula WHERE nombre_estado = ? LIMIT 1");
@@ -20,11 +20,11 @@ function obtenerEstadoId($mysqli, $nombre)
     return null;
 }
 
-// Procesar retiro de matrícula
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['retirar_matricula'])) {
     $matricula_id = (int) ($_POST['matricula_id'] ?? 0);
 
-    // Verificar que la matrícula pertenece al estudiante y está Activa
+    
     $stmt = $mysqli->prepare("
         SELECT m.id, m.horario_id, em.nombre_estado
         FROM matriculas m
@@ -47,11 +47,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['retirar_matricula']))
         if ($estado_cancelada === null) {
             $error = "No se encontró el estado 'Cancelada' en la tabla estados_matricula.";
         } else {
-            // Cambiar estado a Cancelada
+            
             $upd = $mysqli->prepare("UPDATE matriculas SET estado_id = ? WHERE id = ?");
             $upd->bind_param("ii", $estado_cancelada, $matricula_id);
             if ($upd->execute()) {
-                // Liberar cupo del horario
+                
                 $upd2 = $mysqli->prepare("UPDATE horarios SET cupos_disponibles = cupos_disponibles + 1 WHERE id = ?");
                 $upd2->bind_param("i", $mat['horario_id']);
                 $upd2->execute();
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['retirar_matricula']))
     }
 }
 
-// Consulta de historial con NOTA FINAL (tareas + evaluaciones)
+
 $stmt = $mysqli->prepare("
    SELECT 
         m.id AS matricula_id,

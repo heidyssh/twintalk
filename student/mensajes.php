@@ -2,7 +2,7 @@
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
 
-require_role([3]); // SOLO ESTUDIANTE
+require_role([3]); 
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -29,13 +29,13 @@ $reply_contenido_cita = "";
 
 $baseUrl = "/twintalk/student/mensajes.php";
 
-// -----------------------------
-// 2) Procesar acciones (POST)
-// -----------------------------
+
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
-    // 2.1) Enviar mensaje
+    
     if ($accion === 'enviar_mensaje') {
         $destinatario_id = isset($_POST['destinatario_id']) ? (int)$_POST['destinatario_id'] : 0;
         $asunto          = trim($_POST['asunto'] ?? '');
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($destinatario_id <= 0 || $contenido === '') {
             $error = "Debes seleccionar un destinatario y escribir un mensaje.";
         } else {
-            // Manejo de archivo adjunto
+            
             $archivo_url    = null;
             $tamano_archivo = null;
 
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!in_array($ext, $ext_permitidas)) {
                     $error = "Tipo de archivo no permitido.";
                 } else {
-                    // Carpeta en la RAÍZ del proyecto
+                    
                     $dir_subida = dirname(__DIR__) . "/uploads/mensajes";
                     if (!is_dir($dir_subida)) {
                         @mkdir($dir_subida, 0777, true);
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($error === "") {
-                // Para reply, agregar "Re:" si no lo tiene
+                
                 if ($reply_de > 0 && $asunto !== "" && stripos($asunto, "re:") !== 0) {
                     $asunto = "Re: " . $asunto;
                 }
@@ -107,12 +107,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 2.2) Eliminar mensaje
+    
     if ($accion === 'eliminar_mensaje') {
         $mensaje_id = isset($_POST['mensaje_id']) ? (int)$_POST['mensaje_id'] : 0;
 
         if ($mensaje_id > 0) {
-            // ADMIN puede borrar cualquier mensaje
+            
             $stmt = $mysqli->prepare("
                 SELECT archivo_url
                 FROM mensajes
@@ -134,9 +134,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($stmtDel->execute()) {
                     $mensaje = "Mensaje eliminado correctamente.";
 
-                    // Borrar archivo físico si existe
+                    
                     if ($archivo_url && strpos($archivo_url, "/twintalk/uploads/mensajes/") === 0) {
-                        $root       = dirname(__DIR__); // C:\xampp\htdocs\twintalk
+                        $root       = dirname(__DIR__); 
                         $rel_path   = str_replace("/twintalk", "", $archivo_url);
                         $ruta_fisica = $root . $rel_path;
                         if (file_exists($ruta_fisica)) {
@@ -154,9 +154,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// -----------------------------
-// 3) Si viene reply_id (prellenar formulario)
-// -----------------------------
+
+
+
 if ($reply_id > 0) {
     $stmt = $mysqli->prepare("
         SELECT m.id, m.asunto, m.contenido, m.remitente_id,
@@ -182,9 +182,9 @@ if ($reply_id > 0) {
     $stmt->close();
 }
 
-// -----------------------------
-// 4) Lista de usuarios para combo destinatario
-// -----------------------------
+
+
+
 $usuarios_opciones = [];
 $stmt = $mysqli->prepare("
     SELECT id, nombre, apellido, email
@@ -200,9 +200,9 @@ while ($u = $resUsers->fetch_assoc()) {
 }
 $stmt->close();
 
-// -----------------------------
-// 5) Inbox y enviados (solo los del usuario)
-// -----------------------------
+
+
+
 $stmt = $mysqli->prepare("
     SELECT m.id, m.asunto, m.contenido, m.leido, m.fecha_envio,
            u.nombre AS remitente_nombre,

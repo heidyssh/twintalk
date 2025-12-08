@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-require_role([2]); // Docente
+require_role([2]); 
 
 $docenteId = $_SESSION['usuario_id'] ?? null;
 if (!$docenteId) {
@@ -10,12 +10,12 @@ if (!$docenteId) {
     exit;
 }
 
-// Horario seleccionado por parámetro (para filtrar tareas y cargar alumnos del grupo)
+
 $horario_id_param = isset($_GET['horario_id']) ? (int) $_GET['horario_id'] : 0;
 
-// --------------------------------------------
-// Estudiantes de este horario (para tareas en grupo)
-// --------------------------------------------
+
+
+
 $estudiantes = [];
 if ($horario_id_param > 0) {
     $sqlEst = "
@@ -42,13 +42,13 @@ if ($horario_id_param > 0) {
 $mensaje = "";
 $error = "";
 
-// Carpeta para archivos de tareas
+
 $uploadDir = __DIR__ . '/../uploads/tareas/';
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0775, true);
 }
 
-// 1) Horarios del docente
+
 $sqlHor = "
     SELECT h.id, c.nombre_curso, d.nombre_dia, h.hora_inicio
     FROM horarios h
@@ -67,11 +67,11 @@ while ($row = $resHor->fetch_assoc()) {
 }
 $stmtHor->close();
 
-// 2) Acciones POST: crear o eliminar tarea
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
-    // CREAR TAREA
+    
     if ($accion === 'crear_tarea') {
         $horario_id = (int) ($_POST['horario_id'] ?? 0);
         $titulo = trim($_POST['titulo'] ?? '');
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($horario_id <= 0 || $titulo === '') {
             $error = "Debes seleccionar un horario y escribir un título.";
         } else {
-            // Validar que el horario pertenezca a este docente
+            
             $checkHor = $mysqli->prepare("SELECT id FROM horarios WHERE id = ? AND docente_id = ? LIMIT 1");
             $checkHor->bind_param("ii", $horario_id, $docenteId);
             $checkHor->execute();
@@ -101,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Manejo de archivo de instrucciones (opcional)
+        
         if (!$error && !empty($_FILES['archivo_instrucciones']['name'])) {
             $file = $_FILES['archivo_instrucciones'];
             if ($file['error'] === UPLOAD_ERR_OK) {
@@ -143,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $valor_maximo
             );
             if ($stmtIns->execute()) {
-                // Guardar grupos / destinatarios si la tarea es en grupo
+                
                 $tarea_id = $stmtIns->insert_id;
 
                 if ($modalidad === 'grupo' && !empty($_POST['destinatarios']) && is_array($_POST['destinatarios'])) {
@@ -160,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $nombreGrupo = trim($gruposPost[$matId]);
                                 }
 
-                                // Si el docente no escribió nada, puedes dejarlo vacío
+                                
                                 $stmtDest->bind_param("iis", $tarea_id, $matId, $nombreGrupo);
                                 $stmtDest->execute();
                             }
@@ -176,12 +176,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtIns->close();
         }
 
-        // ELIMINAR TAREA
+        
     } elseif ($accion === 'eliminar_tarea') {
         $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
 
         if ($tarea_id > 0) {
-            // Validar que la tarea sea de este docente
+            
             $stmtVal = $mysqli->prepare("
                 SELECT t.id
                 FROM tareas t
@@ -197,13 +197,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($resVal->num_rows === 0) {
                 $error = "No puedes eliminar esta tarea.";
             } else {
-                // Borrar entregas asociadas
+                
                 $stmtDelEnt = $mysqli->prepare("DELETE FROM tareas_entregas WHERE tarea_id = ?");
                 $stmtDelEnt->bind_param("i", $tarea_id);
                 $stmtDelEnt->execute();
                 $stmtDelEnt->close();
 
-                // Marcar tarea como inactiva
+                
                 $stmtDelTar = $mysqli->prepare("UPDATE tareas SET activo = 0 WHERE id = ?");
                 $stmtDelTar->bind_param("i", $tarea_id);
                 $stmtDelTar->execute();
@@ -215,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 3) Listado de tareas del docente (opcionalmente filtradas por horario)
+
 $params = [$docenteId];
 $types = "i";
 
@@ -579,8 +579,8 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-    // Mostrar/ocultar el bloque de estudiantes cuando se elige Grupo / Individual
-    // y recargar la página al cambiar el horario para poder cargar los alumnos.
+    
+    
     document.addEventListener('DOMContentLoaded', function () {
         var radiosModalidad = document.querySelectorAll('input[name="modalidad"]');
         var wrapperGrupo = document.getElementById('grupo-estudiantes-wrapper');
@@ -602,7 +602,7 @@ include __DIR__ . '/../includes/header.php';
 
         actualizarGrupo();
 
-        // Cuando cambie el horario, recargamos con ?horario_id=...
+        
         if (selHorario) {
             selHorario.addEventListener('change', function () {
                 var v = this.value;

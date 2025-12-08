@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([3]); // solo estudiantes
+require_role([3]); 
 
 $usuario_id = $_SESSION['usuario_id'] ?? 0;
 $horario_id = isset($_GET['horario_id']) ? (int) $_GET['horario_id'] : 0;
@@ -13,7 +13,7 @@ if ($horario_id <= 0) {
     exit;
 }
 
-// 1) Verificar que el estudiante esté matriculado en ese horario
+
 $check = $mysqli->prepare("
     SELECT 
         m.id AS matricula_id,
@@ -37,9 +37,9 @@ if (!$matricula) {
     exit;
 }
 
-// Si la matrícula NO está activa (Cancelada, Pendiente, Finalizada) bloquear acceso
-// Si la matrícula NO está activa (Cancelada, Pendiente, Finalizada) bloquear acceso
-// Bloquear SOLO si la matrícula está Cancelada
+
+
+
 if ($matricula['nombre_estado'] === 'Cancelada') {
     include __DIR__ . "/../includes/header.php";
     echo '<div class="alert alert-warning mt-4">
@@ -60,21 +60,21 @@ $matricula_id = (int) $matricula['matricula_id'];
 $mensaje_tarea = "";
 $error_tarea = "";
 
-// Carpeta para archivos de tareas de estudiantes
+
 $uploadDirTareas = __DIR__ . '/../uploads/tareas/';
 if (!is_dir($uploadDirTareas)) {
     mkdir($uploadDirTareas, 0775, true);
 }
 
-// Manejar subida de tarea del estudiante
-// Manejar subida de tarea del estudiante
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subir_tarea')) {
     $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
 
     if ($tarea_id <= 0 || !isset($_FILES['archivo_tarea'])) {
         $error_tarea = "Datos de tarea inválidos.";
     } else {
-        // Validar que la tarea sea de este horario y obtener modalidad
+        
         $sqlValT = "
             SELECT id, fecha_entrega, permitir_atraso, modalidad
             FROM tareas
@@ -92,14 +92,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
         } else {
             $tareaRow = $resValT->fetch_assoc();
 
-            // ===============================
-            //  FECHA LÍMITE REAL (tarea + extensiones)
-            // ===============================
-            $fecha_limite = $tareaRow['fecha_entrega']; // fecha original (puede ser null)
+            
+            
+            
+            $fecha_limite = $tareaRow['fecha_entrega']; 
 
-            // Buscar extensiones para esta tarea:
-            // - generales (matricula_id IS NULL)
-            // - o específicas para este estudiante
+            
+            
+            
             $stmtExt = $mysqli->prepare("
                 SELECT MAX(nueva_fecha) AS max_fecha
                 FROM tareas_extensiones
@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
             $stmtExt->close();
 
             if (!empty($rowExt['max_fecha'])) {
-                $fecha_ext = $rowExt['max_fecha']; // Y-m-d
+                $fecha_ext = $rowExt['max_fecha']; 
                 if (empty($fecha_limite) || $fecha_ext > $fecha_limite) {
                     $fecha_limite = $fecha_ext;
                 }
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
 
             $hoy = date('Y-m-d');
 
-            // Si ya pasó la fecha y no se permite atraso -> bloquear
+            
             if (
                 !empty($fecha_limite)
                 && $hoy > $fecha_limite
@@ -146,13 +146,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
 
                         $ok = false;
 
-                        // ===============================
-                        //   ENTREGA GRUPAL
-                        //   (UNA SOLA ENTREGA POR GRUPO)
-                        // ===============================
+                        
+                        
+                        
+                        
                         if (!empty($tareaRow['modalidad']) && $tareaRow['modalidad'] === 'grupo') {
 
-                            // 1) Obtener el nombre de grupo de este estudiante
+                            
                             $nombreGrupo = null;
                             $stmtGrupo = $mysqli->prepare("
                                 SELECT nombre_grupo
@@ -168,7 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
                             }
                             $stmtGrupo->close();
 
-                            // 2) Obtener todas las matrículas de ese mismo grupo
+                            
                             $matriculasGrupo = [];
 
                             if (!empty($nombreGrupo)) {
@@ -186,12 +186,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
                                 $stmtMG->close();
                             }
 
-                            // Por seguridad, si no encuentra nada, al menos él mismo
+                            
                             if (empty($matriculasGrupo)) {
                                 $matriculasGrupo[] = $matricula_id;
                             }
 
-                            // 3) Insertar/actualizar la entrega para CADA integrante del grupo
+                            
                             foreach ($matriculasGrupo as $matIdGrupo) {
                                 $sqlCheckEnt = "
                                     SELECT id
@@ -235,9 +235,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
                             }
 
                         } else {
-                            // ===============================
-                            //   ENTREGA INDIVIDUAL (LO DE ANTES)
-                            // ===============================
+                            
+                            
+                            
                             $sqlCheckEnt = "
                                 SELECT id
                                 FROM tareas_entregas
@@ -290,7 +290,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
 }
 
 
-// 2) Datos del curso, horario y docente
+
 $infoSql = "
     SELECT
         h.id AS horario_id,
@@ -333,7 +333,7 @@ if (!$curso) {
     exit;
 }
 
-// 3) Materiales del curso
+
 $matSql = "
     SELECT 
         m.id,
@@ -354,12 +354,12 @@ $stmtMat->execute();
 $materiales = $stmtMat->get_result();
 $stmtMat->close();
 
-// 4) Tareas del curso (con valor_maximo y mi entrega)
-// 4) Tareas del curso (todas las tareas del horario, individuales y grupales)
-// La modalidad 'grupo' es solo informativa (el docente ya define grupos),
-// pero la tarea se muestra a TODO el curso.
-// 4) Tareas del curso (todas las tareas del horario, individuales y grupales)
-// La modalidad 'grupo' indica que la entrega es por equipo.
+
+
+
+
+
+
 $tareasSql = "
     SELECT 
         t.id,
@@ -372,7 +372,7 @@ $tareasSql = "
         t.modalidad,
         td.nombre_grupo AS mi_nombre_grupo,
 
-        /* Obtener compañeros del mismo grupo */
+        
         (SELECT GROUP_CONCAT(CONCAT(u.nombre,' ',u.apellido) SEPARATOR ', ')
          FROM tareas_destinatarios td2
          INNER JOIN matriculas m2 ON m2.id = td2.matricula_id
@@ -410,12 +410,12 @@ $tareasSql = "
 $stmtTar = $mysqli->prepare($tareasSql);
 $stmtTar->bind_param(
     "iiiiii",
-    $matricula_id, // mi_archivo
-    $matricula_id, // mi_fecha_entrega
-    $matricula_id, // mi_calificacion
-    $matricula_id, // mis_comentarios
-    $matricula_id, // td.nombre_grupo (mi grupo)
-    $horario_id    // filtro por horario
+    $matricula_id, 
+    $matricula_id, 
+    $matricula_id, 
+    $matricula_id, 
+    $matricula_id, 
+    $horario_id    
 );
 $stmtTar->execute();
 $tareas = $stmtTar->get_result();
@@ -423,7 +423,7 @@ $stmtTar->close();
 
 
 
-// 4.b Extensiones de tareas para este estudiante (y generales)
+
 $extensiones_por_tarea = [];
 
 $extSql = "
@@ -442,7 +442,7 @@ if ($stmtExtAll = $mysqli->prepare($extSql)) {
     $stmtExtAll->close();
 }
 
-// 5) Anuncios específicos del curso
+
 $anSql = "
     SELECT 
         a.titulo,
@@ -461,7 +461,7 @@ $stmtAn->execute();
 $anuncios = $stmtAn->get_result();
 $stmtAn->close();
 
-// 6) Compañeros de clase
+
 $comSql = "
     SELECT u.nombre, u.apellido, u.email
     FROM matriculas m
@@ -575,11 +575,11 @@ include __DIR__ . "/../includes/header.php";
                                 $hoy = date('Y-m-d');
                                 $fechaPub = $t['fecha_publicacion'] ? date('d/m/Y H:i', strtotime($t['fecha_publicacion'])) : null;
 
-                                // Fecha base en BD
-                                $fechaBaseBD = $t['fecha_entrega']; // Y-m-d o null
+                                
+                                $fechaBaseBD = $t['fecha_entrega']; 
                                 $fechaLimiteRealBD = $fechaBaseBD;
 
-                                // Extensión (si existe) para esta tarea
+                                
                                 $extFecha = $extensiones_por_tarea[(int) $t['id']] ?? null;
 
                                 if (!empty($extFecha)) {
@@ -596,7 +596,7 @@ include __DIR__ . "/../includes/header.php";
                                 $vencida = (!empty($fechaLimiteRealBD) && $fechaLimiteRealBD < $hoy && !$entregada);
                                 $esGrupo = (!empty($t['modalidad']) && $t['modalidad'] === 'grupo');
                                 $nombreGrupoLocal = $t['mi_nombre_grupo'] ?? '';
-                                $bloquearSubidaGrp = ($esGrupo && $entregada); // si el grupo ya entregó, bloquear subida
+                                $bloquearSubidaGrp = ($esGrupo && $entregada); 
                         
                                 $extension_aplicada = (!empty($extFecha) && $fechaLimiteRealBD === $extFecha);
                                 ?>

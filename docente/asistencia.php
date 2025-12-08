@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-require_role([2]); // solo docentes
+require_role([2]); 
 
 $docente_id = $_SESSION['usuario_id'] ?? 0;
 if ($docente_id <= 0) {
@@ -13,9 +13,9 @@ if ($docente_id <= 0) {
 $mensaje = "";
 $error   = "";
 
-// -----------------------------
-// 1) Obtener horarios del docente
-// -----------------------------
+
+
+
 $stmtHor = $mysqli->prepare("
     SELECT 
         h.id,
@@ -44,7 +44,7 @@ while ($row = $resHorarios->fetch_assoc()) {
 }
 $stmtHor->close();
 
-// Si no tiene horarios
+
 if (empty($horarios_docente)) {
     include __DIR__ . '/../includes/header.php';
     echo '<div class="container py-4">
@@ -56,9 +56,9 @@ if (empty($horarios_docente)) {
     exit;
 }
 
-// -----------------------------
-// 2) Horario seleccionado
-// -----------------------------
+
+
+
 $horario_id_seleccionado = isset($_REQUEST['horario_id'])
     ? (int)$_REQUEST['horario_id']
     : (int)$horarios_docente[0]['id'];
@@ -80,15 +80,15 @@ if (!$horario_valido) {
     $horario_actual = $horarios_docente[0];
 }
 
-// -----------------------------
-// 3) Generar LISTA DE FECHAS DE CLASE (solo días de clase)
-// -----------------------------
+
+
+
 $lista_fechas = [];
 
 try {
     $inicio   = new DateTime($horario_actual['fecha_inicio']);
     $fin      = new DateTime($horario_actual['fecha_fin']);
-    $numero_dia_clase = (int)$horario_actual['numero_dia']; // 1=lunes..7=domingo
+    $numero_dia_clase = (int)$horario_actual['numero_dia']; 
 
     for ($d = clone $inicio; $d <= $fin; $d->modify('+1 day')) {
         if ((int)$d->format('N') === $numero_dia_clase) {
@@ -110,18 +110,18 @@ if (empty($lista_fechas)) {
     exit;
 }
 
-// -----------------------------
-// 4) Determinar FECHA seleccionada
-//    - Siempre debe ser una de las fechas de clase
-// -----------------------------
+
+
+
+
 $hoy = date('Y-m-d');
 $fecha_clase = null;
 
 if (isset($_REQUEST['fecha_clase']) && in_array($_REQUEST['fecha_clase'], $lista_fechas, true)) {
     $fecha_clase = $_REQUEST['fecha_clase'];
 } else {
-    // Por defecto, si hay alguna fecha <= hoy, usamos la última (la más reciente);
-    // si todas son futuras, usamos la primera.
+    
+    
     foreach ($lista_fechas as $f) {
         if ($f <= $hoy) {
             $fecha_clase = $f;
@@ -132,19 +132,19 @@ if (isset($_REQUEST['fecha_clase']) && in_array($_REQUEST['fecha_clase'], $lista
     }
 }
 
-// -----------------------------
-// 5) Guardar asistencia (para la fecha seleccionada)
-// -----------------------------
+
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'guardar_asistencia') {
 
     $fecha_post = $_POST['fecha_clase'] ?? '';
-    // Seguridad: solo aceptar fechas que pertenezcan a la lista de fechas de clase
+    
     if (!in_array($fecha_post, $lista_fechas, true)) {
         $error = "La fecha seleccionada no es válida para este horario.";
     } else {
         $fecha_clase = $fecha_post;
 
-        // Obtener las matrículas del horario
+        
         $stmtMat = $mysqli->prepare("
             SELECT 
                 m.id AS matricula_id
@@ -174,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'guard
         ");
 
         foreach ($matriculas_ids as $mat_id) {
-            // Si no está marcado el checkbox, lo consideramos FALTA (0)
+            
             $presente = isset($presentes[$mat_id]) ? 1 : 0;
             $stmtAsis->bind_param("isi", $mat_id, $fecha_clase, $presente);
             $stmtAsis->execute();
@@ -185,13 +185,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'guard
     }
 }
 
-// -----------------------------
-// 6) Cargar asistencia del día seleccionado + estudiantes
-// -----------------------------
+
+
+
 $asistencia_map = [];
 $estudiantes    = [];
 
-// Asistencia ya registrada para esa fecha
+
 $stmtAsisDia = $mysqli->prepare("
     SELECT 
         matricula_id,
@@ -207,7 +207,7 @@ while ($row = $resAsisDia->fetch_assoc()) {
 }
 $stmtAsisDia->close();
 
-// Estudiantes del horario
+
 $stmtEst = $mysqli->prepare("
     SELECT 
         m.id AS matricula_id,
@@ -230,9 +230,9 @@ while ($row = $resEst->fetch_assoc()) {
 }
 $stmtEst->close();
 
-// -----------------------------
-// 7) Resumen de asistencias / faltas por alumno (REGLA 7 FALTAS)
-// -----------------------------
+
+
+
 $resumen = [];
 
 $stmtResumen = $mysqli->prepare("
@@ -378,7 +378,7 @@ include __DIR__ . '/../includes/header.php';
                     <tbody>
                         <?php $i = 1; foreach ($estudiantes as $est): 
                             $mat = $est['matricula_id'];
-                            // Si no hay registro previo, por defecto lo mostramos sin marcar
+                            
                             $presente = $asistencia_map[$mat] ?? null;
                         ?>
                         <tr>

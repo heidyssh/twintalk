@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([3]); // solo estudiante
+require_role([3]); 
 
 require_once __DIR__ . "/../vendor/autoload.php";
 use Dompdf\Dompdf;
@@ -13,7 +13,7 @@ if ($usuario_id <= 0 || $matricula_id <= 0) {
     die("Solicitud no válida.");
 }
 
-// 1. Traer datos de la matrícula + NOTA FINAL (tareas + evaluaciones)
+
 $sql = "
     SELECT 
         m.id AS matricula_id,
@@ -82,12 +82,12 @@ if (!$datos) {
     die("No se encontró la matrícula solicitada.");
 }
 
-// Solo permitir diploma si está FINALIZADA
+
 if ($datos['nombre_estado'] !== 'Finalizada') {
     die("Aún no puedes generar tu diploma porque este curso no está finalizado.");
 }
 
-// 2. Preparar datos
+
 $nombreCompleto = $datos['est_nombre'] . " " . $datos['est_apellido'];
 $cursoNombre = $datos['nombre_curso'];
 $nivelCodigo = $datos['codigo_nivel'];
@@ -97,16 +97,16 @@ $fechaFin = date("d/m/Y", strtotime($datos['fecha_fin']));
 $notaFinal = (float) ($datos['nota_final'] ?? 0);
 $notaFinalTexto = $notaFinal > 0 ? number_format($notaFinal, 2) : "—";
 $fechaEmision = date("d/m/Y");
-// Logo
+
 $logoPath = __DIR__ . '/../assets/img/logo.png';
 $logoBase64 = '';
 if (file_exists($logoPath)) {
     $logoData = base64_encode(file_get_contents($logoPath));
     $logoBase64 = 'data:image/png;base64,' . $logoData;
 }
-// Firma Dirección Académica
+
 $firmaPath = __DIR__ . '/../assets/img/firmadueña.png';
-// Firma del docente (dinámica)
+
 $docenteFirmaBase64 = '';
 $docenteId = (int) $datos['docente_id'];
 
@@ -123,7 +123,7 @@ if (file_exists($firmaPath)) {
     $firmaBase64 = 'data:image/png;base64,' . $firmaData;
 }
 
-// 3. HTML
+
 ob_start();
 ?>
 <!DOCTYPE html>
@@ -133,7 +133,7 @@ ob_start();
     <meta charset="UTF-8">
     <title>Diploma de finalización</title>
     <style>
-        /* Márgenes de la hoja (poco margen para que se vea grande) */
+        
         @page {
             margin: 18px;
         }
@@ -243,7 +243,7 @@ ob_start();
             page-break-inside: avoid;
         }
 
-        /* Fila de firmas bien alineadas */
+        
         .signature-row {
             display: flex !important;
             flex-direction: row !important;
@@ -260,7 +260,7 @@ ob_start();
 
         .firma-spacer {
             height: 50px;
-            /* mismo alto que la imagen de la firma */
+            
             margin-bottom: 4px;
         }
 
@@ -367,10 +367,10 @@ ob_start();
 <?php
 $html = ob_get_clean();
 
-// 4. Generar PDF
+
 $dompdf = new Dompdf();
 $dompdf->loadHtml($html);
-$dompdf->setPaper('A4', 'landscape'); // horizontal tipo diploma
+$dompdf->setPaper('A4', 'landscape'); 
 $dompdf->render();
 
 $nombreArchivo = "Diploma_Matricula_" . $matricula_id . ".pdf";
