@@ -1,16 +1,16 @@
 <?php
 require_once __DIR__ . "/../../config/db.php";
 require_once __DIR__ . "/../../includes/auth.php";
-require_role([1]); // admin
+require_role([1]); 
 
-// Dompdf
+
 require_once __DIR__ . "/../../vendor/autoload.php";
 use Dompdf\Dompdf;
-// Mes y año a usar en el PDF (desde el filtro, o actuales por defecto)
+
 $mes  = isset($_GET['mes'])  ? (int)$_GET['mes']  : (int)date('m');
 $anio = isset($_GET['anio']) ? (int)$_GET['anio'] : (int)date('Y');
 
-// Validaciones básicas
+
 if ($mes < 1 || $mes > 12) {
     $mes = (int)date('m');
 }
@@ -18,7 +18,7 @@ if ($anio < 2000 || $anio > 2100) {
     $anio = (int)date('Y');
 }
 
-// ========== MISMOS KPIs QUE reportes_mensuales.php ==========
+
 $sql = "
 SELECT
    (SELECT COUNT(*) 
@@ -82,10 +82,10 @@ $stmt->execute();
 $kpis = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// ========== HTML DEL PDF (ESTÉTICO) ==========
-$mesNombre = date('F', mktime(0,0,0,$mes,1,$anio)); // en inglés, pero sirve
+
+$mesNombre = date('F', mktime(0,0,0,$mes,1,$anio)); 
 $fechaGeneracion = date('d/m/Y H:i');
-// Convertir logo a base64
+
 $logoPath = __DIR__ . '/../../assets/img/logo.png';
 $logoData = base64_encode(file_get_contents($logoPath));
 $logoBase64 = 'data:image/png;base64,' . $logoData;
@@ -220,7 +220,7 @@ $html = '
 </html>
 ';
 
-// ========== GENERAR PDF ==========
+
 $dompdf = new Dompdf();
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');

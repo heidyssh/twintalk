@@ -2,7 +2,7 @@
 require_once __DIR__ . "/../../config/db.php";
 require_once __DIR__ . "/../../includes/auth.php";
 
-require_role([1]); // admin
+require_role([1]); 
 
 $curso_id = isset($_GET['curso_id']) ? (int) $_GET['curso_id'] : 0;
 
@@ -11,7 +11,7 @@ if ($curso_id <= 0) {
     exit;
 }
 
-// Info básica del curso
+
 $stmt = $mysqli->prepare("
     SELECT c.id, c.nombre_curso, c.descripcion, n.codigo_nivel, n.nombre_nivel
     FROM cursos c
@@ -29,7 +29,7 @@ if (!$curso) {
     exit;
 }
 
-// Horarios del curso
+
 $stmt = $mysqli->prepare("
     SELECT 
         h.id,
@@ -57,7 +57,7 @@ while ($row = $horariosRes->fetch_assoc()) {
 }
 $stmt->close();
 
-// Alumnos por horario
+
 $alumnosPorHorario = [];
 if (!empty($horarios)) {
     $stmt = $mysqli->prepare("
@@ -87,7 +87,7 @@ if (!empty($horarios)) {
     $stmt->close();
 }
 
-// Tareas del curso (todas las de los horarios de este curso)
+
 $stmt = $mysqli->prepare("
     SELECT 
         t.id,
@@ -119,7 +119,7 @@ include __DIR__ . "/../../includes/header.php";
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
 
-            <!-- ENCABEZADO + BOTÓN PDF -->
+            
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <div>
                     <h3 class="mb-1 text-primary"><?= htmlspecialchars($curso['nombre_curso']) ?></h3>
@@ -129,14 +129,14 @@ include __DIR__ . "/../../includes/header.php";
                     </p>
                 </div>
 
-                <!-- BOTÓN PDF -->
+                
                 <a href="reporte_curso_pdf.php?curso_id=<?= $curso_id ?>" class="btn btn-sm btn-outline-danger"
                     target="_blank">
                     <i class="fa-solid fa-file-pdf me-1"></i> Descargar PDF
                 </a>
             </div>
 
-            <!-- DESCRIPCIÓN DEL CURSO -->
+            
             <?php if (!empty($curso['descripcion'])): ?>
                 <p class="small text-muted mb-0"><?= htmlspecialchars($curso['descripcion']) ?></p>
             <?php endif; ?>
@@ -161,7 +161,7 @@ include __DIR__ . "/../../includes/header.php";
     </ul>
 
     <div class="tab-content">
-        <!-- TAB HORARIOS + ALUMNOS -->
+        
         <div class="tab-pane fade show active" id="pane-horarios" role="tabpanel">
             <?php if (empty($horarios)): ?>
                 <div class="alert alert-info">Este curso aún no tiene horarios registrados.</div>
@@ -217,7 +217,7 @@ include __DIR__ . "/../../includes/header.php";
             <?php endif; ?>
         </div>
 
-        <!-- TAB TAREAS -->
+        
         <div class="tab-pane fade" id="pane-tareas" role="tabpanel">
             <?php if (empty($tareas)): ?>
                 <div class="alert alert-info">No hay tareas registradas para este curso.</div>

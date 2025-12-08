@@ -58,8 +58,8 @@ if ($horario_id > 0) {
         exit;
     }
 
-    // Traer estudiantes matriculados en este horario
-    $sqlEst = "
+// Traer estudiantes matriculados en este horario
+$sqlEst = "
     SELECT
         m.id AS matricula_id,
         u.nombre,
@@ -74,9 +74,10 @@ if ($horario_id > 0) {
     INNER JOIN usuarios u ON e.id = u.id
     INNER JOIN estados_matricula em ON m.estado_id = em.id
     WHERE m.horario_id = ?
-      AND em.nombre_estado = 'Activa'
+      AND em.nombre_estado IN ('Activa','Pendiente')
     ORDER BY u.apellido, u.nombre
 ";
+
 
 
     $stmtEst = $mysqli->prepare($sqlEst);

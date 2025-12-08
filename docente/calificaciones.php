@@ -56,6 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Acción genérica (extender fechas de tareas)
     $accion = $_POST['accion'] ?? '';
 
+    
+
     // 1) Extender fecha de una tarea para TODOS los alumnos del curso
     if ($accion === 'extender_general_tarea') {
         $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
@@ -317,7 +319,7 @@ if ($view === 'evaluaciones' && $curso_id > 0) {
     $tipos_evaluacion = $mysqli->query($sqlTipos)->fetch_all(MYSQLI_ASSOC);
 
     // Estudiantes matriculados en este curso con este docente
-    $sqlEst = "
+$sqlEst = "
     SELECT 
         m.id AS matricula_id,
         u.nombre,
@@ -330,9 +332,10 @@ if ($view === 'evaluaciones' && $curso_id > 0) {
     INNER JOIN horarios h      ON h.id = m.horario_id
     WHERE h.curso_id = ?
       AND h.docente_id = ?
-      AND em.nombre_estado = 'Activa'
+      AND em.nombre_estado IN ('Activa','Pendiente')
     ORDER BY u.apellido, u.nombre
 ";
+
 
     $stmt = $mysqli->prepare($sqlEst);
     $stmt->bind_param("ii", $curso_id, $docenteId);
@@ -456,7 +459,7 @@ if ($view === 'tareas' && $curso_id > 0) {
           AND te.tarea_id = ?
     WHERE h.curso_id = ?
       AND h.docente_id = ?
-      AND em.nombre_estado = 'Activa'
+      AND em.nombre_estado IN ('Activa','Pendiente')
     ORDER BY u.apellido, u.nombre
 ";
 

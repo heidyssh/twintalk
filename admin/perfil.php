@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([1]); // solo admin
+require_role([1]); 
 
 $usuario_id = $_SESSION['usuario_id'] ?? null;
 if (!$usuario_id) {
@@ -12,7 +12,7 @@ if (!$usuario_id) {
 $mensaje = "";
 $error   = "";
 
-// Avatares predeterminados (los que están en assets/img/avatars)
+
 $lista_avatars = [
     "/twintalk/assets/img/avatars/avatar1.jpg",
     "/twintalk/assets/img/avatars/avatar2.jpg",
@@ -43,16 +43,16 @@ $lista_avatars = [
     "/twintalk/assets/img/avatars/avatar28.jpg",
 ];
 
-// Carpeta para avatares subidos
+
 $uploadDir     = __DIR__ . "/../uploads/avatars/";
 $uploadUrlBase = "/twintalk/uploads/avatars/";
 
-// Asegurar carpeta
+
 if (!is_dir($uploadDir)) {
     @mkdir($uploadDir, 0777, true);
 }
 
-// Cargar datos del usuario
+
 $stmt = $mysqli->prepare("SELECT nombre, apellido, email, telefono, foto_perfil FROM usuarios WHERE id = ?");
 $stmt->bind_param("i", $usuario_id);
 $stmt->execute();
@@ -64,7 +64,7 @@ $avatar_actual = $foto_perfil ?: "/twintalk/assets/img/avatars/avatar1.jpg";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // 1) Actualizar datos básicos
+    
     if (isset($_POST['actualizar_perfil'])) {
         $nuevo_nombre   = trim($_POST['nombre'] ?? '');
         $nuevo_apellido = trim($_POST['apellido'] ?? '');
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 2) Cambiar contraseña
+    
     elseif (isset($_POST['cambiar_password'])) {
         $pass1 = $_POST['password']  ?? '';
         $pass2 = $_POST['password2'] ?? '';
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 3) Elegir avatar predeterminado
+    
     elseif (isset($_POST['actualizar_avatar'])) {
         $avatar_sel = $_POST['avatar_seleccionado'] ?? '';
         if (in_array($avatar_sel, $lista_avatars)) {
@@ -130,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 4) Subir avatar propio
+    
     elseif (isset($_POST['subir_avatar']) && isset($_FILES['avatar_file'])) {
         $file = $_FILES['avatar_file'];
 

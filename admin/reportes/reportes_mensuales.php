@@ -2,15 +2,15 @@
 require_once __DIR__ . "/../../config/db.php";
 require_once __DIR__ . "/../../includes/auth.php";
 
-require_role([1]); // admin
+require_role([1]); 
 
-// ==========================
-// 1) Parámetros mes / año
-// ==========================
+
+
+
 $mes  = isset($_GET['mes'])  ? (int)$_GET['mes']  : (int)date('m');
 $anio = isset($_GET['anio']) ? (int)$_GET['anio'] : (int)date('Y');
 
-// Validar rangos básicos
+
 if ($mes < 1 || $mes > 12) {
     $mes = (int)date('m');
 }
@@ -19,7 +19,7 @@ if ($anio < 2000 || $anio > 2100) {
     $anio = (int)date('Y');
 }
 
-// Nombre de meses para mostrar
+
 $mesesNombre = [
     1  => 'Enero', 2 => 'Febrero', 3 => 'Marzo',
     4  => 'Abril', 5 => 'Mayo',    6 => 'Junio',
@@ -27,9 +27,9 @@ $mesesNombre = [
     10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
 ];
 
-// ==========================
-// 2) KPIs globales del mes
-// ==========================
+
+
+
 $sql = "
 SELECT
    (SELECT COUNT(*) 
@@ -84,23 +84,23 @@ if (!$stmt) {
 }
 
 $stmt->bind_param(
-    "iiiiiiiiiiiiiiii",  // 16 i
+    "iiiiiiiiiiiiiiii",  
     $mes,
-    $anio,         // 1) nuevos_estudiantes
+    $anio,         
     $mes,
-    $anio,         // 2) matriculas_mes
+    $anio,         
     $mes,
-    $anio,         // 3) ingresos_mes
+    $anio,         
     $mes,
-    $anio,         // 4) asistencia_global
+    $anio,         
     $mes,
-    $anio,         // 5) tareas_asignadas
+    $anio,         
     $mes,
-    $anio,         // 6) tareas_entregadas
+    $anio,         
     $mes,
-    $anio,         // 7) mensajes_mes
+    $anio,         
     $mes,
-    $anio          // 8) leads_mes
+    $anio          
 );
 
 $stmt->execute();

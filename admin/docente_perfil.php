@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([1]); // solo admin
+require_role([1]); 
 
 $docente_id = isset($_GET['docente_id']) ? (int)$_GET['docente_id'] : 0;
 
@@ -14,7 +14,7 @@ if ($docente_id <= 0) {
     exit;
 }
 
-// 1) Datos principales del docente: usuarios + docentes + titulos_academicos + informacion_personal
+
 $sqlDocente = "
     SELECT
         u.id,
@@ -67,7 +67,7 @@ if (!$docente) {
     exit;
 }
 
-// 2) Horarios y cursos asignados al docente
+
 $sqlHorarios = "
     SELECT
         h.id,
@@ -104,7 +104,7 @@ while ($row = $resHorarios->fetch_assoc()) {
 }
 $stmtHor->close();
 
-// Estadísticas simples
+
 $totalHorarios   = count($horarios);
 $totalEstudiantes = 0;
 foreach ($horarios as $h) {

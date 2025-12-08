@@ -2,14 +2,14 @@
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
 
-require_role([1]); // solo admin
+require_role([1]); 
 
 $mensaje = "";
 $error   = "";
 
-// -----------------------------------------------------
-// Helper: obtener id de un estado por nombre
-// -----------------------------------------------------
+
+
+
 function obtenerEstadoIdPorNombre($mysqli, $nombre) {
     $stmt = $mysqli->prepare("SELECT id FROM estados_matricula WHERE nombre_estado = ? LIMIT 1");
     $stmt->bind_param("s", $nombre);
@@ -19,9 +19,9 @@ function obtenerEstadoIdPorNombre($mysqli, $nombre) {
     return $res ? (int)$res['id'] : null;
 }
 
-// -----------------------------------------------------
-// Helper: obtener precio vigente del curso
-// -----------------------------------------------------
+
+
+
 function obtenerPrecioCursoActual($mysqli, $curso_id) {
     $stmt = $mysqli->prepare("
         SELECT precio
@@ -40,9 +40,9 @@ function obtenerPrecioCursoActual($mysqli, $curso_id) {
     return $res ? (float)$res['precio'] : 0.0;
 }
 
-// -----------------------------------------------------
-// Registrar pago (parcial o total) de una matrícula
-// -----------------------------------------------------
+
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'registrar_pago') {
 
     $matricula_id   = (int)($_POST['matricula_id'] ?? 0);
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
         $error = "Debes seleccionar método de pago y un monto válido.";
     } else {
 
-        // Obtener datos actuales de la matrícula (incluyendo monto_pagado y curso)
+        
         $sqlDatos = "
             SELECT 
                 m.monto_pagado,
@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
             } else {
                 $nuevo_total = $monto_actual + $monto_nuevo;
 
-                // Actualizar registro de matrícula con nuevo total y método de pago
+                
                 $sqlUpdate = "
                     UPDATE matriculas
                     SET monto_pagado = ?, 
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
                 $stmt->execute();
                 $stmt->close();
 
-                // Actualizar estado según si ya pagó todo o no
+                
                 $estado_activa_id    = obtenerEstadoIdPorNombre($mysqli, "Activa");
                 $estado_pendiente_id = obtenerEstadoIdPorNombre($mysqli, "Pendiente");
 
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
                     $stmt->close();
                     $mensaje = "Pago registrado. Matrícula pagada completamente.";
                 } else {
-                    // Sigue quedando saldo pendiente
+                    
                     if ($estado_pendiente_id && $estado_actual_id != $estado_activa_id) {
                         $sqlEstado = "UPDATE matriculas SET estado_id = ? WHERE id = ?";
                         $stmt = $mysqli->prepare($sqlEstado);
@@ -118,8 +118,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
                     $mensaje = "Pago parcial registrado. El alumno aún tiene saldo pendiente.";
                 }
 
-                // (Opcional) enviar correo de confirmación
-                // enviarCorreoConfirmacionPago($mysqli, $matricula_id);
+                
+                
 
                 header("Location: pagos.php");
                 exit;
@@ -128,9 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
     }
 }
 
-// -----------------------------------------------------
-// Listar matrículas con saldo pendiente
-// -----------------------------------------------------
+
+
+
 $sqlPend = "
     SELECT 
         m.id AS matricula_id,
@@ -155,7 +155,7 @@ $sqlPend = "
 ";
 $pendientes = $mysqli->query($sqlPend);
 
-// Métodos de pago disponibles
+
 $metodos_pago = $mysqli->query("SELECT id, nombre_metodo FROM metodos_pago ORDER BY nombre_metodo")->fetch_all(MYSQLI_ASSOC);
 
 include __DIR__ . "/../includes/header.php";
@@ -219,7 +219,7 @@ include __DIR__ . "/../includes/header.php";
                                 $pagado = $m['monto_pagado'] !== null ? (float)$m['monto_pagado'] : 0.0;
                                 $saldo  = max($precio_curso - $pagado, 0);
                                 if ($precio_curso <= 0 || $saldo <= 0) {
-                                    // No mostrar si no hay precio o ya está totalmente pagado
+                                    
                                     continue;
                                 }
                             ?>

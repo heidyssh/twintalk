@@ -1,10 +1,10 @@
 <?php
 date_default_timezone_set('America/Tegucigalpa');
-$host = "127.0.0.1";        // igual que en config.inc.php
-$user = "root";             // igual
-$pass = "";                 // sin contraseña
-$db   = "twintalk_academy_db";  // el nombre de tu base
-$port = 3307;               // IMPORTANTE: este puerto
+$host = "127.0.0.1";        
+$user = "root";             
+$pass = "";                 
+$db   = "twintalk_academy_db";  
+$port = 3307;               
 
 $mysqli = new mysqli($host, $user, $pass, $db, $port);
 

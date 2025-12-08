@@ -1,11 +1,11 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([1]); // admin
+require_role([1]); 
 
 $mensaje = "";
 $error   = "";
-// Eliminar usuario (desactivar)
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'eliminar_usuario')) {
     $usuario_id = (int)($_POST['usuario_id'] ?? 0);
 
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'elim
         }
     }
 }
-// Cambiar rol
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['usuario_id'], $_POST['rol_id'])) {
     $usuario_id = (int)$_POST['usuario_id'];
     $rol_id     = (int)$_POST['rol_id'];
@@ -36,16 +36,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['usuario_id'], $_POST[
     if ($usuario_id <= 0 || $rol_id <= 0) {
         $error = "Datos inválidos.";
     } else {
-        // No permitir que el admin actual se quite su propio rol
+        
         if ($usuario_id == ($_SESSION['usuario_id'] ?? 0) && $rol_id != 1) {
             $error = "No puedes quitarte tu propio rol de administrador.";
         } else {
-            // Actualizar rol en usuarios
+            
             $stmt = $mysqli->prepare("UPDATE usuarios SET rol_id = ? WHERE id = ?");
             $stmt->bind_param("ii", $rol_id, $usuario_id);
             if ($stmt->execute()) {
 
-                // Si ahora es DOCENTE, asegurarse que exista en docentes
+                
                 if ($rol_id == 2) {
                     $stmtCheck = $mysqli->prepare("SELECT id FROM docentes WHERE id = ?");
                     $stmtCheck->bind_param("i", $usuario_id);
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['usuario_id'], $_POST[
                     $stmtCheck->close();
                 }
 
-                // Si ahora es ESTUDIANTE, asegurarse que exista en estudiantes
+                
                 if ($rol_id == 3) {
                     $stmtCheck = $mysqli->prepare("SELECT id FROM estudiantes WHERE id = ?");
                     $stmtCheck->bind_param("i", $usuario_id);
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['usuario_id'], $_POST[
     }
 }
 
-// Cargar usuarios + rol actual
+
 $usuarios = $mysqli->query("
     SELECT u.id, u.nombre, u.apellido, u.email, u.rol_id, r.nombre_rol
     FROM usuarios u
@@ -100,7 +100,7 @@ $usuarios = $mysqli->query("
     ORDER BY u.fecha_registro DESC
 ");
 
-// Cargar roles para el select
+
 $roles = [];
 $resRoles = $mysqli->query("SELECT id, nombre_rol FROM roles ORDER BY id ASC");
 if ($resRoles) {

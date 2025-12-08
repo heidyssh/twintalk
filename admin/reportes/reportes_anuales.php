@@ -2,15 +2,15 @@
 require_once __DIR__ . "/../../config/db.php";
 require_once __DIR__ . "/../../includes/auth.php";
 
-require_role([1]); // solo admin
+require_role([1]); 
 
-// Año que se quiere ver
+
 $anio = isset($_GET['anio']) ? (int)$_GET['anio'] : (int)date('Y');
 if ($anio < 2000 || $anio > 2100) {
     $anio = (int)date('Y');
 }
 
-// Nombres de meses
+
 $mesesNombres = [
     1  => 'Enero',
     2  => 'Febrero',
@@ -26,7 +26,7 @@ $mesesNombres = [
     12 => 'Diciembre'
 ];
 
-// Mismo SQL que usas en reportes_mensuales, pero lo ejecutamos 12 veces (uno por mes)
+
 $sqlMes = "
 SELECT
    (SELECT COUNT(*) 
@@ -74,10 +74,10 @@ SELECT
       AND YEAR(fecha_envio)  = ?) AS leads_mes
 ";
 
-// Aquí guardamos los 12 meses
+
 $datosMeses = [];
 
-// Totales anuales (sumamos los meses)
+
 $totales = [
     'nuevos_estudiantes' => 0,
     'matriculas_mes'     => 0,
@@ -94,17 +94,17 @@ for ($m = 1; $m <= 12; $m++) {
         die("Error al preparar la consulta mensual: " . $mysqli->error);
     }
 
-    // mismo patrón que en reportes_mensuales.php
+    
     $stmt->bind_param(
         "iiiiiiiiiiiiiiii",
-        $m, $anio,  // nuevos_estudiantes
-        $m, $anio,  // matriculas_mes
-        $m, $anio,  // ingresos_mes
-        $m, $anio,  // asistencia_global
-        $m, $anio,  // tareas_asignadas
-        $m, $anio,  // tareas_entregadas
-        $m, $anio,  // mensajes_mes
-        $m, $anio   // leads_mes
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio   
     );
 
     $stmt->execute();
@@ -112,7 +112,7 @@ for ($m = 1; $m <= 12; $m++) {
     $row = $res->fetch_assoc();
     $stmt->close();
 
-    // Por si algún mes no tiene nada, que no truene
+    
     if (!$row) {
         $row = [
             'nuevos_estudiantes' => 0,
@@ -129,10 +129,10 @@ for ($m = 1; $m <= 12; $m++) {
     $row['mes_num']    = $m;
     $row['mes_nombre'] = $mesesNombres[$m];
 
-    // Guardamos para la tabla
+    
     $datosMeses[] = $row;
 
-    // Sumamos totales anuales
+    
     $totales['nuevos_estudiantes'] += (int)$row['nuevos_estudiantes'];
     $totales['matriculas_mes']     += (int)$row['matriculas_mes'];
     $totales['ingresos_mes']       += (float)$row['ingresos_mes'];

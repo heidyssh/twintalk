@@ -1,17 +1,17 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([1]); // solo admin
+require_role([1]); 
 
 $mensaje = "";
 $error = "";
 
-// Curso filtrado opcional
+
 $curso_id_filtro = isset($_GET['curso_id']) && ctype_digit($_GET['curso_id'])
     ? (int) $_GET['curso_id']
     : 0;
 
-// Cursos activos
+
 $cursos_data = [];
 $res_cursos = $mysqli->query("SELECT id, nombre_curso FROM cursos WHERE activo = 1 ORDER BY nombre_curso");
 if ($res_cursos) {
@@ -20,7 +20,7 @@ if ($res_cursos) {
     }
 }
 
-// DOCENTES: todos los usuarios con rol 2 (docente)
+
 $docentes_data = [];
 $res_doc = $mysqli->query("
     SELECT u.id, u.nombre, u.apellido
@@ -34,7 +34,7 @@ if ($res_doc) {
     }
 }
 
-// Días de semana
+
 $dias_data = [];
 $res_dias = $mysqli->query("SELECT id, nombre_dia FROM dias_semana ORDER BY numero_dia ASC");
 if ($res_dias) {
@@ -43,7 +43,7 @@ if ($res_dias) {
     }
 }
 
-// Crear horario
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_horario'])) {
     $curso_id = (int) ($_POST['curso_id'] ?? 0);
     $docente_id = (int) ($_POST['docente_id'] ?? 0);
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_horario'])) {
     $fecha_inicio = $_POST['fecha_inicio'] ?? '';
     $cupos = (int) ($_POST['cupos_disponibles'] ?? 0);
 
-    // Calcular fecha_fin automáticamente: 3 meses después de fecha_inicio
+    
     if ($fecha_inicio !== '') {
         $fecha_fin = date('Y-m-d', strtotime($fecha_inicio . ' +3 months'));
     } else {
@@ -68,14 +68,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_horario'])) {
     ) {
         $error = "Completa todos los campos obligatorios del horario.";
     } else {
-        // 🔗 Asegurar que el docente también exista en la tabla `docentes`
+        
         $stmtCheck = $mysqli->prepare("SELECT id FROM docentes WHERE id = ?");
         $stmtCheck->bind_param("i", $docente_id);
         $stmtCheck->execute();
         $stmtCheck->store_result();
 
         if ($stmtCheck->num_rows == 0) {
-            // Crear registro mínimo en docentes (titulo_id y especialidad pueden quedar NULL)
+            
             $stmtInsDoc = $mysqli->prepare("
                 INSERT INTO docentes (id, fecha_contratacion, activo)
                 VALUES (?, CURDATE(), 1)
@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_horario'])) {
         }
         $stmtCheck->close();
 
-        // Crear horario (ya puede referenciar a docentes.id sin romper FK)
+        
         $stmt = $mysqli->prepare("
             INSERT INTO horarios
                 (curso_id, docente_id, dia_semana_id, hora_inicio, hora_fin, aula,
@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_horario'])) {
     }
 }
 
-// Desactivar horario
+
 if (isset($_GET['desactivar']) && ctype_digit($_GET['desactivar'])) {
     $id_h = (int) $_GET['desactivar'];
     $stmt = $mysqli->prepare("UPDATE horarios SET activo = 0 WHERE id = ?");
@@ -128,7 +128,7 @@ if (isset($_GET['desactivar']) && ctype_digit($_GET['desactivar'])) {
     $stmt->close();
 }
 
-// Listar horarios
+
 $sqlHorarios = "
     SELECT h.*, c.nombre_curso,
            u.nombre AS docente_nombre, u.apellido AS docente_apellido,

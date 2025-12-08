@@ -1,18 +1,18 @@
 <?php
 require_once __DIR__ . "/../../config/db.php";
 require_once __DIR__ . "/../../includes/auth.php";
-require_role([1]); // admin
+require_role([1]); 
 
 require_once __DIR__ . "/../../vendor/autoload.php";
 use Dompdf\Dompdf;
 
-// Año a imprimir
+
 $anio = isset($_GET['anio']) ? (int)$_GET['anio'] : (int)date('Y');
 if ($anio < 2000 || $anio > 2100) {
     $anio = (int)date('Y');
 }
 
-// Nombres de meses
+
 $mesesNombres = [
     1  => 'Enero',
     2  => 'Febrero',
@@ -28,7 +28,7 @@ $mesesNombres = [
     12 => 'Diciembre'
 ];
 
-// Mismo SQL del reporte anual HTML (por mes)
+
 $sqlMes = "
 SELECT
    (SELECT COUNT(*) 
@@ -76,10 +76,10 @@ SELECT
       AND YEAR(fecha_envio)  = ?) AS leads_mes
 ";
 
-// Array con los 12 meses
+
 $datosMeses = [];
 
-// Totales anuales
+
 $totales = [
     'nuevos_estudiantes' => 0,
     'matriculas_mes'     => 0,
@@ -98,14 +98,14 @@ for ($m = 1; $m <= 12; $m++) {
 
     $stmt->bind_param(
         "iiiiiiiiiiiiiiii",
-        $m, $anio,  // nuevos_estudiantes
-        $m, $anio,  // matriculas_mes
-        $m, $anio,  // ingresos_mes
-        $m, $anio,  // asistencia_global
-        $m, $anio,  // tareas_asignadas
-        $m, $anio,  // tareas_entregadas
-        $m, $anio,  // mensajes_mes
-        $m, $anio   // leads_mes
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio,  
+        $m, $anio   
     );
 
     $stmt->execute();
@@ -140,7 +140,7 @@ for ($m = 1; $m <= 12; $m++) {
     $totales['leads_mes']          += (int)$row['leads_mes'];
 }
 
-// Logo
+
 $logoPath = __DIR__ . '/../../assets/img/logo.png';
 $logoBase64 = '';
 if (file_exists($logoPath)) {
@@ -348,7 +348,7 @@ $html = ob_get_clean();
 
 $dompdf = new Dompdf();
 $dompdf->loadHtml($html);
-$dompdf->setPaper('A4', 'landscape'); // horizontal
+$dompdf->setPaper('A4', 'landscape'); 
 $dompdf->render();
 
 $dompdf->stream("Reporte_Anual_{$anio}.pdf", ["Attachment" => true]);

@@ -5,7 +5,7 @@ require_role([1]);
 
 $nombre_admin = $_SESSION['nombre'] ?? 'Administrador';
 
-// Helper rápido para contar
+
 function tt_contar($mysqli, $sql)
 {
     $res = $mysqli->query($sql);

@@ -1,12 +1,12 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
-require_role([1]); // solo admin
+require_role([1]); 
 
 $mensaje = "";
 $error = "";
 
-// Eliminar / desactivar curso
+
 if (isset($_GET['eliminar']) && ctype_digit($_GET['eliminar'])) {
     $id_eliminar = (int) $_GET['eliminar'];
     $stmt = $mysqli->prepare("UPDATE cursos SET activo = 0 WHERE id = ?");
@@ -19,7 +19,7 @@ if (isset($_GET['eliminar']) && ctype_digit($_GET['eliminar'])) {
     $stmt->close();
 }
 
-// Cargar niveles para el select
+
 $niveles = [];
 $resNiv = $mysqli->query("SELECT id, codigo_nivel, nombre_nivel FROM niveles_academicos ORDER BY id ASC");
 if ($resNiv) {
@@ -28,7 +28,7 @@ if ($resNiv) {
     }
 }
 
-// Si viene a editar, cargamos el curso
+
 $curso_editar = null;
 if (isset($_GET['editar']) && ctype_digit($_GET['editar'])) {
     $id_editar = (int) $_GET['editar'];
@@ -39,7 +39,7 @@ if (isset($_GET['editar']) && ctype_digit($_GET['editar'])) {
     if ($res && $res->num_rows === 1) {
         $curso_editar = $res->fetch_assoc();
 
-        // Nuevo: traer precio vigente (si existe)
+        
         $stmtPrecio = $mysqli->prepare("
             SELECT precio
             FROM precios_cursos
@@ -64,7 +64,7 @@ if (isset($_GET['editar']) && ctype_digit($_GET['editar'])) {
 }
 
 
-// Crear / actualizar curso
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nombre_curso = trim($_POST['nombre_curso'] ?? '');
     $nivel_id = (int) ($_POST['nivel_id'] ?? 0);
@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($nombre_curso === '' || $nivel_id <= 0 || $duracion_horas <= 0 || $capacidad_maxima <= 0) {
         $error = "Completa todos los campos obligatorios.";
     } else {
-        // Validar que no exista curso con mismo nombre + nivel
+        
         $stmt = $mysqli->prepare("
             SELECT id FROM cursos
             WHERE nombre_curso = ? AND nivel_id = ? AND id <> ?
@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Ya existe un curso con ese nombre y nivel.";
         } else {
             if ($curso_id > 0) {
-                // Actualizar
+                
                 $stmt2 = $mysqli->prepare("
                     UPDATE cursos
                     SET nombre_curso = ?, descripcion = ?, nivel_id = ?,
@@ -113,9 +113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $mensaje = "Curso actualizado correctamente.";
                     $curso_editar = null;
 
-                    // Nuevo: si se indicó un precio válido, actualizamos precios_cursos
+                    
                     if ($precio !== null && $precio > 0) {
-                        // Desactivar precios vigentes anteriores para este curso
+                        
                         $stmtPrecio = $mysqli->prepare("
             UPDATE precios_cursos
             SET activo = 0
@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $stmtPrecio->close();
                         }
 
-                        // Insertar nuevo precio vigente
+                        
                         $stmtPrecioIns = $mysqli->prepare("
             INSERT INTO precios_cursos (curso_id, precio, fecha_inicio_vigencia, activo)
             VALUES (?, ?, CURDATE(), 1)
@@ -144,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt2->close();
 
             } else {
-                // Crear
+                
                 $stmt2 = $mysqli->prepare("
                     INSERT INTO cursos (nombre_curso, descripcion, nivel_id, duracion_horas, capacidad_maxima, activo, fecha_creacion)
                     VALUES (?, ?, ?, ?, ?, 1, NOW())
@@ -160,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($stmt2->execute()) {
                     $mensaje = "Curso creado correctamente.";
 
-                    // Nuevo: si se indicó un precio válido, lo guardamos como precio vigente
+                    
                     if ($precio !== null && $precio > 0) {
                         $curso_nuevo_id = $stmt2->insert_id;
 
@@ -185,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Listar cursos
+
 $cursos = $mysqli->query("
     SELECT 
         c.*,

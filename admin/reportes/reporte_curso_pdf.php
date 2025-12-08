@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . "/../../config/db.php";
 require_once __DIR__ . "/../../includes/auth.php";
-require_role([1]); // admin
+require_role([1]); 
 
 require_once __DIR__ . "/../../vendor/autoload.php";
 use Dompdf\Dompdf;
@@ -12,7 +12,7 @@ if ($curso_id <= 0) {
     die("Curso no válido.");
 }
 
-// Info básica del curso
+
 $stmt = $mysqli->prepare("
     SELECT c.id, c.nombre_curso, c.descripcion, n.codigo_nivel, n.nombre_nivel
     FROM cursos c
@@ -29,7 +29,7 @@ if (!$curso) {
     die("Curso no encontrado.");
 }
 
-// Horarios del curso + cantidad de alumnos
+
 $stmt = $mysqli->prepare("
     SELECT 
         h.id,
@@ -58,7 +58,7 @@ $horariosRes = $stmt->get_result();
 $horarios = $horariosRes->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Tareas del curso
+
 $stmt = $mysqli->prepare("
     SELECT 
         t.id,
@@ -81,7 +81,7 @@ $stmt->execute();
 $tareas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// ===== Logo en base64 =====
+
 $logoPath = __DIR__ . '/../../assets/img/logo.png';
 $logoBase64 = '';
 if (file_exists($logoPath)) {
@@ -91,7 +91,7 @@ if (file_exists($logoPath)) {
 
 $fechaGeneracion = date('d/m/Y H:i');
 
-// ===== HTML DEL PDF =====
+
 ob_start();
 ?>
 <!DOCTYPE html>
