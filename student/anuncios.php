@@ -4,10 +4,6 @@ require_once __DIR__ . "/../includes/auth.php";
 require_role([3]); 
 
 $usuario_id = $_SESSION['usuario_id'];
-
-
-
-
 $sql = "
     SELECT 
         a.titulo,

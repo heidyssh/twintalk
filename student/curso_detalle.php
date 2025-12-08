@@ -37,9 +37,6 @@ if (!$matricula) {
     exit;
 }
 
-
-
-
 if ($matricula['nombre_estado'] === 'Cancelada') {
     include __DIR__ . "/../includes/header.php";
     echo '<div class="alert alert-warning mt-4">
@@ -51,22 +48,13 @@ if ($matricula['nombre_estado'] === 'Cancelada') {
 }
 
 $matricula_id = (int)$matricula['matricula_id'];
-
-
-
-
 $matricula_id = (int) $matricula['matricula_id'];
-
 $mensaje_tarea = "";
 $error_tarea = "";
-
-
 $uploadDirTareas = __DIR__ . '/../uploads/tareas/';
 if (!is_dir($uploadDirTareas)) {
     mkdir($uploadDirTareas, 0775, true);
 }
-
-
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subir_tarea')) {
     $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
@@ -91,15 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
             $error_tarea = "La tarea no pertenece a este curso.";
         } else {
             $tareaRow = $resValT->fetch_assoc();
-
-            
-            
-            
             $fecha_limite = $tareaRow['fecha_entrega']; 
-
-            
-            
-            
             $stmtExt = $mysqli->prepare("
                 SELECT MAX(nueva_fecha) AS max_fecha
                 FROM tareas_extensiones
@@ -120,8 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
             }
 
             $hoy = date('Y-m-d');
-
-            
             if (
                 !empty($fecha_limite)
                 && $hoy > $fecha_limite
@@ -143,16 +121,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
                     if (move_uploaded_file($tmpName, $rutaDestino)) {
                         $archivo_url = '/twintalk/uploads/tareas/' . $nuevoNombre;
                         $tamano_archivo = $file['size'];
-
                         $ok = false;
-
-                        
-                        
-                        
-                        
                         if (!empty($tareaRow['modalidad']) && $tareaRow['modalidad'] === 'grupo') {
-
-                            
                             $nombreGrupo = null;
                             $stmtGrupo = $mysqli->prepare("
                                 SELECT nombre_grupo
@@ -167,10 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
                                 $nombreGrupo = trim((string) $rowGrupo['nombre_grupo']);
                             }
                             $stmtGrupo->close();
-
-                            
                             $matriculasGrupo = [];
-
                             if (!empty($nombreGrupo)) {
                                 $stmtMG = $mysqli->prepare("
                                     SELECT matricula_id
@@ -185,13 +152,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
                                 }
                                 $stmtMG->close();
                             }
-
-                            
                             if (empty($matriculasGrupo)) {
                                 $matriculasGrupo[] = $matricula_id;
                             }
 
-                            
                             foreach ($matriculasGrupo as $matIdGrupo) {
                                 $sqlCheckEnt = "
                                     SELECT id
@@ -235,9 +199,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
                             }
 
                         } else {
-                            
-                            
-                            
                             $sqlCheckEnt = "
                                 SELECT id
                                 FROM tareas_entregas
@@ -288,9 +249,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'subi
         }
     }
 }
-
-
-
 $infoSql = "
     SELECT
         h.id AS horario_id,
@@ -333,7 +291,6 @@ if (!$curso) {
     exit;
 }
 
-
 $matSql = "
     SELECT 
         m.id,
@@ -354,12 +311,6 @@ $stmtMat->execute();
 $materiales = $stmtMat->get_result();
 $stmtMat->close();
 
-
-
-
-
-
-
 $tareasSql = "
     SELECT 
         t.id,
@@ -371,7 +322,6 @@ $tareasSql = "
         t.valor_maximo,
         t.modalidad,
         td.nombre_grupo AS mi_nombre_grupo,
-
         
         (SELECT GROUP_CONCAT(CONCAT(u.nombre,' ',u.apellido) SEPARATOR ', ')
          FROM tareas_destinatarios td2
@@ -380,7 +330,6 @@ $tareasSql = "
          WHERE td2.tarea_id = t.id
          AND td2.nombre_grupo = td.nombre_grupo
         ) AS companeros_grupo,
-
 
         (SELECT te.archivo_url 
          FROM tareas_entregas te 
@@ -420,10 +369,6 @@ $stmtTar->bind_param(
 $stmtTar->execute();
 $tareas = $stmtTar->get_result();
 $stmtTar->close();
-
-
-
-
 $extensiones_por_tarea = [];
 
 $extSql = "
@@ -441,8 +386,6 @@ if ($stmtExtAll = $mysqli->prepare($extSql)) {
     }
     $stmtExtAll->close();
 }
-
-
 $anSql = "
     SELECT 
         a.titulo,
@@ -481,7 +424,6 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-    <!-- HEADER con gradiente estilo TwinTalk -->
     <div class="card card-soft border-0 shadow-sm mb-4">
         <div class="card-body" style="background: linear-gradient(90deg, #fbe9f0, #ffffff); border-radius: 0.75rem;">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
@@ -503,8 +445,6 @@ include __DIR__ . "/../includes/header.php";
 
     <div class="row g-4 mb-4">
         <div class="col-lg-8">
-
-            <!-- Descripción curso -->
             <div class="card card-soft mb-3 border-0 shadow-sm">
                 <div class="card-body p-3">
                     <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Descripción del curso</h2>
@@ -514,7 +454,6 @@ include __DIR__ . "/../includes/header.php";
                 </div>
             </div>
 
-            <!-- Anuncios -->
             <div class="card card-soft mb-3 border-0 shadow-sm">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -553,7 +492,7 @@ include __DIR__ . "/../includes/header.php";
                 </div>
             </div>
 
-            <!-- TAREAS -->
+            
             <div class="card card-soft mb-3 border-0 shadow-sm">
                 <div class="card-body p-3">
                     <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Tareas del curso</h2>
@@ -603,7 +542,7 @@ include __DIR__ . "/../includes/header.php";
                                 <li class="list-group-item border-0 border-bottom py-3">
                                     <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
                                         <div class="flex-grow-1">
-                                            <!-- Título y badges -->
+                                            
                                             <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                                 <strong class="small"><?= htmlspecialchars($t['titulo']) ?></strong>
 
@@ -650,14 +589,14 @@ include __DIR__ . "/../includes/header.php";
                                                 </span>
                                             </div>
 
-                                            <!-- Descripción -->
+                                            
                                             <?php if (!empty($t['descripcion'])): ?>
                                                 <p class="small text-muted mb-2">
                                                     <?= nl2br(htmlspecialchars($t['descripcion'])) ?>
                                                 </p>
                                             <?php endif; ?>
 
-                                            <!-- Archivo de instrucciones -->
+                                            
                                             <?php if (!empty($t['archivo_instrucciones'])): ?>
                                                 <p class="small mb-2">
                                                     <i class="fa-solid fa-paperclip me-1"></i>
@@ -671,7 +610,7 @@ include __DIR__ . "/../includes/header.php";
                                                 </p>
                                             <?php endif; ?>
 
-                                            <!-- Mi entrega -->
+                                            
 <?php if (!empty($t['mi_archivo'])): ?>
     <div class="border rounded-3 p-2 bg-light mb-2">
         <div class="d-flex justify-content-between gap-2">
@@ -687,7 +626,7 @@ include __DIR__ . "/../includes/header.php";
                     <?php endif; ?>
                 </span><br>
 
-                <!-- 🔗 Enlace al archivo que se envió -->
+                
                 <p class="small mb-1">
                     <i class="fa-solid fa-file-arrow-down me-1"></i>
                     <a href="<?= htmlspecialchars($t['mi_archivo']) ?>" target="_blank"
@@ -740,7 +679,7 @@ include __DIR__ . "/../includes/header.php";
 <?php endif; ?>
 
 
-                                            <!-- Columna derecha: subida -->
+                                            
 <div style="min-width: 230px;">
     <?php if ($bloquearSubidaGrp): ?>
         <span class="badge bg-light text-success d-block text-center small mb-2 border">
@@ -793,7 +732,7 @@ include __DIR__ . "/../includes/header.php";
                 </div>
             </div>
 
-            <!-- Materiales -->
+            
             <div class="card card-soft border-0 shadow-sm">
                 <div class="card-body p-3">
                     <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Materiales del curso</h2>
@@ -839,9 +778,9 @@ include __DIR__ . "/../includes/header.php";
 
         </div>
 
-        <!-- Columna derecha -->
+        
         <div class="col-lg-4">
-            <!-- Docente -->
+            
             <div class="card card-soft mb-3 border-0 shadow-sm">
                 <div class="card-body p-3">
                     <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Docente del curso</h2>
@@ -874,7 +813,7 @@ include __DIR__ . "/../includes/header.php";
                 </div>
             </div>
 
-            <!-- Compañeros -->
+            
             <div class="card card-soft border-0 shadow-sm">
                 <div class="card-body p-3">
                     <h2 class="h6 fw-bold mb-2" style="color:#4b2e83;">Compañeros de clase</h2>

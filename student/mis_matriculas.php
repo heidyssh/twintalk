@@ -128,7 +128,7 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-    <!-- Encabezado con gradiente, igual estilo que curso_detalle.php -->
+    
     <div class="card card-soft border-0 shadow-sm mb-4">
         <div class="card-body" style="background: linear-gradient(90deg, #fbe9f0, #ffffff); border-radius: 0.75rem;">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
@@ -156,7 +156,7 @@ include __DIR__ . "/../includes/header.php";
         </div>
     <?php endif; ?>
 
-    <!-- Card principal con la tabla de matrículas -->
+    
     <div class="card card-soft border-0 shadow-sm">
         <div class="card-body">
             <div class="table-responsive table-rounded">
@@ -229,7 +229,7 @@ include __DIR__ . "/../includes/header.php";
                                         <div
                                             class="d-flex flex-column flex-md-row justify-content-center align-items-center gap-1">
                                             <?php if (in_array($row['nombre_estado'], ['Activa', 'Pendiente'])): ?>
-                                                <!-- Botón para retirarse de la clase (si está Activa o Pendiente) -->
+                                                
                                                 <form method="post" class="d-inline"
                                                     onsubmit="return confirm('¿Seguro que deseas retirarte de esta clase?');">
                                                     <input type="hidden" name="matricula_id"
@@ -241,13 +241,13 @@ include __DIR__ . "/../includes/header.php";
                                                 </form>
                                             <?php endif; ?>
 
-                                            <!-- Ver curso -->
+                                            
                                             <a href="curso_detalle.php?horario_id=<?= (int) $row['horario_id'] ?>"
                                                 class="btn btn-sm btn-outline-primary">
                                                 Ver curso
                                             </a>
 
-                                            <!-- Ver diploma solo si la matrícula está finalizada -->
+                                            
                                             <?php if ($row['nombre_estado'] === 'Finalizada'): ?>
                                                 <a href="diploma_pdf.php?matricula_id=<?= (int) $row['matricula_id'] ?>"
                                                     class="btn btn-sm btn-success" target="_blank">

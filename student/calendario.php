@@ -11,7 +11,6 @@ if (!$usuario_id) {
 
 $hoy = date("Y-m-d");
 
-
 $stmt = $mysqli->prepare("
     SELECT 
         t.id AS tarea_id,
@@ -94,7 +93,7 @@ include __DIR__ . "/../includes/header.php";
 
 <div class="container my-4">
 
-    <!-- Cabecera con degradado -->
+    
     <div class="card card-soft border-0 shadow-sm mb-3">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
              style="background:linear-gradient(90deg,#fbe9f0,#ffffff);">
@@ -158,7 +157,7 @@ include __DIR__ . "/../includes/header.php";
                     <div class="card card-soft h-100 shadow-sm border-0">
                         <div class="card-body d-flex flex-column">
 
-                            <!-- Encabezado pill: estado + curso -->
+                            
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <span class="badge <?= $badgeClass ?> tarea-header-pill">
                                     <?= htmlspecialchars($estado) ?>
@@ -169,19 +168,18 @@ include __DIR__ . "/../includes/header.php";
                                 </small>
                             </div>
 
-                            <!-- Título -->
+                            
                             <h5 class="card-title <?= $claseTexto ?> mb-1" style="font-size:15px;">
                                 <?= htmlspecialchars($t['titulo']) ?>
                             </h5>
 
-                            <!-- Descripción -->
+                            
                             <?php if (!empty($t['descripcion'])): ?>
                                 <p class="card-text small <?= $claseTexto ?> mb-2">
                                     <?= nl2br(htmlspecialchars($t['descripcion'])) ?>
                                 </p>
                             <?php endif; ?>
 
-                            <!-- Fechas y nota -->
                             <ul class="list-unstyled small mb-3 <?= $claseTexto ?>">
                                 <li class="mb-1">
                                     <i class="fa-regular fa-calendar-plus me-1"></i>
@@ -207,13 +205,11 @@ include __DIR__ . "/../includes/header.php";
                                 <?php endif; ?>
                             </ul>
 
-                            <!-- Pie: modalidad + estado corto -->
                             <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
                                 <span class="badge bg-light text-secondary border small">
                                     <i class="fa-solid fa-users-rectangle me-1"></i>
                                     <?= $t['modalidad'] === 'grupo' ? 'Trabajo en grupo' : 'Trabajo individual' ?>
                                 </span>
-
                                 <?php if ($vencida && !$entregada): ?>
                                     <small class="text-danger">
                                         ⛔ Fuera de tiempo
@@ -228,7 +224,6 @@ include __DIR__ . "/../includes/header.php";
                                     </small>
                                 <?php endif; ?>
                             </div>
-
                         </div>
                     </div>
                 </div>

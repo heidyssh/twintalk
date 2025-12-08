@@ -13,14 +13,7 @@ if (!$docente_id) {
 
 $horario_id = isset($_GET['horario_id']) ? (int) $_GET['horario_id'] : 0;
 
-
-
-
-
-
 if ($horario_id > 0) {
-
-    
     $sqlCurso = "
         SELECT
             h.id AS horario_id,
@@ -87,8 +80,6 @@ $sqlEst = "
     ?>
 
     <div class="container my-4">
-
-        <!-- Encabezado con estética TwinTalk -->
         <div class="card card-soft border-0 shadow-sm mb-4">
             <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
                 style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
@@ -175,11 +166,6 @@ $sqlEst = "
     exit;
 }
 
-
-
-
-
-
 $sqlHor = "
     SELECT 
         h.id AS horario_id,
@@ -208,7 +194,6 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-
     <!-- Encabezado general -->
     <div class="card card-soft border-0 shadow-sm mb-4">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
@@ -278,5 +263,4 @@ include __DIR__ . "/../includes/header.php";
     <?php endif; ?>
 
 </div>
-
 <?php include __DIR__ . "/../includes/footer.php"; ?>

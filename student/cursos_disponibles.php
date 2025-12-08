@@ -321,7 +321,7 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="container py-4">
 
-    <!-- Cabecera con degradado -->
+    
     <div class="card card-soft border-0 shadow-sm mb-3">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
             style="background:linear-gradient(90deg,#fbe9f0,#ffffff);">
@@ -351,7 +351,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <!-- Badges de estado del alumno -->
+    
     <div class="mb-3">
         <?php if ($nivel_max_finalizado === null): ?>
             <span class="badge badge-soft-primary badge-pill-small me-2">
@@ -402,7 +402,7 @@ include __DIR__ . '/../includes/header.php';
                     <div class="card card-soft h-100 border-0 shadow-sm rounded-4">
                         <div class="card-body d-flex flex-column">
 
-                            <!-- Encabezado: nombre + nivel + día/horario -->
+                            
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
                                     <h5 class="card-title mb-0">
@@ -423,14 +423,14 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
                             </div>
 
-                            <!-- Descripción -->
+                            
                             <?php if (!empty($c['descripcion'])): ?>
                                 <p class="card-text small text-muted mb-2">
                                     <?= nl2br(htmlspecialchars($c['descripcion'])) ?>
                                 </p>
                             <?php endif; ?>
 
-                            <!-- Info básica -->
+                            
                             <div class="small mb-2">
                                 <strong>Precio:</strong> <?= $precio_mostrar ?><br>
                                 <strong>Aula:</strong> <?= htmlspecialchars($c['aula'] ?? 'Por asignar') ?><br>
@@ -438,7 +438,7 @@ include __DIR__ . '/../includes/header.php';
                                 <?= (int) $c['cupos_disponibles'] ?>
                             </div>
 
-                            <!-- Acciones / estado -->
+                            
                             <div class="mt-auto pt-2 border-top">
                                 <?php if ($sin_cupos): ?>
                                     <button class="btn btn-sm btn-outline-secondary w-100" disabled>

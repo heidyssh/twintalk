@@ -1,5 +1,5 @@
 <?php
-// Redirigir a dashboards si ya está logueado (a menos que venga en modo público)
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -16,12 +16,8 @@ if (isset($_SESSION['usuario_id']) && !isset($_GET['public'])) {
         exit;
     }
 }
-
 require_once __DIR__ . "/config/db.php";
 
-// -------------------------
-// Manejo del formulario de contacto
-// -------------------------
 $contacto_ok    = "";
 $contacto_error = "";
 
@@ -37,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_contacto'])) {
         $contacto_error = "Por favor completa al menos tu nombre, correo y mensaje.";
     } else {
 
-        // --- Manejo de archivo ---
+        
         $archivoRuta = null;
 
         if (!empty($_FILES['archivo']['name'])) {
@@ -45,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_contacto'])) {
             $nombreArchivo = time() . "_" . basename($_FILES['archivo']['name']);
             $rutaDestino = __DIR__ . "/uploads_contacto/" . $nombreArchivo;
 
-            // Crear carpeta si no existe
+            
             if (!is_dir(__DIR__ . "/uploads_contacto")) {
                 mkdir(__DIR__ . "/uploads_contacto", 0777, true);
             }
@@ -55,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_contacto'])) {
             }
         }
 
-        // Guardar mensaje
+        
         $stmt = $mysqli->prepare("
             INSERT INTO mensajes_interes (nombre, email, telefono, programa, mensaje, archivo)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -85,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_contacto'])) {
     }
 }
 
-// Cursos activos que se mostrarán como programas
+
 $cursos = $mysqli->query("
     SELECT c.id, c.nombre_curso, c.descripcion,
            c.duracion_horas, c.capacidad_maxima,
@@ -99,11 +95,6 @@ $cursos = $mysqli->query("
 
 include __DIR__ . "/includes/header.php";
 ?>
-
-
-<!-- ==========================================
-    HERO
-=========================================== -->
 <section id="inicio" class="section-hero">
     <div class="row align-items-center gy-4 hero-card p-4 p-lg-5">
         <div class="col-lg-6">
@@ -115,7 +106,7 @@ include __DIR__ . "/includes/header.php";
                 <span class="text-gradient">¡vive el inglés, no solo lo traduzcas!</span>
             </h1>
             <p class="lead text-muted">
-                Aprende inglés desde nivel <strong>A1</strong> hasta <strong>B1/B2</strong>
+                Aprende inglés desde nivel <strong>A1</strong> hasta <strong>C1/C2</strong>
                 con clases dinámicas, docentes apasionados y un ambiente que te motiva a hablar
                 desde el primer día. 💬✨
             </p>
@@ -150,7 +141,7 @@ include __DIR__ . "/includes/header.php";
             </div>
         </div>
 
-        <!-- Tarjeta visual -->
+        
         <div class="col-lg-6 text-center">
             <div class="card card-soft p-3 p-md-4 d-inline-block position-relative overflow-hidden">
                 <div class="position-absolute top-0 start-0 m-2 small badge-level">💻 Plataforma académica</div>
@@ -165,7 +156,7 @@ include __DIR__ . "/includes/header.php";
 
 <hr class="section-divider">
 
-<!-- SOBRE -->
+
 <section id="sobre" class="section-padding">
     <div class="row g-4 align-items-stretch">
         <div class="col-lg-6">
@@ -189,7 +180,7 @@ include __DIR__ . "/includes/header.php";
 
 <hr class="section-divider">
 
-<!-- CURSOS -->
+
 <section id="programas" class="section-padding">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="section-title mb-0">Cursos disponibles 📚</h2>
@@ -222,15 +213,15 @@ include __DIR__ . "/includes/header.php";
 
 <hr class="section-divider">
 
-<!-- FUNDADORA / HISTORIA -->
+
 <section id="fundadora" class="section-padding">
     <div class="row justify-content-center">
         <div class="col-12">
-            <!-- Card grande que contiene foto + historia -->
+            
             <div class="card card-soft p-3 p-md-4">
                 <div class="row g-4 align-items-center">
                     
-                    <!-- FOTO -->
+                    
                     <div class="col-lg-5">
                         <div class="card card-soft h-100 p-2 p-md-3 text-center">
                             <img src="/twintalk/assets/img/dueña.jpg"
@@ -242,7 +233,7 @@ include __DIR__ . "/includes/header.php";
                         </div>
                     </div>
 
-                    <!-- HISTORIA -->
+                    
                     <div class="col-lg-7">
                         <div class="card card-soft h-100 p-3 p-md-4">
                             <h2 class="h4 fw-bold mb-3">
@@ -282,9 +273,9 @@ include __DIR__ . "/includes/header.php";
 
 <hr class="section-divider">
 
-<!-- CONTACTO (con mensajes guardados en la BD) --> <section id="contacto" class="section-padding bg-light"> <div class="row g-4 align-items-stretch"> <!-- Columna: Información de contacto --> <div class="col-lg-5"> <div class="card card-soft h-100 p-3 p-md-4"> <h2 class="section-title mb-3">Contáctanos 📩</h2> <?php if ($contacto_ok): ?> <div class="alert alert-success small"> <?= htmlspecialchars($contacto_ok) ?> </div> <?php elseif ($contacto_error): ?> <div class="alert alert-danger small"> <?= htmlspecialchars($contacto_error) ?> </div> <?php endif; ?> <p class="text-muted small"> Si necesitas más información sobre horarios, precios o niveles, puedes escribirnos o visitarnos. ¡Con gusto te orientamos! 🙂 </p> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-primary rounded-circle"> <i class="fa-solid fa-location-dot"></i> </span> </div> <div> <div class="fw-semibold small">Ubicación</div> <div class="text-muted small"> La Ceiba, Atlántida, Honduras </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-success rounded-circle"> <i class="fa-brands fa-whatsapp"></i> </span> </div> <div> <div class="fw-semibold small">WhatsApp</div> <div class="text-muted small"> +504 9838-9820 <!-- Cambia al número real --> </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-danger rounded-circle"> <i class="fa-solid fa-envelope"></i> </span> </div> <div> <div class="fw-semibold small">Correo electrónico</div> <div class="text-muted small"> <a href="mailto:twintalk39@gmail.com" class="text-decoration-none"> twintalk39@gmail.com </a> </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-secondary rounded-circle"> <i class="fa-solid fa-clock"></i> </span> </div> <div> <div class="fw-semibold small">Horario de atención</div> <div class="text-muted small"> Lunes a viernes · 8:00 a.m. – 6:00 p.m.<br> Sábados · 9:00 a.m. – 1:00 p.m. </div> </div> </div> <hr> <p class="small text-muted mb-0"> También puedes crear tu cuenta directamente en la plataforma y nos pondremos en contacto contigo para completar el proceso de matrícula. </p> </div> </div>
+ <section id="contacto" class="section-padding bg-light"> <div class="row g-4 align-items-stretch">  <div class="col-lg-5"> <div class="card card-soft h-100 p-3 p-md-4"> <h2 class="section-title mb-3">Contáctanos 📩</h2> <?php if ($contacto_ok): ?> <div class="alert alert-success small"> <?= htmlspecialchars($contacto_ok) ?> </div> <?php elseif ($contacto_error): ?> <div class="alert alert-danger small"> <?= htmlspecialchars($contacto_error) ?> </div> <?php endif; ?> <p class="text-muted small"> Si necesitas más información sobre horarios, precios o niveles, puedes escribirnos o visitarnos. ¡Con gusto te orientamos! 🙂 </p> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-primary rounded-circle"> <i class="fa-solid fa-location-dot"></i> </span> </div> <div> <div class="fw-semibold small">Ubicación</div> <div class="text-muted small"> La Ceiba, Atlántida, Honduras </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-success rounded-circle"> <i class="fa-brands fa-whatsapp"></i> </span> </div> <div> <div class="fw-semibold small">WhatsApp</div> <div class="text-muted small"> +504 9838-9820  </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-danger rounded-circle"> <i class="fa-solid fa-envelope"></i> </span> </div> <div> <div class="fw-semibold small">Correo electrónico</div> <div class="text-muted small"> <a href="mailto:twintalk39@gmail.com" class="text-decoration-none"> twintalk39@gmail.com </a> </div> </div> </div> <div class="d-flex mb-3"> <div class="me-3 mt-1"> <span class="btn btn-sm btn-outline-secondary rounded-circle"> <i class="fa-solid fa-clock"></i> </span> </div> <div> <div class="fw-semibold small">Horario de atención</div> <div class="text-muted small"> Lunes a viernes · 8:00 a.m. – 6:00 p.m.<br> Sábados · 9:00 a.m. – 1:00 p.m. </div> </div> </div> <hr> <p class="small text-muted mb-0"> También puedes crear tu cuenta directamente en la plataforma y nos pondremos en contacto contigo para completar el proceso de matrícula. </p> </div> </div>
 
-        <!-- FORM -->
+        
         <div class="col-lg-7">
             <div class="card card-soft p-3 p-md-4 h-100">
                 <h3 class="h6 fw-bold mb-3"><i class="fa-solid fa-paper-plane me-1"></i> Envíanos un mensaje</h3>

@@ -256,7 +256,7 @@ include __DIR__ . "/../includes/header.php";
     </div>
 <?php endif; ?>
 
-<!-- Tabs bandeja -->
+
 <ul class="nav nav-pills mb-3">
     <li class="nav-item">
         <a class="nav-link <?= $view === 'inbox' ? 'active' : '' ?>"
@@ -279,7 +279,7 @@ include __DIR__ . "/../includes/header.php";
 </ul>
 
 <div class="row">
-    <!-- Formulario nuevo mensaje / reply -->
+    
     <div class="col-lg-4 mb-4">
         <div class="card shadow-sm border-0" style="border-top:4px solid #A45A6A;">
             <div class="card-body">
@@ -294,8 +294,7 @@ include __DIR__ . "/../includes/header.php";
                 <form method="post" enctype="multipart/form-data">
                     <input type="hidden" name="accion" value="enviar_mensaje">
                     <input type="hidden" name="reply_de" value="<?= $reply_id ?>">
-
-                    <!-- Destinatario -->
+                    
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Para</label>
                         <select name="destinatario_id" class="form-select form-select-sm" required>
@@ -314,14 +313,14 @@ include __DIR__ . "/../includes/header.php";
                         </select>
                     </div>
 
-                    <!-- Asunto -->
+                    
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Asunto</label>
                         <input type="text" name="asunto" class="form-control form-control-sm"
                                value="<?= htmlspecialchars($reply_asunto) ?>">
                     </div>
 
-                    <!-- Contenido -->
+                    
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Mensaje</label>
                         <textarea name="contenido" rows="5" class="form-control form-control-sm" required><?=
@@ -329,7 +328,7 @@ include __DIR__ . "/../includes/header.php";
                         ?></textarea>
                     </div>
 
-                    <!-- Archivo -->
+                    
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Adjuntar archivo (opcional)</label>
                         <input type="file" name="archivo" class="form-control form-control-sm">
@@ -349,7 +348,7 @@ include __DIR__ . "/../includes/header.php";
         </div>
     </div>
 
-    <!-- Listado de mensajes -->
+    
     <div class="col-lg-8">
         <div class="card shadow-sm border-0">
             <div class="card-body">

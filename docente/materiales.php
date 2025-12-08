@@ -12,14 +12,10 @@ if (!$docenteId) {
 
 $mensaje = "";
 $error = "";
-
-
 $uploadDir = __DIR__ . '/../uploads/materiales/';
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0775, true);
 }
-
-
 $sqlHor = "
     SELECT h.id, c.nombre_curso, d.nombre_dia, h.hora_inicio
     FROM horarios h
@@ -65,10 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ext = pathinfo($nombreOriginal, PATHINFO_EXTENSION);
                 $nuevoNombre = uniqid('mat_') . ($ext ? '.' . $ext : '');
                 $rutaDestino = $uploadDir . $nuevoNombre;
-
-                
-                
-                
                 $extLower = strtolower($ext);
                 $tipo_archivo_id = null;
 
@@ -85,15 +77,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $resTipos->free();
                 }
-
                 
                 if ($tipo_archivo_id === null) {
                     $tipo_archivo_id = 1;
                 }
-
-                
-                
-                
                 if (!move_uploaded_file($tmpName, $rutaDestino)) {
                     $error = "No se pudo guardar el archivo en el servidor.";
                 } else {
@@ -122,9 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmtIns->close();
                 }
             }
-
         }
-
         
     } elseif ($accion === 'eliminar_material') {
         $material_id = (int) ($_POST['material_id'] ?? 0);
@@ -140,11 +125,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($resGet) {
                 $rutaRel = $resGet['archivo_url']; 
                 $rutaAbs = realpath(__DIR__ . '/..' . str_replace('/twintalk', '', $rutaRel));
-                
-                
-                
-                
-
                 $sqlDelMat = "DELETE FROM materiales WHERE id = ? AND docente_id = ?";
                 $stmtDelMat = $mysqli->prepare($sqlDelMat);
                 $stmtDelMat->bind_param("ii", $material_id, $docenteId);
@@ -158,7 +138,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
 
 $sqlMat = "
     SELECT 

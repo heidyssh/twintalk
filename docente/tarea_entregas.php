@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-require_role([2]); 
+require_role([2]);
 
 $docenteId = $_SESSION['usuario_id'] ?? null;
 if (!$docenteId) {
@@ -10,7 +10,7 @@ if (!$docenteId) {
     exit;
 }
 
-$tarea_id = isset($_GET['tarea_id']) ? (int)$_GET['tarea_id'] : 0;
+$tarea_id = isset($_GET['tarea_id']) ? (int) $_GET['tarea_id'] : 0;
 if ($tarea_id <= 0) {
     include __DIR__ . '/../includes/header.php';
     echo '<div class="alert alert-danger mt-4">Tarea no válida.</div>';
@@ -19,17 +19,14 @@ if ($tarea_id <= 0) {
 }
 
 $mensaje = "";
-$error   = "";
-
-
-
+$error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'calificar') {
-    $matricula_id   = (int)($_POST['matricula_id'] ?? 0);
-    $calificacion   = $_POST['calificacion'] !== '' ? floatval($_POST['calificacion']) : null;
-    $comentarios    = trim($_POST['comentarios'] ?? '');
+    $matricula_id = (int) ($_POST['matricula_id'] ?? 0);
+    $calificacion = $_POST['calificacion'] !== '' ? floatval($_POST['calificacion']) : null;
+    $comentarios = trim($_POST['comentarios'] ?? '');
 
-    
+
     $sqlCheck = "SELECT id FROM tareas_entregas WHERE tarea_id = ? AND matricula_id = ? LIMIT 1";
     $stmtC = $mysqli->prepare($sqlCheck);
     $stmtC->bind_param("ii", $tarea_id, $matricula_id);
@@ -38,19 +35,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'calif
     $existe = $resC->fetch_assoc();
     $stmtC->close();
 
-        if ($existe) {
-        // Ya existe entrega: solo actualizamos nota y comentario
+    if ($existe) {
+
         $sqlU = "
             UPDATE tareas_entregas
             SET calificacion = ?, comentarios_docente = ?, fecha_calificacion = NOW()
             WHERE id = ?
         ";
         $stmtU = $mysqli->prepare($sqlU);
-        $stmtU->bind_param("dsi", $calificacion, $comentarios, $existe['id']);
+
+
+        $entregaId = (int) $existe['id'];
+
+        $stmtU->bind_param("dsi", $calificacion, $comentarios, $entregaId);
         $stmtU->execute();
         $stmtU->close();
+
     } else {
-        // No existe entrega: creamos registro con archivo_url vacío
+
         $sqlI = "
             INSERT INTO tareas_entregas (
                 tarea_id,
@@ -72,9 +74,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'calif
 
 }
 
-
-
-
 $sqlTarea = "
     SELECT t.*, c.nombre_curso, h.hora_inicio, h.hora_fin
     FROM tareas t
@@ -94,9 +93,6 @@ if (!$tarea) {
     include __DIR__ . '/../includes/footer.php';
     exit;
 }
-
-
-
 
 $sqlAlumnos = "
     SELECT 
@@ -118,7 +114,8 @@ $sqlAlumnos = "
     ORDER BY u.nombre ASC, u.apellido ASC
 ";
 $stmtA = $mysqli->prepare($sqlAlumnos);
-$stmtA->bind_param("ii", $tarea_id, $tarea['horario_id']);
+$horarioId = (int) $tarea['horario_id'];
+$stmtA->bind_param("ii", $tarea_id, $horarioId);
 $stmtA->execute();
 $alumnos = $stmtA->get_result();
 $stmtA->close();
@@ -187,15 +184,11 @@ include __DIR__ . '/../includes/header.php';
                                     <input type="hidden" name="accion" value="calificar">
                                     <input type="hidden" name="matricula_id" value="<?= $a['matricula_id'] ?>">
 
-                                    <input type="number" name="calificacion"
-                                           step="0.01"
-                                           min="0"
-                                           max="100"
-                                           value="<?= $a['calificacion'] ?>"
-                                           class="form-control form-control-sm mb-1">
+                                    <input type="number" name="calificacion" step="0.01" min="0" max="100"
+                                        value="<?= $a['calificacion'] ?>" class="form-control form-control-sm mb-1">
 
                                     <textarea name="comentarios" class="form-control form-control-sm mb-1"
-                                              placeholder="Comentario..."><?= htmlspecialchars($a['comentarios_docente']) ?></textarea>
+                                        placeholder="Comentario..."><?= htmlspecialchars($a['comentarios_docente']) ?></textarea>
 
                                     <button class="btn btn-sm btn-primary w-100">
                                         Guardar

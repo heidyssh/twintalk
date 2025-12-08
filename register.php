@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errores[] = "Correo electrónico inválido.";
     }
 
-    // Validación de contraseña segura
+    
     if (strlen($password) < 12) {
         $errores[] = "La contraseña debe tener al menos 12 caracteres.";
     }
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errores)) {
-        // Comprobar email único
+        
         $check = $mysqli->prepare("SELECT id FROM usuarios WHERE email = ?");
         $check->bind_param("s", $email);
         $check->execute();
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errores[] = "Ya existe una cuenta con ese correo.";
         } else {
             $hash = password_hash($password, PASSWORD_BCRYPT);
-            $rol_estudiante = 3; // estudiante por defecto
+            $rol_estudiante = 3; 
 
             $stmt = $mysqli->prepare("
                 INSERT INTO usuarios (
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt->execute()) {
                 $usuario_id = $stmt->insert_id;
 
-                // Insertar en estudiantes
+                
                 $nivel_actual = "A1";
                 $ins_est = $mysqli->prepare("
                     INSERT INTO estudiantes (id, nivel_actual, fecha_inscripcion)

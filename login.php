@@ -40,14 +40,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif (!password_verify($password, $row['password_hash'])) {
                 $errores[] = "Correo o contraseña incorrectos.";
             } else {
-                // Login correcto
+                
                 $_SESSION['usuario_id'] = (int) $row['id'];
                 $_SESSION['rol_id'] = (int) $row['rol_id'];
                 $_SESSION['nombre'] = $row['nombre'] ?? '';
                 $_SESSION['apellido'] = $row['apellido'] ?? '';
                 $_SESSION['email'] = $row['email'] ?? '';
 
-                // Cargar avatar desde la BD en la sesión
+                
                 if (!empty($row['foto_perfil'])) {
                     $_SESSION['foto_perfil'] = $row['foto_perfil'];
                 } else {

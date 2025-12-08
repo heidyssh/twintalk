@@ -199,11 +199,6 @@ include __DIR__ . "/../includes/header.php";
                     </tbody>
                 </table>
             </div>
-
-            <p class="small text-muted mb-0">
-                Al asignar rol <strong>docente</strong> se crea un registro en la tabla <code>docentes</code> (si no existe).  
-                Al asignar rol <strong>estudiante</strong> se crea un registro en la tabla <code>estudiantes</code> (si no existe).
-            </p>
         </div>
     </div>
 </div>

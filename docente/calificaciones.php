@@ -100,72 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     
-    if ($accion === 'extender_tarea_alumno') {
-        $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
-        $curso_id = (int) ($_POST['curso_id'] ?? 0);
-        $matricula_id = (int) ($_POST['matricula_id'] ?? 0);
-        $nueva_fecha = $_POST['nueva_fecha'] ?? '';
-
-        if ($tarea_id > 0 && $curso_id > 0 && $matricula_id > 0 && $nueva_fecha !== '') {
-
-            
-            $del = $mysqli->prepare("
-            DELETE FROM tareas_extensiones
-            WHERE tarea_id = ? AND matricula_id = ?
-        ");
-            $del->bind_param("ii", $tarea_id, $matricula_id);
-            $del->execute();
-            $del->close();
-
-            
-            $stmt = $mysqli->prepare("
-            INSERT INTO tareas_extensiones (tarea_id, matricula_id, nueva_fecha)
-            VALUES (?, ?, ?)
-        ");
-            $stmt->bind_param("iis", $tarea_id, $matricula_id, $nueva_fecha);
-            if ($stmt->execute()) {
-                $mensaje = "Se extendió la fecha para ese alumno.";
-            } else {
-                $error = "No se pudo guardar la extensión individual.";
-            }
-            $stmt->close();
-
-            header("Location: calificaciones.php?view=tareas&curso_id={$curso_id}&tarea_id={$tarea_id}");
-            exit;
-        } else {
-            $error = "Datos inválidos para extensión individual.";
-        }
-    }
-
-    
-    if ($accion === 'extender_tarea_alumno') {
-        $tarea_id = (int) ($_POST['tarea_id'] ?? 0);
-        $curso_id = (int) ($_POST['curso_id'] ?? 0);
-        $matricula_id = (int) ($_POST['matricula_id'] ?? 0);
-        $nueva_fecha = $_POST['nueva_fecha'] ?? '';
-
-        if ($tarea_id > 0 && $curso_id > 0 && $matricula_id > 0 && $nueva_fecha !== '') {
-
-            $stmt = $mysqli->prepare("
-                INSERT INTO tareas_extensiones (tarea_id, matricula_id, nueva_fecha)
-                VALUES (?, ?, ?)
-            ");
-            $stmt->bind_param("iis", $tarea_id, $matricula_id, $nueva_fecha);
-            if ($stmt->execute()) {
-                $mensaje = "Se extendió la fecha para ese alumno.";
-            } else {
-                $error = "No se pudo guardar la extensión individual.";
-            }
-            $stmt->close();
-
-            header("Location: calificaciones.php?view=tareas&curso_id={$curso_id}&tarea_id={$tarea_id}");
-            exit;
-        } else {
-            $error = "Datos inválidos para extensión individual.";
-        }
-    }
-
-    
     if (isset($_POST['guardar_calificaciones'])) {
 
         $curso_id = (int) ($_POST['curso_id'] ?? 0);
@@ -281,10 +215,10 @@ if (
             $stmt->close();
 
             if ($rowEnt) {
-                // Ya hay entrega: tomamos su ID
+                
                 $entrega_id = (int) $rowEnt['id'];
             } else {
-                // No hay entrega: creamos registro con archivo_url vacío
+                
                 $sqlInsert = "
                     INSERT INTO tareas_entregas 
                         (tarea_id, matricula_id, archivo_url, calificacion, comentarios_docente, fecha_calificacion)
@@ -629,7 +563,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="alert alert-danger py-2 border-0 shadow-sm mb-3"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <!-- Tabs -->
+    
     <ul class="nav nav-pills mb-3">
         <li class="nav-item">
             <a class="nav-link <?= $view === 'evaluaciones' ? 'active' : '' ?>"
@@ -646,7 +580,7 @@ include __DIR__ . '/../includes/header.php';
     </ul>
 
     <div class="row">
-        <!-- Columna izquierda: cursos -->
+        
         <div class="col-md-3 mb-3">
             <div class="card card-soft p-3">
                 <h2 class="h6 fw-bold mb-3">Mis cursos</h2>
@@ -675,7 +609,7 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
-        <!-- Columna derecha: contenido -->
+        
         <div class="col-md-9 mb-3">
 
             <?php if (!$curso_id): ?>
@@ -684,7 +618,7 @@ include __DIR__ . '/../includes/header.php';
 
                 <?php if ($view === 'evaluaciones'): ?>
 
-                    <!-- EVALUACIONES GENERALES -->
+                    
                     <div class="card card-soft mb-3">
                         <div class="card-header bg-white">
                             <div class="d-flex flex-column">
@@ -702,7 +636,7 @@ include __DIR__ . '/../includes/header.php';
                                 </p>
                             <?php else: ?>
 
-                                <!-- Filtros -->
+                                
                                 <div class="tt-section-block">
                                     <form method="get" class="row g-2">
                                         <input type="hidden" name="view" value="evaluaciones">
@@ -726,7 +660,7 @@ include __DIR__ . '/../includes/header.php';
                                     </form>
                                 </div>
 
-                                <!-- Tabla para capturar notas -->
+                                
                                 <?php if ($tipo_evaluacion_id): ?>
                                     <div class="tt-section-block">
                                         <form method="post" class="table-responsive">
@@ -781,7 +715,7 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
                                 <?php endif; ?>
 
-                                <!-- Historial -->
+                                
                                 <?php if (!empty($historial_evaluaciones)): ?>
                                     <div class="tt-section-block">
                                         <h6 class="fw-bold mb-2">Historial de evaluaciones del curso</h6>
@@ -833,9 +767,9 @@ include __DIR__ . '/../includes/header.php';
 
                 <?php elseif ($view === 'tareas'): ?>
 
-                    <!-- TAREAS Y ENTREGAS -->
+                    
                     <div class="row">
-                        <!-- Lista de tareas -->
+                        
                         <div class="col-lg-5 mb-3">
                             <div class="card card-soft h-100">
                                 <div class="card-header bg-white">
@@ -886,8 +820,7 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Entregas -->
+                                                
                         <div class="col-lg-7 mb-3">
                             <div class="card card-soft h-100">
                                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
@@ -926,7 +859,7 @@ include __DIR__ . '/../includes/header.php';
                                                     </div>
                                                 </div>
 
-                                                <!-- Extensión general -->
+                                                
                                                 <form method="post" class="d-flex align-items-center gap-2">
                                                     <input type="hidden" name="accion" value="extender_general_tarea">
                                                     <input type="hidden" name="curso_id" value="<?= $curso_id ?>">
@@ -959,7 +892,6 @@ include __DIR__ . '/../includes/header.php';
                                                         <th class="text-center">Entrega</th>
                                                         <th class="text-center" style="width:90px;">Nota</th>
                                                         <th>Comentario</th>
-                                                        <th class="text-center" style="width:170px;">Extender fecha</th>
                                                     </tr>
                                                     </thead>
 
@@ -1015,31 +947,6 @@ include __DIR__ . '/../includes/header.php';
                                                                     </span>
                                                                 <?php endif; ?>
                                                             </td>
-
-                                                            <!-- Extensión individual -->
-                                                            <td class="text-center">
-                                                                <form method="post"
-                                                                      class="d-flex flex-column align-items-center gap-1">
-
-                                                                    <input type="hidden" name="accion" value="extender_tarea_alumno">
-                                                                    <input type="hidden" name="curso_id" value="<?= $curso_id ?>">
-                                                                    <input type="hidden" name="tarea_id" value="<?= $tarea_id ?>">
-                                                                    <input type="hidden" name="matricula_id"
-                                                                           value="<?= (int) $e['matricula_id'] ?>">
-
-                                                                    <input type="date" name="nueva_fecha"
-                                                                           class="form-control form-control-sm text-center"
-                                                                           style="max-width: 150px;"
-                                                                           required>
-
-                                                                    <button class="btn btn-outline-secondary btn-sm" type="submit">
-                                                                        <i class="fa-solid fa-calendar-check me-1"></i>
-                                                                        Guardar
-                                                                    </button>
-
-                                                                </form>
-                                                            </td>
-
                                                         </tr>
                                                     <?php endforeach; ?>
                                                     </tbody>

@@ -92,7 +92,6 @@ if ($horario_id_seleccionado > 0) {
         $tareas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
 
-        
         $sqlNotasTareas = "
             SELECT 
                 SUM(te.calificacion) AS suma_tareas,
@@ -109,12 +108,10 @@ if ($horario_id_seleccionado > 0) {
         $stmt->execute();
         $rowT = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-
         $suma_tareas     = $rowT && $rowT['suma_tareas'] !== null ? (float) $rowT['suma_tareas'] : 0.0;
         $cantidad_tareas = $rowT && $rowT['cantidad_tareas'] !== null ? (int)  $rowT['cantidad_tareas'] : 0;
         $nota_tareas     = $suma_tareas;
 
-        
         $sqlNotasEval = "
             SELECT 
                 SUM(c.puntaje) AS suma_eval,
@@ -193,8 +190,6 @@ include __DIR__ . "/../includes/header.php";
 </style>
 
 <div class="container my-4">
-
-    <!-- Cabecera con degradado -->
     <div class="card card-soft border-0 shadow-sm mb-3">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
              style="background:linear-gradient(90deg,#fbe9f0,#ffffff);">
@@ -216,7 +211,7 @@ include __DIR__ . "/../includes/header.php";
     </div>
 
     <div class="row">
-        <!-- Columna izquierda: selección de curso -->
+        
         <div class="col-md-4 mb-3">
             <div class="card card-soft shadow-sm border-0 p-3">
                 <h2 class="h6 fw-bold mb-3">Mis cursos</h2>
@@ -243,7 +238,6 @@ include __DIR__ . "/../includes/header.php";
             </div>
         </div>
 
-        <!-- Columna derecha: resumen + tablas -->
         <div class="col-md-8 mb-3">
             <?php if (!$horario_id_seleccionado || !$matricula_id): ?>
                 <div class="alert alert-info mb-0">
@@ -251,7 +245,7 @@ include __DIR__ . "/../includes/header.php";
                 </div>
             <?php else: ?>
 
-                <!-- Resumen: nota general -->
+                
                 <div class="card card-soft shadow-sm border-0 mb-3">
                     <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
                         <div>
@@ -288,8 +282,6 @@ include __DIR__ . "/../includes/header.php";
                         </div>
                     </div>
                 </div>
-
-                <!-- Detalle de tareas -->
                 <div class="card card-soft shadow-sm border-0 mb-3">
                     <div class="card-header bg-white border-0 pb-0">
                         <h2 class="h6 fw-bold mb-2">Tareas del curso seleccionado</h2>
@@ -370,12 +362,10 @@ include __DIR__ . "/../includes/header.php";
                                                             </div>
                                                         <?php endif; ?>
                                                     <?php endif; ?>
-
                                                     <div class="mt-1">
                                                         <span class="<?= $clase_estado ?> small"><?= $estado ?></span>
                                                     </div>
                                                 </td>
-
                                                 <td class="small">
                                                     <?php
                                                     if ($t['calificacion'] !== null) {
@@ -396,7 +386,7 @@ include __DIR__ . "/../includes/header.php";
                     </div>
                 </div>
 
-                <!-- Detalle de evaluaciones (quiz, exámenes, etc.) -->
+                
                 <div class="card card-soft shadow-sm border-0">
                     <div class="card-header bg-white border-0 pb-0">
                         <h2 class="h6 fw-bold mb-2">Evaluaciones del curso (quiz, exámenes, etc.)</h2>

@@ -332,13 +332,13 @@ ob_start();
             <div class="footer">
                 <table style="width:100%; margin-top:25px;">
                     <tr>
-                        <!-- Columna izquierda: Docente -->
+                        
                         <td style="width:50%; text-align:center;">
 
                             <?php if ($docenteFirmaBase64): ?>
                                 <img src="<?= $docenteFirmaBase64 ?>" class="firma-img">
                             <?php else: ?>
-                                <div style="height:50px;"></div> <!-- mantiene alineación si no sube firma -->
+                                <div style="height:50px;"></div> 
                             <?php endif; ?>
 
                             <div class="signature-line"></div>
@@ -346,8 +346,6 @@ ob_start();
                             <div class="signature-role">Docente del curso</div>
                         </td>
 
-
-                        <!-- Columna derecha: Dirección Académica -->
                         <td style="width:50%; text-align:center;">
                             <?php if ($firmaBase64): ?>
                                 <img src="<?= $firmaBase64 ?>" class="firma-img">

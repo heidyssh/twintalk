@@ -236,8 +236,6 @@ include __DIR__ . '/../includes/header.php';
 </style>
 
 <div class="container my-4">
-
-    <!-- Cabecera con degradado y botón regresar -->
     <div class="card card-soft border-0 shadow-sm mb-3">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
              style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
@@ -262,12 +260,7 @@ include __DIR__ . '/../includes/header.php';
         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <!-- ====================================================== -->
-    <!-- FILA 1 — DATOS PERSONALES + CONTRASEÑA -->
-    <!-- ====================================================== -->
     <div class="row g-3">
-
-        <!-- DATOS PERSONALES -->
         <div class="col-md-6">
             <div class="card card-soft shadow-sm border-0 p-3">
                 <div class="section-title">Datos personales</div>
@@ -290,7 +283,7 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
-        <!-- CONTRASEÑA -->
+        
         <div class="col-md-6">
             <div class="card card-soft shadow-sm border-0 p-3">
                 <div class="section-title">Cambiar contraseña</div>
@@ -308,11 +301,6 @@ include __DIR__ . '/../includes/header.php';
         </div>
 
     </div>
-
-
-    <!-- ====================================================== -->
-    <!-- FILA 2 — AVATAR COMPLETO -->
-    <!-- ====================================================== -->
     <div class="row g-3 mt-2">
         <div class="col-md-12">
             <div class="card card-soft shadow-sm border-0 p-3">
@@ -323,7 +311,7 @@ include __DIR__ . '/../includes/header.php';
                     <img src="<?= htmlspecialchars($avatar_actual) ?>" class="avatar-preview" alt="Avatar actual">
                 </div>
 
-                <!-- Avatar predeterminado -->
+                
                 <form method="post" class="text-center mb-4">
                     <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
                         <?php foreach ($lista_avatars as $av): ?>
@@ -339,7 +327,7 @@ include __DIR__ . '/../includes/header.php';
                     </button>
                 </form>
 
-                <!-- Subir avatar -->
+                
                 <form method="post" enctype="multipart/form-data" class="text-center">
                     <div style="max-width:300px;margin:auto;">
                         <input type="file" name="avatar_file" class="form-control mb-2"
@@ -355,12 +343,12 @@ include __DIR__ . '/../includes/header.php';
     </div>
 
 
-    <!-- ====================================================== -->
-    <!-- FILA 3 — DATOS ADICIONALES + DOCUMENTOS -->
-    <!-- ====================================================== -->
+    
+    
+    
     <div class="row g-3 mt-2">
 
-        <!-- Datos adicionales -->
+        
         <div class="col-md-6">
             <div class="card card-soft shadow-sm border-0 p-3">
                 <div class="section-title">Datos adicionales</div>
@@ -391,7 +379,7 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
-        <!-- Documento -->
+        
         <div class="col-md-6">
             <div class="card card-soft shadow-sm border-0 p-3">
                 <div class="section-title">Documento personal</div>
@@ -419,11 +407,7 @@ include __DIR__ . '/../includes/header.php';
         </div>
 
     </div>
-
-
-    <!-- ====================================================== -->
-    <!-- FILA 4 — CONTACTOS DE EMERGENCIA -->
-    <!-- ====================================================== -->
+    
     <div class="row g-3 mt-2 mb-4">
         <div class="col-md-12">
             <div class="card card-soft shadow-sm border-0 p-3">
@@ -478,7 +462,7 @@ include __DIR__ . '/../includes/header.php';
 
                 <hr>
 
-                <!-- Nuevo contacto -->
+                
                 <form method="post">
                     <div class="row g-2">
 
