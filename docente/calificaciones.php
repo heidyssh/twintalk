@@ -318,19 +318,22 @@ if ($view === 'evaluaciones' && $curso_id > 0) {
 
     // Estudiantes matriculados en este curso con este docente
     $sqlEst = "
-        SELECT 
-            m.id AS matricula_id,
-            u.nombre,
-            u.apellido,
-            u.email
-        FROM matriculas m
-        INNER JOIN estudiantes est ON est.id = m.estudiante_id
-        INNER JOIN usuarios u      ON u.id = est.id
-        INNER JOIN horarios h      ON h.id = m.horario_id
-        WHERE h.curso_id = ?
-          AND h.docente_id = ?
-        ORDER BY u.apellido, u.nombre
-    ";
+    SELECT 
+        m.id AS matricula_id,
+        u.nombre,
+        u.apellido,
+        u.email
+    FROM matriculas m
+    INNER JOIN estados_matricula em ON m.estado_id = em.id
+    INNER JOIN estudiantes est ON est.id = m.estudiante_id
+    INNER JOIN usuarios u      ON u.id = est.id
+    INNER JOIN horarios h      ON h.id = m.horario_id
+    WHERE h.curso_id = ?
+      AND h.docente_id = ?
+      AND em.nombre_estado = 'Activa'
+    ORDER BY u.apellido, u.nombre
+";
+
     $stmt = $mysqli->prepare($sqlEst);
     $stmt->bind_param("ii", $curso_id, $docenteId);
     $stmt->execute();
@@ -433,27 +436,30 @@ if ($view === 'tareas' && $curso_id > 0) {
         if ($tarea_seleccionada) {
             // Entregas por estudiante
             $sqlEnt = "
-                SELECT 
-                    m.id AS matricula_id,
-                    u.nombre,
-                    u.apellido,
-                    u.email,
-                    te.id AS entrega_id,
-                    te.archivo_url,
-                    te.fecha_entrega,
-                    te.calificacion,
-                    te.comentarios_docente
-                FROM matriculas m
-                INNER JOIN estudiantes est ON est.id = m.estudiante_id
-                INNER JOIN usuarios u      ON u.id = est.id
-                INNER JOIN horarios h      ON h.id = m.horario_id
-                LEFT JOIN tareas_entregas te
-                       ON te.matricula_id = m.id
-                      AND te.tarea_id = ?
-                WHERE h.curso_id = ?
-                  AND h.docente_id = ?
-                ORDER BY u.apellido, u.nombre
-            ";
+    SELECT 
+        m.id AS matricula_id,
+        u.nombre,
+        u.apellido,
+        u.email,
+        te.id AS entrega_id,
+        te.archivo_url,
+        te.fecha_entrega,
+        te.calificacion,
+        te.comentarios_docente
+    FROM matriculas m
+    INNER JOIN estados_matricula em ON m.estado_id = em.id
+    INNER JOIN estudiantes est ON est.id = m.estudiante_id
+    INNER JOIN usuarios u      ON u.id = est.id
+    INNER JOIN horarios h      ON h.id = m.horario_id
+    LEFT JOIN tareas_entregas te
+           ON te.matricula_id = m.id
+          AND te.tarea_id = ?
+    WHERE h.curso_id = ?
+      AND h.docente_id = ?
+      AND em.nombre_estado = 'Activa'
+    ORDER BY u.apellido, u.nombre
+";
+
             $stmt = $mysqli->prepare($sqlEnt);
             $stmt->bind_param("iii", $tarea_id, $curso_id, $docenteId);
             $stmt->execute();

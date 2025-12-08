@@ -244,13 +244,16 @@ $stmtResumen = $mysqli->prepare("
         SUM(CASE WHEN a.presente = 1 THEN 1 ELSE 0 END) AS asistencias,
         SUM(CASE WHEN a.presente = 0 THEN 1 ELSE 0 END) AS faltas
     FROM matriculas m
+    INNER JOIN estados_matricula em ON m.estado_id = em.id
     INNER JOIN estudiantes e ON m.estudiante_id = e.id
     INNER JOIN usuarios u    ON e.id = u.id
     LEFT JOIN asistencia a   ON a.matricula_id = m.id
     WHERE m.horario_id = ?
+      AND em.nombre_estado = 'Activa'
     GROUP BY m.id, u.nombre, u.apellido, u.email
     ORDER BY u.apellido, u.nombre
 ");
+
 $stmtResumen->bind_param("i", $horario_id_seleccionado);
 $stmtResumen->execute();
 $resRes = $stmtResumen->get_result();

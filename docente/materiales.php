@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-require_role([2]); // Docente
+require_role([2]); 
 
 $docenteId = $_SESSION['usuario_id'] ?? null;
 if (!$docenteId) {
@@ -13,13 +13,13 @@ if (!$docenteId) {
 $mensaje = "";
 $error = "";
 
-// Carpeta de subida
+
 $uploadDir = __DIR__ . '/../uploads/materiales/';
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0775, true);
 }
 
-// 1) Horarios del docente
+
 $sqlHor = "
     SELECT h.id, c.nombre_curso, d.nombre_dia, h.hora_inicio
     FROM horarios h
@@ -34,11 +34,11 @@ $stmtHor->execute();
 $horarios = $stmtHor->get_result();
 $stmtHor->close();
 
-// 2) Manejar acciones POST (subir / eliminar)
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
-    // SUBIR MATERIAL
+    
     if ($accion === 'subir_material') {
         $horario_id = (int) ($_POST['horario_id'] ?? 0);
         $titulo = trim($_POST['titulo'] ?? '');
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!isset($_FILES['archivo']) || $_FILES['archivo']['error'] !== UPLOAD_ERR_OK) {
             $error = "Debes seleccionar un archivo válido.";
         } else {
-            // Verificar que el horario sea del docente
+            
             $checkHor = $mysqli->prepare("SELECT id FROM horarios WHERE id = ? AND docente_id = ? LIMIT 1");
             $checkHor->bind_param("ii", $horario_id, $docenteId);
             $checkHor->execute();
@@ -66,9 +66,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $nuevoNombre = uniqid('mat_') . ($ext ? '.' . $ext : '');
                 $rutaDestino = $uploadDir . $nuevoNombre;
 
-                // ==============================
-                // 1) Calcular tipo_archivo_id según la extensión
-                // ==============================
+                
+                
+                
                 $extLower = strtolower($ext);
                 $tipo_archivo_id = null;
 
@@ -79,21 +79,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         foreach ($exts as $e) {
                             if ($e !== '' && $e === $extLower) {
                                 $tipo_archivo_id = (int) $rowTA['id'];
-                                break 2; // salir de los dos bucles
+                                break 2; 
                             }
                         }
                     }
                     $resTipos->free();
                 }
 
-                // Si no encontró nada, forzar un tipo por defecto (por ejemplo PDF = 1)
+                
                 if ($tipo_archivo_id === null) {
                     $tipo_archivo_id = 1;
                 }
 
-                // ==============================
-                // 2) Mover archivo y guardar en BD
-                // ==============================
+                
+                
+                
                 if (!move_uploaded_file($tmpName, $rutaDestino)) {
                     $error = "No se pudo guardar el archivo en el servidor.";
                 } else {
@@ -125,11 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         }
 
-        // ELIMINAR MATERIAL
+        
     } elseif ($accion === 'eliminar_material') {
         $material_id = (int) ($_POST['material_id'] ?? 0);
         if ($material_id > 0) {
-            // Primero obtener la ruta para eliminar archivo físico (opcional)
+            
             $sqlGet = "SELECT archivo_url FROM materiales WHERE id = ? AND docente_id = ? LIMIT 1";
             $stmtGet = $mysqli->prepare($sqlGet);
             $stmtGet->bind_param("ii", $material_id, $docenteId);
@@ -138,12 +138,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtGet->close();
 
             if ($resGet) {
-                $rutaRel = $resGet['archivo_url']; // ej: /twintalk/uploads/materiales/xxx.pdf
+                $rutaRel = $resGet['archivo_url']; 
                 $rutaAbs = realpath(__DIR__ . '/..' . str_replace('/twintalk', '', $rutaRel));
-                // Si quieres eliminar el archivo físico, descomenta esto:
-                // if ($rutaAbs && file_exists($rutaAbs)) {
-                //     unlink($rutaAbs);
-                // }
+                
+                
+                
+                
 
                 $sqlDelMat = "DELETE FROM materiales WHERE id = ? AND docente_id = ?";
                 $stmtDelMat = $mysqli->prepare($sqlDelMat);
@@ -159,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 3) Listar materiales del docente
+
 $sqlMat = "
     SELECT 
         m.id,
@@ -251,7 +251,7 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="container-fluid mt-3 tt-material-page">
 
-    <!-- Encabezado bonito -->
+    
     <div class="card card-soft border-0 shadow-sm mb-4">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
             style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
@@ -285,7 +285,7 @@ include __DIR__ . '/../includes/header.php';
         </div>
     <?php endif; ?>
 
-    <!-- Formulario para subir material -->
+    
     <div class="card card-soft mb-4">
         <div class="card-header bg-white border-0 pb-0">
             <strong class="d-block" style="color:#b14f72;">Subir nuevo material</strong>
@@ -337,7 +337,7 @@ include __DIR__ . '/../includes/header.php';
         </div>
     </div>
 
-    <!-- Listado de materiales -->
+    
     <div class="card card-soft">
         <div class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-center">
             <div>
@@ -397,7 +397,7 @@ include __DIR__ . '/../includes/header.php';
                                         <?= htmlspecialchars($m['fecha_subida']) ?>
                                     </td>
 
-                                    <!-- Botón de eliminar material -->
+                                    
                                     <td class="text-end">
                                         <form method="post" onsubmit="return confirm('¿Eliminar este material?');"
                                             class="d-inline">

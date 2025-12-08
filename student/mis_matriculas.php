@@ -40,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['retirar_matricula']))
 
     if (!$mat) {
         $error = "Matrícula no válida.";
-    } elseif ($mat['nombre_estado'] !== 'Activa') {
-        $error = "Solo puedes retirarte de matrículas activas.";
+    } elseif (!in_array($mat['nombre_estado'], ['Activa', 'Pendiente'])) {
+    $error = "Solo puedes retirarte de matrículas activas o pendientes.";
     } else {
         $estado_cancelada = obtenerEstadoId($mysqli, 'Cancelada');
         if ($estado_cancelada === null) {
@@ -76,6 +76,7 @@ $stmt = $mysqli->prepare("
         d.nombre_dia,
         h.hora_inicio,
         h.hora_fin,
+        em.id AS estado_id,
         em.nombre_estado,
         m.fecha_matricula,
         m.monto_pagado,
@@ -84,6 +85,7 @@ $stmt = $mysqli->prepare("
         IFNULL(t_sum.suma_tareas, 0) AS suma_tareas,
         IFNULL(e_sum.suma_eval, 0)   AS suma_eval,
         (IFNULL(t_sum.suma_tareas, 0) + IFNULL(e_sum.suma_eval, 0)) AS nota_final
+
 
     FROM matriculas m
     JOIN horarios h ON m.horario_id = h.id
@@ -128,8 +130,7 @@ include __DIR__ . "/../includes/header.php";
 <div class="container my-4">
     <!-- Encabezado con gradiente, igual estilo que curso_detalle.php -->
     <div class="card card-soft border-0 shadow-sm mb-4">
-        <div class="card-body"
-             style="background: linear-gradient(90deg, #fbe9f0, #ffffff); border-radius: 0.75rem;">
+        <div class="card-body" style="background: linear-gradient(90deg, #fbe9f0, #ffffff); border-radius: 0.75rem;">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
                 <div>
                     <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
@@ -225,33 +226,37 @@ include __DIR__ . "/../includes/header.php";
                                     </td>
 
                                     <td class="text-center">
-                                        <div class="d-flex flex-column flex-md-row justify-content-center align-items-center gap-1">
-                                            <?php if ($row['nombre_estado'] === 'Activa'): ?>
+                                        <div
+                                            class="d-flex flex-column flex-md-row justify-content-center align-items-center gap-1">
+                                            <?php if (in_array($row['nombre_estado'], ['Activa', 'Pendiente'])): ?>
+                                                <!-- Botón para retirarse de la clase (si está Activa o Pendiente) -->
                                                 <form method="post" class="d-inline"
-                                                      onsubmit="return confirm('¿Seguro que deseas retirarte de esta clase?');">
-                                                    <input type="hidden" name="matricula_id" value="<?= (int) $row['matricula_id'] ?>">
-                                                    <button type="submit"
-                                                            name="retirar_matricula"
-                                                            class="btn btn-sm btn-outline-danger">
+                                                    onsubmit="return confirm('¿Seguro que deseas retirarte de esta clase?');">
+                                                    <input type="hidden" name="matricula_id"
+                                                        value="<?= (int) $row['matricula_id'] ?>">
+                                                    <button type="submit" name="retirar_matricula"
+                                                        class="btn btn-sm btn-outline-danger">
                                                         Retirarme
                                                     </button>
                                                 </form>
                                             <?php endif; ?>
 
+                                            <!-- Ver curso -->
                                             <a href="curso_detalle.php?horario_id=<?= (int) $row['horario_id'] ?>"
-                                               class="btn btn-sm btn-outline-primary">
+                                                class="btn btn-sm btn-outline-primary">
                                                 Ver curso
                                             </a>
 
+                                            <!-- Ver diploma solo si la matrícula está finalizada -->
                                             <?php if ($row['nombre_estado'] === 'Finalizada'): ?>
                                                 <a href="diploma_pdf.php?matricula_id=<?= (int) $row['matricula_id'] ?>"
-                                                   class="btn btn-sm btn-success"
-                                                   target="_blank">
+                                                    class="btn btn-sm btn-success" target="_blank">
                                                     Ver diploma
                                                 </a>
                                             <?php endif; ?>
                                         </div>
                                     </td>
+
                                 </tr>
                             <?php endwhile; ?>
                         <?php else: ?>

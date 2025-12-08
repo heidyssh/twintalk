@@ -15,24 +15,45 @@ if ($horario_id <= 0) {
 
 // 1) Verificar que el estudiante esté matriculado en ese horario
 $check = $mysqli->prepare("
-    SELECT m.id AS matricula_id, em.nombre_estado
+    SELECT 
+        m.id AS matricula_id,
+        em.nombre_estado
     FROM matriculas m
     INNER JOIN estados_matricula em ON m.estado_id = em.id
-    WHERE m.estudiante_id = ? AND m.horario_id = ?
+    WHERE m.estudiante_id = ? 
+      AND m.horario_id = ?
     LIMIT 1
 ");
 $check->bind_param("ii", $usuario_id, $horario_id);
 $check->execute();
-$resCheck = $check->get_result();
+$resCheck  = $check->get_result();
 $matricula = $resCheck->fetch_assoc();
 $check->close();
 
 if (!$matricula) {
     include __DIR__ . "/../includes/header.php";
-    echo '<div class="alert alert-danger mt-4">No estás matriculado en este curso.</div>';
+    echo '<div class="alert alert-danger mt-4">No estás matriculado en esta clase.</div>';
     include __DIR__ . "/../includes/footer.php";
     exit;
 }
+
+// Si la matrícula NO está activa (Cancelada, Pendiente, Finalizada) bloquear acceso
+// Si la matrícula NO está activa (Cancelada, Pendiente, Finalizada) bloquear acceso
+// Bloquear SOLO si la matrícula está Cancelada
+if ($matricula['nombre_estado'] === 'Cancelada') {
+    include __DIR__ . "/../includes/header.php";
+    echo '<div class="alert alert-warning mt-4">
+            Tu matrícula en esta clase fue cancelada. 
+            Ya no puedes acceder al contenido del curso.
+          </div>';
+    include __DIR__ . "/../includes/footer.php";
+    exit;
+}
+
+$matricula_id = (int)$matricula['matricula_id'];
+
+
+
 
 $matricula_id = (int) $matricula['matricula_id'];
 

@@ -5,7 +5,29 @@ require_role([1]); // admin
 
 $mensaje = "";
 $error   = "";
+// Eliminar usuario (desactivar)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'eliminar_usuario')) {
+    $usuario_id = (int)($_POST['usuario_id'] ?? 0);
 
+    if ($usuario_id <= 0) {
+        $error = "Usuario inválido.";
+    } elseif ($usuario_id == ($_SESSION['usuario_id'] ?? 0)) {
+        $error = "No puedes eliminar tu propio usuario.";
+    } else {
+        $stmt = $mysqli->prepare("UPDATE usuarios SET activo = 0 WHERE id = ?");
+        if ($stmt) {
+            $stmt->bind_param("i", $usuario_id);
+            if ($stmt->execute()) {
+                $mensaje = "Usuario eliminado (desactivado) correctamente.";
+            } else {
+                $error = "No se pudo eliminar el usuario.";
+            }
+            $stmt->close();
+        } else {
+            $error = "No se pudo preparar la eliminación.";
+        }
+    }
+}
 // Cambiar rol
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['usuario_id'], $_POST['rol_id'])) {
     $usuario_id = (int)$_POST['usuario_id'];
@@ -74,6 +96,7 @@ $usuarios = $mysqli->query("
     SELECT u.id, u.nombre, u.apellido, u.email, u.rol_id, r.nombre_rol
     FROM usuarios u
     JOIN roles r ON u.rol_id = r.id
+    WHERE u.activo = 1
     ORDER BY u.fecha_registro DESC
 ");
 
@@ -111,6 +134,7 @@ include __DIR__ . "/../includes/header.php";
                             <th>Correo</th>
                             <th>Rol actual</th>
                             <th>Cambiar rol</th>
+                            <th>Eliminar</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -127,6 +151,7 @@ include __DIR__ . "/../includes/header.php";
                                 <td>
                                     <form method="post" class="d-flex align-items-center gap-2">
                                         <input type="hidden" name="usuario_id" value="<?= (int)$u['id'] ?>">
+                                        <input type="hidden" name="accion" value="cambiar_rol">
                                         <select name="rol_id" class="form-select form-select-sm" style="max-width: 180px;">
                                             <?php foreach ($roles as $r): ?>
                                                 <option value="<?= (int)$r['id'] ?>"
@@ -151,6 +176,21 @@ include __DIR__ . "/../includes/header.php";
                                         </button>
                                     </form>
                                 </td>
+                                <td>
+    <?php if ((int)$u['id'] !== (int)($_SESSION['usuario_id'] ?? 0)): ?>
+        <form method="post" class="d-inline"
+              onsubmit="return confirm('¿Seguro que deseas eliminar este usuario?');">
+            <input type="hidden" name="accion" value="eliminar_usuario">
+            <input type="hidden" name="usuario_id" value="<?= (int)$u['id'] ?>">
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+                Eliminar
+            </button>
+        </form>
+    <?php else: ?>
+        <span class="text-muted small">Tú</span>
+    <?php endif; ?>
+</td>
+
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>

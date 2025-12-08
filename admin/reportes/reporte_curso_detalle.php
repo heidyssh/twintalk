@@ -4,7 +4,7 @@ require_once __DIR__ . "/../../includes/auth.php";
 
 require_role([1]); // admin
 
-$curso_id = isset($_GET['curso_id']) ? (int)$_GET['curso_id'] : 0;
+$curso_id = isset($_GET['curso_id']) ? (int) $_GET['curso_id'] : 0;
 
 if ($curso_id <= 0) {
     header("Location: reportes_cursos.php");
@@ -61,20 +61,22 @@ $stmt->close();
 $alumnosPorHorario = [];
 if (!empty($horarios)) {
     $stmt = $mysqli->prepare("
-        SELECT 
-            m.id AS matricula_id,
-            m.horario_id,
-            u.nombre,
-            u.apellido,
-            u.email,
-            em.nombre_estado
-        FROM matriculas m
-        INNER JOIN estudiantes e ON e.id = m.estudiante_id
-        INNER JOIN usuarios u    ON u.id = e.id
-        INNER JOIN estados_matricula em ON em.id = m.estado_id
-        WHERE m.horario_id = ?
-        ORDER BY u.apellido, u.nombre
-    ");
+    SELECT 
+        m.id AS matricula_id,
+        m.horario_id,
+        u.nombre,
+        u.apellido,
+        u.email,
+        em.nombre_estado
+    FROM matriculas m
+    INNER JOIN estudiantes e ON e.id = m.estudiante_id
+    INNER JOIN usuarios u    ON u.id = e.id
+    INNER JOIN estados_matricula em ON em.id = m.estado_id
+    WHERE m.horario_id = ?
+      AND em.nombre_estado = 'Activa'
+    ORDER BY u.apellido, u.nombre
+");
+
 
     foreach ($horarios as $hid => $hinfo) {
         $stmt->bind_param("i", $hid);
@@ -122,14 +124,14 @@ include __DIR__ . "/../../includes/header.php";
                 <div>
                     <h3 class="mb-1 text-primary"><?= htmlspecialchars($curso['nombre_curso']) ?></h3>
                     <p class="text-muted mb-1">
-                        Nivel: <?= htmlspecialchars($curso['codigo_nivel'] ?? '') ?> 
+                        Nivel: <?= htmlspecialchars($curso['codigo_nivel'] ?? '') ?>
                         <?= htmlspecialchars($curso['nombre_nivel'] ?? '') ?>
                     </p>
                 </div>
 
                 <!-- BOTÓN PDF -->
-                <a href="reporte_curso_pdf.php?curso_id=<?= $curso_id ?>" 
-                   class="btn btn-sm btn-outline-danger" target="_blank">
+                <a href="reporte_curso_pdf.php?curso_id=<?= $curso_id ?>" class="btn btn-sm btn-outline-danger"
+                    target="_blank">
                     <i class="fa-solid fa-file-pdf me-1"></i> Descargar PDF
                 </a>
             </div>
@@ -145,12 +147,14 @@ include __DIR__ . "/../../includes/header.php";
 
     <ul class="nav nav-tabs mb-3" id="reporteCursoTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="tab-horarios" data-bs-toggle="tab" data-bs-target="#pane-horarios" type="button" role="tab">
+            <button class="nav-link active" id="tab-horarios" data-bs-toggle="tab" data-bs-target="#pane-horarios"
+                type="button" role="tab">
                 Horarios y alumnos
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-tareas" data-bs-toggle="tab" data-bs-target="#pane-tareas" type="button" role="tab">
+            <button class="nav-link" id="tab-tareas" data-bs-toggle="tab" data-bs-target="#pane-tareas" type="button"
+                role="tab">
                 Tareas del curso
             </button>
         </li>
@@ -169,14 +173,14 @@ include __DIR__ . "/../../includes/header.php";
                                 <div>
                                     <strong><?= htmlspecialchars($h['nombre_dia']) ?></strong>
                                     <span class="text-muted">
-                                        (<?= substr($h['hora_inicio'],0,5) ?> - <?= substr($h['hora_fin'],0,5) ?>)
+                                        (<?= substr($h['hora_inicio'], 0, 5) ?> - <?= substr($h['hora_fin'], 0, 5) ?>)
                                     </span>
                                     <span class="badge bg-light text-muted ms-2">
                                         Aula: <?= htmlspecialchars($h['aula']) ?>
                                     </span>
                                 </div>
                                 <div class="text-end small text-muted">
-                                    Docente: <?= htmlspecialchars($h['nombre_docente'].' '.$h['apellido_docente']) ?><br>
+                                    Docente: <?= htmlspecialchars($h['nombre_docente'] . ' ' . $h['apellido_docente']) ?><br>
                                     Del <?= $h['fecha_inicio'] ?> al <?= $h['fecha_fin'] ?>
                                 </div>
                             </div>
@@ -198,7 +202,7 @@ include __DIR__ . "/../../includes/header.php";
                                         <tbody>
                                             <?php foreach ($alumnosPorHorario[$hid] as $al): ?>
                                                 <tr>
-                                                    <td><?= htmlspecialchars($al['nombre'].' '.$al['apellido']) ?></td>
+                                                    <td><?= htmlspecialchars($al['nombre'] . ' ' . $al['apellido']) ?></td>
                                                     <td><?= htmlspecialchars($al['email']) ?></td>
                                                     <td><?= htmlspecialchars($al['nombre_estado']) ?></td>
                                                 </tr>
@@ -236,7 +240,7 @@ include __DIR__ . "/../../includes/header.php";
                                     <td><?= htmlspecialchars($t['titulo']) ?></td>
                                     <td>
                                         <?= htmlspecialchars($t['nombre_dia']) ?>
-                                        (<?= substr($t['hora_inicio'],0,5) ?>)
+                                        (<?= substr($t['hora_inicio'], 0, 5) ?>)
                                         <span class="badge bg-light text-muted">H<?= $t['horario_id'] ?></span>
                                     </td>
                                     <td><?= $t['fecha_publicacion'] ?></td>

@@ -5,11 +5,31 @@ require_once __DIR__ . "/../includes/auth.php";
 require_role([1]); // solo admin
 
 $mensaje = "";
-$error   = "";
+$error = "";
+$mensaje = "";
+$error = "";
 
+// Eliminar mensaje
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['accion'] ?? '') === 'eliminar')) {
+    $id = (int) ($_POST['mensaje_id'] ?? 0);
+    if ($id > 0) {
+        $stmt = $mysqli->prepare("DELETE FROM mensajes_interes WHERE id = ?");
+        if ($stmt) {
+            $stmt->bind_param("i", $id);
+            if ($stmt->execute()) {
+                $mensaje = "Mensaje eliminado correctamente.";
+            } else {
+                $error = "No se pudo eliminar el mensaje.";
+            }
+            $stmt->close();
+        } else {
+            $error = "No se pudo preparar la eliminación.";
+        }
+    }
+}
 // Marcar como leído
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'marcar_leido') {
-    $id = (int)($_POST['mensaje_id'] ?? 0);
+    $id = (int) ($_POST['mensaje_id'] ?? 0);
     if ($id > 0) {
         $stmt = $mysqli->prepare("UPDATE mensajes_interes SET leido = 1 WHERE id = ?");
         if ($stmt) {
@@ -57,7 +77,7 @@ include __DIR__ . "/../includes/header.php";
         <div class="card-body">
 
             <p class="text-muted small mb-3">
-                Aquí se muestran los mensajes enviados desde el formulario de contacto del sitio público, 
+                Aquí se muestran los mensajes enviados desde el formulario de contacto del sitio público,
                 junto con archivos adjuntos si los enviaron.
             </p>
 
@@ -113,11 +133,9 @@ include __DIR__ . "/../includes/header.php";
 
                                         <!-- ARCHIVO ADJUNTO -->
                                         <?php if (!empty($row['archivo'])): ?>
-                                            <a href="<?= htmlspecialchars($row['archivo']) ?>" 
-                                               target="_blank" 
-                                               class="btn btn-sm"
-                                               style="border:1px solid #A45A6A;color:#A45A6A;border-radius:999px;">
-                                               <i class="fa-solid fa-file-arrow-down me-1"></i> Ver archivo
+                                            <a href="<?= htmlspecialchars($row['archivo']) ?>" target="_blank" class="btn btn-sm"
+                                                style="border:1px solid #A45A6A;color:#A45A6A;border-radius:999px;">
+                                                <i class="fa-solid fa-file-arrow-down me-1"></i> Ver archivo
                                             </a>
                                         <?php else: ?>
                                             <span class="text-muted small">Sin archivo</span>
@@ -125,7 +143,7 @@ include __DIR__ . "/../includes/header.php";
                                     </td>
 
                                     <td class="small">
-                                        <?php if ((int)$row['leido'] === 1): ?>
+                                        <?php if ((int) $row['leido'] === 1): ?>
                                             <span class="badge" style="background:#E3FCEC;color:#2E7D32;">
                                                 Leído
                                             </span>
@@ -137,20 +155,28 @@ include __DIR__ . "/../includes/header.php";
                                     </td>
 
                                     <td class="small">
-                                        <?php if ((int)$row['leido'] === 0): ?>
+                                        <?php if ((int) $row['leido'] === 0): ?>
                                             <form method="post" class="d-inline">
                                                 <input type="hidden" name="accion" value="marcar_leido">
-                                                <input type="hidden" name="mensaje_id" value="<?= (int)$row['id'] ?>">
-                                                <button type="submit"
-                                                        class="btn btn-sm"
-                                                        style="border:1px solid #A45A6A;color:#A45A6A;border-radius:999px;">
+                                                <input type="hidden" name="mensaje_id" value="<?= (int) $row['id'] ?>">
+                                                <button type="submit" class="btn btn-sm"
+                                                    style="border:1px solid #A45A6A;color:#A45A6A;border-radius:999px;">
                                                     Marcar leído
                                                 </button>
                                             </form>
-                                        <?php else: ?>
-                                            <span class="text-muted small">—</span>
                                         <?php endif; ?>
+
+                                        <form method="post" class="d-inline ms-1"
+                                            onsubmit="return confirm('¿Seguro que deseas eliminar este mensaje?');">
+                                            <input type="hidden" name="accion" value="eliminar">
+                                            <input type="hidden" name="mensaje_id" value="<?= (int) $row['id'] ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                style="border-radius:999px;">
+                                                Eliminar
+                                            </button>
+                                        </form>
                                     </td>
+
                                 </tr>
                             <?php endwhile; ?>
                         <?php else: ?>

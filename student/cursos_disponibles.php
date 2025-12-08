@@ -18,26 +18,29 @@ if (!$usuario_id) {
 }
 
 $mensaje = "";
-$error   = "";
+$error = "";
 
 /**
  * Obtener ID de un estado de matrícula por nombre (Activa, Pendiente, Finalizada, etc.)
  */
-function obtenerEstadoIdPorNombre(mysqli $mysqli, string $nombre): ?int {
+function obtenerEstadoIdPorNombre(mysqli $mysqli, string $nombre): ?int
+{
     $stmt = $mysqli->prepare("SELECT id FROM estados_matricula WHERE nombre_estado = ? LIMIT 1");
-    if (!$stmt) return null;
+    if (!$stmt)
+        return null;
     $stmt->bind_param("s", $nombre);
     $stmt->execute();
     $res = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    return $res ? (int)$res['id'] : null;
+    return $res ? (int) $res['id'] : null;
 }
 
 /**
  * Obtener el nivel máximo FINALIZADO del estudiante (según niveles_academicos.id)
  * Devuelve el id de nivel (niveles_academicos.id) o null si no tiene cursos finalizados.
  */
-function obtenerNivelMaximoFinalizado(mysqli $mysqli, int $estudiante_id): ?int {
+function obtenerNivelMaximoFinalizado(mysqli $mysqli, int $estudiante_id): ?int
+{
     $sql = "
         SELECT MAX(na.id) AS max_nivel
         FROM matriculas m
@@ -49,13 +52,14 @@ function obtenerNivelMaximoFinalizado(mysqli $mysqli, int $estudiante_id): ?int 
           AND em.nombre_estado = 'Finalizada'
     ";
     $stmt = $mysqli->prepare($sql);
-    if (!$stmt) return null;
+    if (!$stmt)
+        return null;
     $stmt->bind_param("i", $estudiante_id);
     $stmt->execute();
     $res = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if ($res && $res['max_nivel'] !== null) {
-        return (int)$res['max_nivel'];
+        return (int) $res['max_nivel'];
     }
     return null;
 }
@@ -65,7 +69,8 @@ function obtenerNivelMaximoFinalizado(mysqli $mysqli, int $estudiante_id): ?int 
  * - Matrículas en estado 'Pendiente'
  * - O matrículas 'Activa' sin monto_pagado o sin metodo_pago.
  */
-function tienePagosPendientes(mysqli $mysqli, int $estudiante_id): bool {
+function tienePagosPendientes(mysqli $mysqli, int $estudiante_id): bool
+{
     $sql = "
         SELECT COUNT(*) AS total
         FROM matriculas m
@@ -80,19 +85,21 @@ function tienePagosPendientes(mysqli $mysqli, int $estudiante_id): bool {
           )
     ";
     $stmt = $mysqli->prepare($sql);
-    if (!$stmt) return false;
+    if (!$stmt)
+        return false;
     $stmt->bind_param("i", $estudiante_id);
     $stmt->execute();
     $res = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    return $res && (int)$res['total'] > 0;
+    return $res && (int) $res['total'] > 0;
 }
 
 /**
  * Obtener precio vigente de un curso (precios_cursos.activo = 1)
  */
-function obtenerPrecioCursoActual(mysqli $mysqli, int $curso_id): ?float {
+function obtenerPrecioCursoActual(mysqli $mysqli, int $curso_id): ?float
+{
     $stmt = $mysqli->prepare("
         SELECT precio
         FROM precios_cursos
@@ -103,36 +110,39 @@ function obtenerPrecioCursoActual(mysqli $mysqli, int $curso_id): ?float {
         ORDER BY fecha_inicio_vigencia DESC
         LIMIT 1
     ");
-    if (!$stmt) return null;
+    if (!$stmt)
+        return null;
     $stmt->bind_param("i", $curso_id);
     $stmt->execute();
     $res = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    return $res ? (float)$res['precio'] : null;
+    return $res ? (float) $res['precio'] : null;
 }
 
 // En esta BD, estudiantes.id = usuarios.id (FK)
-$estudiante_id = (int)$usuario_id;
+$estudiante_id = (int) $usuario_id;
 
 // ---------------------------------------------
 // PROCESAR MATRÍCULA (POST)
 // ---------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'matricular') {
-    $horario_id = isset($_POST['horario_id']) ? (int)$_POST['horario_id'] : 0;
+    $horario_id = isset($_POST['horario_id']) ? (int) $_POST['horario_id'] : 0;
 
     if ($horario_id <= 0) {
         $error = "Horario inválido.";
     } else {
         // 1) Verificar si ya está matriculado en ese horario
         $stmt = $mysqli->prepare("
-            SELECT m.id, em.nombre_estado
-            FROM matriculas m
-            JOIN estados_matricula em ON m.estado_id = em.id
-            WHERE m.estudiante_id = ?
-              AND m.horario_id = ?
-            LIMIT 1
-        ");
+    SELECT m.id, em.nombre_estado
+    FROM matriculas m
+    JOIN estados_matricula em ON m.estado_id = em.id
+    WHERE m.estudiante_id = ?
+      AND m.horario_id = ?
+      AND em.nombre_estado IN ('Activa','Pendiente')
+    LIMIT 1
+");
+
         if ($stmt) {
             $stmt->bind_param("ii", $estudiante_id, $horario_id);
             $stmt->execute();
@@ -174,14 +184,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
 
                         if (!$horario) {
                             $error = "No se encontró el horario seleccionado.";
-                        } elseif (!(int)$horario['activo']) {
+                        } elseif (!(int) $horario['activo']) {
                             $error = "Este horario no está activo actualmente.";
                         } else {
                             // 4) Validar cupos
-                            if ((int)$horario['cupos_disponibles'] <= 0) {
+                            if ((int) $horario['cupos_disponibles'] <= 0) {
                                 $error = "No hay cupos disponibles en este horario.";
                             } else {
-                                $curso_nivel_id = (int)$horario['nivel_id'];
+                                $curso_nivel_id = (int) $horario['nivel_id'];
 
                                 // 5) Validar requisitos por nivel
                                 $nivel_max_finalizado = obtenerNivelMaximoFinalizado($mysqli, $estudiante_id);
@@ -281,38 +291,43 @@ $cursos_disp = $mysqli->query($sqlCursos);
 
 // Obtener nivel máximo finalizado y bandera de pagos pendientes para mostrar info
 $nivel_max_finalizado = obtenerNivelMaximoFinalizado($mysqli, $estudiante_id);
-$tiene_pagos_pend     = tienePagosPendientes($mysqli, $estudiante_id);
+$tiene_pagos_pend = tienePagosPendientes($mysqli, $estudiante_id);
 
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <style>
-.card-soft{
-    border-radius:12px;
-}
-.btn-tt-primary{
-    background-color:#A45A6A;
-    border-color:#A45A6A;
-    color:#fff;
-}
-.btn-tt-primary:hover{
-    background-color:#8c4b59;
-    border-color:#8c4b59;
-    color:#fff;
-}
-.badge-soft-primary{
-    background:#f4e5ef;
-    color:#7b2f4a;
-    border:1px solid #e3bfd7;
-}
-.bg-soft-primary{
-    background:#f4e5ef;
-}
-.badge-pill-small{
-    font-size:11px;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-}
+    .card-soft {
+        border-radius: 12px;
+    }
+
+    .btn-tt-primary {
+        background-color: #A45A6A;
+        border-color: #A45A6A;
+        color: #fff;
+    }
+
+    .btn-tt-primary:hover {
+        background-color: #8c4b59;
+        border-color: #8c4b59;
+        color: #fff;
+    }
+
+    .badge-soft-primary {
+        background: #f4e5ef;
+        color: #7b2f4a;
+        border: 1px solid #e3bfd7;
+    }
+
+    .bg-soft-primary {
+        background: #f4e5ef;
+    }
+
+    .badge-pill-small {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
 </style>
 
 <div class="container py-4">
@@ -320,14 +335,14 @@ include __DIR__ . '/../includes/header.php';
     <!-- Cabecera con degradado -->
     <div class="card card-soft border-0 shadow-sm mb-3">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
-             style="background:linear-gradient(90deg,#fbe9f0,#ffffff);">
+            style="background:linear-gradient(90deg,#fbe9f0,#ffffff);">
             <div>
                 <h1 class="h5 fw-bold mb-1" style="color:#b14f72;">
                     <i class="fa-solid fa-graduation-cap me-2"></i>
                     Cursos disponibles
                 </h1>
                 <p class="small text-muted mb-0">
-                    Elige el curso y horario en el que deseas matricularte.  
+                    Elige el curso y horario en el que deseas matricularte.
                     Debes estar al día con tus pagos para avanzar de nivel.
                 </p>
             </div>
@@ -355,7 +370,7 @@ include __DIR__ . '/../includes/header.php';
             </span>
         <?php else: ?>
             <span class="badge badge-soft-primary badge-pill-small me-2">
-                Nivel máximo finalizado: ID <?= (int)$nivel_max_finalizado ?>
+                Nivel máximo finalizado: ID <?= (int) $nivel_max_finalizado ?>
             </span>
         <?php endif; ?>
 
@@ -371,28 +386,28 @@ include __DIR__ . '/../includes/header.php';
         <div class="row g-3">
             <?php while ($c = $cursos_disp->fetch_assoc()): ?>
                 <?php
-                    $curso_nivel_id = (int)$c['nivel_id'];
-                    $bloqueado_por_nivel = false;
-                    $razon_bloqueo = "";
+                $curso_nivel_id = (int) $c['nivel_id'];
+                $bloqueado_por_nivel = false;
+                $razon_bloqueo = "";
 
-                    if ($nivel_max_finalizado === null) {
-                        if ($curso_nivel_id > 1) {
-                            $bloqueado_por_nivel = true;
-                            $razon_bloqueo = "Debes empezar desde el nivel principiante antes de tomar este curso.";
-                        }
-                    } else {
-                        if ($curso_nivel_id > $nivel_max_finalizado + 1) {
-                            $bloqueado_por_nivel = true;
-                            $razon_bloqueo = "Aún no has completado el nivel anterior requerido.";
-                        }
+                if ($nivel_max_finalizado === null) {
+                    if ($curso_nivel_id > 1) {
+                        $bloqueado_por_nivel = true;
+                        $razon_bloqueo = "Debes empezar desde el nivel principiante antes de tomar este curso.";
                     }
+                } else {
+                    if ($curso_nivel_id > $nivel_max_finalizado + 1) {
+                        $bloqueado_por_nivel = true;
+                        $razon_bloqueo = "Aún no has completado el nivel anterior requerido.";
+                    }
+                }
 
-                    $bloqueado_por_pago = $tiene_pagos_pend;
-                    $sin_cupos = ((int)$c['cupos_disponibles'] <= 0);
+                $bloqueado_por_pago = $tiene_pagos_pend;
+                $sin_cupos = ((int) $c['cupos_disponibles'] <= 0);
 
-                    $precio_mostrar = $c['precio_actual'] !== null
-                        ? "L " . number_format($c['precio_actual'], 2)
-                        : "Por definir";
+                $precio_mostrar = $c['precio_actual'] !== null
+                    ? "L " . number_format($c['precio_actual'], 2)
+                    : "Por definir";
                 ?>
                 <div class="col-md-6 col-lg-4">
                     <div class="card card-soft h-100 border-0 shadow-sm rounded-4">
@@ -431,7 +446,7 @@ include __DIR__ . '/../includes/header.php';
                                 <strong>Precio:</strong> <?= $precio_mostrar ?><br>
                                 <strong>Aula:</strong> <?= htmlspecialchars($c['aula'] ?? 'Por asignar') ?><br>
                                 <strong>Cupos disponibles:</strong>
-                                <?= (int)$c['cupos_disponibles'] ?>
+                                <?= (int) $c['cupos_disponibles'] ?>
                             </div>
 
                             <!-- Acciones / estado -->
@@ -460,7 +475,7 @@ include __DIR__ . '/../includes/header.php';
                                 <?php else: ?>
                                     <form method="post">
                                         <input type="hidden" name="accion" value="matricular">
-                                        <input type="hidden" name="horario_id" value="<?= (int)$c['horario_id'] ?>">
+                                        <input type="hidden" name="horario_id" value="<?= (int) $c['horario_id'] ?>">
                                         <button type="submit" class="btn btn-tt-primary btn-sm w-100">
                                             <i class="fa-solid fa-check me-1"></i>
                                             Matricularme en este horario

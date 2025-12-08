@@ -46,7 +46,6 @@ if (!$tiene_info && !$tiene_matriculas) {
     exit;
 }
 
-
 $mis_cursos = $mysqli->prepare("
     SELECT 
         m.id AS matricula_id, 
@@ -61,6 +60,7 @@ $mis_cursos = $mysqli->prepare("
         u.nombre AS docente_nombre,
         u.apellido AS docente_apellido
     FROM matriculas m
+    INNER JOIN estados_matricula em ON m.estado_id = em.id
     JOIN horarios h ON m.horario_id = h.id
     JOIN cursos c ON h.curso_id = c.id
     JOIN niveles_academicos n ON c.nivel_id = n.id
@@ -68,13 +68,13 @@ $mis_cursos = $mysqli->prepare("
     JOIN docentes dc ON h.docente_id = dc.id
     JOIN usuarios u ON dc.id = u.id
     WHERE m.estudiante_id = ?
+      AND em.nombre_estado IN ('Activa', 'Pendiente')
     ORDER BY h.fecha_inicio DESC
 ");
+
 $mis_cursos->bind_param("i", $usuario_id);
 $mis_cursos->execute();
 $res_mis_cursos = $mis_cursos->get_result();
-
-
 $disponibles = $mysqli->prepare("
     SELECT 
         h.id AS horario_id, 
@@ -91,8 +91,12 @@ $disponibles = $mysqli->prepare("
     WHERE h.activo = 1
       AND h.cupos_disponibles > 0
       AND NOT EXISTS (
-        SELECT 1 FROM matriculas m
-        WHERE m.horario_id = h.id AND m.estudiante_id = ?
+        SELECT 1 
+        FROM matriculas m
+        INNER JOIN estados_matricula em ON m.estado_id = em.id
+        WHERE m.horario_id = h.id 
+          AND m.estudiante_id = ?
+          AND em.nombre_estado IN ('Activa','Pendiente')
       )
     ORDER BY h.fecha_inicio ASC
     LIMIT 5
@@ -160,7 +164,8 @@ $sqlResumenTareas = "
     FROM tareas_entregas te
     INNER JOIN matriculas m ON te.matricula_id = m.id
     INNER JOIN estados_matricula em ON m.estado_id = em.id
-    WHERE m.estudiante_id = ? AND em.nombre_estado = 'Activa'
+    WHERE m.estudiante_id = ?  
+        AND em.nombre_estado IN ('Activa','Pendiente')
 ";
 $stmtResumen = $mysqli->prepare($sqlResumenTareas);
 $stmtResumen->bind_param("i", $usuario_id);
@@ -182,7 +187,7 @@ $sqlPendientes = "
     INNER JOIN matriculas m         ON m.horario_id = h.id
     INNER JOIN estados_matricula em ON m.estado_id = em.id
     WHERE m.estudiante_id = ?
-      AND em.nombre_estado = 'Activa'
+        AND em.nombre_estado IN ('Activa','Pendiente')
       AND t.activo = 1
       AND (t.fecha_entrega IS NULL OR t.fecha_entrega >= CURDATE())
       AND NOT EXISTS (
