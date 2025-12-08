@@ -281,23 +281,31 @@ if (
             $stmt->close();
 
             if ($rowEnt) {
-                
+                // Ya hay entrega: tomamos su ID
                 $entrega_id = (int) $rowEnt['id'];
             } else {
-                
+                // No hay entrega: creamos registro con archivo_url vacío
                 $sqlInsert = "
                     INSERT INTO tareas_entregas 
-                        (tarea_id, matricula_id, calificacion, comentarios_docente, fecha_calificacion)
+                        (tarea_id, matricula_id, archivo_url, calificacion, comentarios_docente, fecha_calificacion)
                     VALUES 
-                        (?, ?, ?, ?, NOW())
+                        (?, ?, '', ?, ?, NOW())
                 ";
                 $stmt = $mysqli->prepare($sqlInsert);
                 
                 $calif_param = $tieneNota ? $notaFloat : null;
-                $stmt->bind_param("iids", $tarea_id, $matricula_id, $calif_param, $comentario_param);
+                $stmt->bind_param(
+                    "iids",
+                    $tarea_id,
+                    $matricula_id,
+                    $calif_param,
+                    $comentario
+                );
                 $stmt->execute();
                 $entrega_id = $stmt->insert_id;
                 $stmt->close();
+            
+
 
                 
                 if (!$entrega_id) {

@@ -38,8 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'calif
     $existe = $resC->fetch_assoc();
     $stmtC->close();
 
-    if ($existe) {
-        
+        if ($existe) {
+        // Ya existe entrega: solo actualizamos nota y comentario
         $sqlU = "
             UPDATE tareas_entregas
             SET calificacion = ?, comentarios_docente = ?, fecha_calificacion = NOW()
@@ -50,10 +50,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'calif
         $stmtU->execute();
         $stmtU->close();
     } else {
-        
+        // No existe entrega: creamos registro con archivo_url vacío
         $sqlI = "
-            INSERT INTO tareas_entregas (tarea_id, matricula_id, calificacion, comentarios_docente, fecha_calificacion)
-            VALUES (?, ?, ?, ?, NOW())
+            INSERT INTO tareas_entregas (
+                tarea_id,
+                matricula_id,
+                archivo_url,
+                calificacion,
+                comentarios_docente,
+                fecha_calificacion
+            )
+            VALUES (?, ?, '', ?, ?, NOW())
         ";
         $stmtI = $mysqli->prepare($sqlI);
         $stmtI->bind_param("iids", $tarea_id, $matricula_id, $calificacion, $comentarios);
@@ -62,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'calif
     }
 
     $mensaje = "Calificación guardada correctamente.";
+
 }
 
 
