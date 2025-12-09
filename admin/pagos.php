@@ -162,7 +162,7 @@ include __DIR__ . "/../includes/header.php";
 ?>
 
 <div class="container my-4">
-    <!-- HEADER con gradiente al estilo TwinTalk -->
+    
     <div class="card card-soft border-0 shadow-sm mb-4">
         <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
              style="background: linear-gradient(90deg, #fbe9f0, #ffffff);">
@@ -184,6 +184,15 @@ include __DIR__ . "/../includes/header.php";
     <?php if ($error): ?>
         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
+
+    <div class="d-flex justify-content-end mb-3">
+    <a href="reportes/reporte_pagos_pdf.php"
+       target="_blank"
+       class="btn btn-outline-danger btn-sm">
+        <i class="fa-solid fa-file-pdf me-1"></i>
+        Descargar reporte de pagos (PDF)
+    </a>
+</div>
 
     <div class="card card-soft shadow-sm border-0">
         <div class="card-header bg-white border-0 pb-0">
